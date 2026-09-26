@@ -5,6 +5,14 @@ export type ThemeName = 'retro' | 'arcade' | 'modern';
 export interface ThemeColors {
   background: string;
   surface: string;
+  surfaceRaised: string;
+  surfaceSunken: string;
+  board: string;
+  boardAlt: string;
+  onPrimary: string;
+  focus: string;
+  warning: string;
+  overlay: string;
   primary: string;
   secondary: string;
   text: string;

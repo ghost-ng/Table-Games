@@ -1,11 +1,7 @@
 import React from 'react';
-import { Pressable, type ViewStyle, type TextStyle } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-} from 'react-native-reanimated';
+import { Pressable, type ViewStyle } from 'react-native';
 import { useTheme } from '../../theme/ThemeProvider';
+import { useWebFocusRing } from '../../utils/useWebFocusRing';
 import { ThemedText } from './ThemedText';
 
 export interface ButtonProps {
@@ -16,25 +12,9 @@ export interface ButtonProps {
   disabled?: boolean;
 }
 
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
-
-const SIZE_HEIGHT: Record<string, number> = {
-  sm: 36,
-  md: 44,
-  lg: 56,
-};
-
-const SIZE_FONT: Record<string, number> = {
-  sm: 14,
-  md: 16,
-  lg: 18,
-};
-
-const SIZE_PADDING: Record<string, number> = {
-  sm: 12,
-  md: 16,
-  lg: 24,
-};
+const SIZE_HEIGHT = { sm: 36, md: 44, lg: 56 };
+const SIZE_FONT = { sm: 14, md: 16, lg: 18 };
+const SIZE_PADDING = { sm: 12, md: 16, lg: 24 };
 
 export function Button({
   title,
@@ -44,79 +24,45 @@ export function Button({
   disabled = false,
 }: ButtonProps) {
   const { theme } = useTheme();
-  const scale = useSharedValue(1);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
-  const handlePressIn = () => {
-    scale.value = withSpring(0.97, { damping: 15, stiffness: 300 });
+  const focus = useWebFocusRing(theme.colors.focus);
+  const containerStyles: Record<NonNullable<ButtonProps['variant']>, ViewStyle> = {
+    primary: { backgroundColor: theme.colors.primary, borderWidth: 0 },
+    secondary: { backgroundColor: theme.colors.surfaceRaised, borderWidth: 2, borderColor: theme.colors.primary },
+    ghost: { backgroundColor: 'transparent', borderWidth: 0 },
   };
-
-  const handlePressOut = () => {
-    scale.value = withSpring(1, { damping: 15, stiffness: 300 });
-  };
-
-  const containerStyles: Record<string, ViewStyle> = {
-    primary: {
-      backgroundColor: theme.colors.primary,
-      borderWidth: 0,
-    },
-    secondary: {
-      backgroundColor: 'transparent',
-      borderWidth: 2,
-      borderColor: theme.colors.primary,
-    },
-    ghost: {
-      backgroundColor: 'transparent',
-      borderWidth: 0,
-    },
-  };
-
-  const textStyles: Record<string, TextStyle> = {
-    primary: {
-      color: '#FFFFFF',
-    },
-    secondary: {
-      color: theme.colors.primary,
-    },
-    ghost: {
-      color: theme.colors.primary,
-    },
-  };
-
   return (
-    <AnimatedPressable
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ disabled }}
       onPress={onPress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
+      onFocus={focus.onFocus}
+      onBlur={focus.onBlur}
       disabled={disabled}
-      style={[
+      hitSlop={size === 'sm' ? 4 : undefined}
+      style={({ pressed }) => [
         {
-          height: SIZE_HEIGHT[size],
+          minHeight: SIZE_HEIGHT[size],
+          paddingVertical: 8,
           paddingHorizontal: SIZE_PADDING[size],
           borderRadius: theme.borderRadius.md,
           alignItems: 'center',
           justifyContent: 'center',
-          opacity: disabled ? 0.5 : 1,
+          opacity: disabled ? 0.5 : pressed ? 0.75 : 1,
         },
         containerStyles[variant],
-        animatedStyle,
+        focus.style,
       ]}
     >
       <ThemedText
-        style={[
-          {
-            fontSize: SIZE_FONT[size],
-            fontWeight: '600',
-            fontFamily: theme.fonts.body,
-          },
-          textStyles[variant],
-        ]}
+        style={{
+          fontSize: SIZE_FONT[size],
+          fontWeight: '600',
+          fontFamily: theme.fonts.body,
+          color: variant === 'primary' ? theme.colors.onPrimary : theme.colors.text,
+        }}
       >
         {title}
       </ThemedText>
-    </AnimatedPressable>
+    </Pressable>
   );
 }

@@ -22,25 +22,27 @@ export function ScoreDisplay({
 
   return (
     <View
+      accessibilityRole="summary"
+      accessibilityLabel={`${labels.player1}: ${scores.player1}. ${labels.player2}: ${scores.player2}.`}
       style={[
         styles.container,
         {
-          backgroundColor: theme.colors.surface,
+          backgroundColor: theme.colors.surfaceSunken,
           borderTopWidth: 1,
           borderTopColor: theme.colors.border,
         },
       ]}
     >
-      <View style={styles.playerScore}>
+      <View style={[styles.playerScore, { borderBottomColor: theme.colors.player1 }]}>
         <ThemedText
           variant="caption"
-          style={[styles.label, { color: theme.colors.player1 }]}
+          style={[styles.label, { color: theme.colors.text }]}
         >
           {labels.player1}
         </ThemedText>
         <ThemedText
           variant="heading"
-          style={[styles.score, { color: theme.colors.player1 }]}
+          style={[styles.score, { color: theme.colors.text }]}
         >
           {scores.player1}
         </ThemedText>
@@ -50,16 +52,16 @@ export function ScoreDisplay({
         style={[styles.divider, { backgroundColor: theme.colors.border }]}
       />
 
-      <View style={styles.playerScore}>
+      <View style={[styles.playerScore, { borderBottomColor: theme.colors.player2 }]}>
         <ThemedText
           variant="caption"
-          style={[styles.label, { color: theme.colors.player2 }]}
+          style={[styles.label, { color: theme.colors.text }]}
         >
           {labels.player2}
         </ThemedText>
         <ThemedText
           variant="heading"
-          style={[styles.score, { color: theme.colors.player2 }]}
+          style={[styles.score, { color: theme.colors.text }]}
         >
           {scores.player2}
         </ThemedText>
@@ -80,6 +82,8 @@ const styles = StyleSheet.create({
   playerScore: {
     flex: 1,
     alignItems: 'center',
+    borderBottomWidth: 3,
+    paddingBottom: 4,
   },
   label: {
     marginBottom: 4,

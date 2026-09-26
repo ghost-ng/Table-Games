@@ -1,43 +1,26 @@
 import { useCallback, useState } from 'react';
 import { useWindowDimensions, type LayoutChangeEvent } from 'react-native';
+import { getResponsiveLayout, type ResponsiveLayoutFlags } from './responsive';
 
-/** Window-width breakpoints. Phones are anything narrower than `tablet`. */
-export const BREAKPOINTS = {
-  tablet: 600,
-  desktop: 1024,
-} as const;
+export { BREAKPOINTS, getResponsiveLayout } from './responsive';
+export type { ResponsiveLayoutFlags } from './responsive';
 
 /** Upper bound for square game boards, so they stay comfortable on large screens. */
 export const MAX_BOARD_SIZE = 560;
 const MIN_BOARD_SIZE = 200;
 
-export interface ResponsiveLayout {
+export interface ResponsiveLayout extends ResponsiveLayoutFlags {
   width: number;
   height: number;
-  isTablet: boolean;
-  isDesktop: boolean;
-  isLandscape: boolean;
-  /** Max width of a screen's content column at this breakpoint. */
-  contentMaxWidth: number;
-  /** Actual content column width (window width, capped at contentMaxWidth). */
-  contentWidth: number;
 }
 
 /** Reactive layout metrics — updates on rotation, window resize and split-screen. */
 export function useResponsive(): ResponsiveLayout {
   const { width, height } = useWindowDimensions();
-  const isTablet = width >= BREAKPOINTS.tablet;
-  const isDesktop = width >= BREAKPOINTS.desktop;
-  const contentMaxWidth = isDesktop ? 720 : isTablet ? 640 : 480;
-
   return {
     width,
     height,
-    isTablet,
-    isDesktop,
-    isLandscape: width > height,
-    contentMaxWidth,
-    contentWidth: Math.min(width, contentMaxWidth),
+    ...getResponsiveLayout(width, height),
   };
 }
 

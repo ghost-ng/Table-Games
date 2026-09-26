@@ -1,57 +1,38 @@
 import React from 'react';
 import { Pressable, View, type ViewStyle, type StyleProp } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-} from 'react-native-reanimated';
 import { useTheme } from '../../theme/ThemeProvider';
+import { useWebFocusRing } from '../../utils/useWebFocusRing';
 
 export interface CardProps {
   children: React.ReactNode;
   onPress?: () => void;
   style?: StyleProp<ViewStyle>;
+  disabled?: boolean;
 }
 
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
-
-export function Card({ children, onPress, style }: CardProps) {
+export function Card({ children, onPress, style, disabled = false }: CardProps) {
   const { theme } = useTheme();
-  const scale = useSharedValue(1);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
-  const handlePressIn = () => {
-    scale.value = withSpring(0.97, { damping: 15, stiffness: 300 });
-  };
-
-  const handlePressOut = () => {
-    scale.value = withSpring(1, { damping: 15, stiffness: 300 });
-  };
-
+  const focus = useWebFocusRing(theme.colors.focus);
   const cardStyle: ViewStyle = {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: theme.colors.surfaceRaised,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    borderRadius: theme.borderRadius.md,
+    borderRadius: theme.borderRadius.lg,
     padding: 16,
     ...theme.shadows.md,
   };
-
   if (onPress) {
     return (
-      <AnimatedPressable
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ disabled }}
+        disabled={disabled}
         onPress={onPress}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
-        style={[cardStyle, animatedStyle, style]}
-      >
-        {children}
-      </AnimatedPressable>
+        onFocus={focus.onFocus}
+        onBlur={focus.onBlur}
+        style={({ pressed }) => [cardStyle, style, { minHeight: 44, opacity: disabled ? 0.5 : pressed ? 0.75 : 1 }, focus.style]}
+      >{children}</Pressable>
     );
   }
-
   return <View style={[cardStyle, style]}>{children}</View>;
 }

@@ -1,20 +1,11 @@
-import React, { useEffect } from 'react';
-import { StyleSheet } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-  interpolateColor,
-} from 'react-native-reanimated';
+import React from 'react';
+import { View } from 'react-native';
 import { useTheme } from '../../theme/ThemeProvider';
 import { ThemedText } from './ThemedText';
 
 export interface TurnIndicatorProps {
   currentPlayer: 'player1' | 'player2';
-  playerNames?: {
-    player1: string;
-    player2: string;
-  };
+  playerNames?: { player1: string; player2: string };
 }
 
 export function TurnIndicator({
@@ -22,45 +13,27 @@ export function TurnIndicator({
   playerNames = { player1: 'Player 1', player2: 'Player 2' },
 }: TurnIndicatorProps) {
   const { theme } = useTheme();
-  const progress = useSharedValue(currentPlayer === 'player1' ? 0 : 1);
-
-  useEffect(() => {
-    progress.value = withTiming(currentPlayer === 'player1' ? 0 : 1, {
-      duration: theme.animation.duration.medium,
-    });
-  }, [currentPlayer, theme.animation.duration.medium]);
-
-  const animatedStyle = useAnimatedStyle(() => {
-    const backgroundColor = interpolateColor(
-      progress.value,
-      [0, 1],
-      [theme.colors.player1, theme.colors.player2]
-    );
-    return { backgroundColor };
-  });
-
   const displayName = playerNames[currentPlayer];
   const label = displayName === 'You' ? 'Your Turn' : `${displayName}'s Turn`;
-
   return (
-    <Animated.View style={[styles.container, animatedStyle]}>
-      <ThemedText variant="label" style={styles.text}>
+    <View
+      accessibilityRole="summary"
+      accessibilityLiveRegion="polite"
+      style={{
+        minHeight: 48,
+        padding: 12,
+        justifyContent: 'center',
+        alignItems: 'center',
+        width: '100%',
+        backgroundColor: theme.colors.surfaceSunken,
+        borderLeftWidth: 4,
+        borderLeftColor: theme.colors[currentPlayer],
+        borderRadius: theme.borderRadius.md,
+      }}
+    >
+      <ThemedText variant="label" style={{ color: theme.colors.text, fontWeight: '600', fontSize: 16 }}>
         {label}
       </ThemedText>
-    </Animated.View>
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    height: 48,
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: '100%',
-  },
-  text: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-    fontSize: 16,
-  },
-});

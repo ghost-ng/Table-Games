@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, View, Pressable, StyleSheet } from 'react-native';
+import { Modal, View, StyleSheet } from 'react-native';
 import { useTheme } from '../../theme/ThemeProvider';
 import { ThemedText } from './ThemedText';
 import { Button } from './Button';
@@ -51,15 +51,19 @@ export function GameOverModal({
     <Modal
       visible={visible}
       transparent
-      animationType="fade"
+      animationType="none"
       onRequestClose={onHome}
     >
-      <View style={styles.backdrop}>
+      <View style={[styles.backdrop, { backgroundColor: theme.colors.overlay }]}>
         <View
+          accessibilityViewIsModal
+          accessibilityLabel={`${gameName}: ${getWinnerText()}`}
           style={[
             styles.content,
             {
-              backgroundColor: theme.colors.surface,
+              backgroundColor: theme.colors.surfaceRaised,
+              borderWidth: 1,
+              borderColor: theme.colors.border,
               borderRadius: theme.borderRadius.lg,
               ...theme.shadows.md,
             },
@@ -84,7 +88,7 @@ export function GameOverModal({
               <View style={styles.scoreItem}>
                 <ThemedText
                   variant="caption"
-                  style={{ color: theme.colors.player1 }}
+                  style={{ color: theme.colors.text }}
                 >
                   {nameOf('player1')}
                 </ThemedText>
@@ -103,7 +107,7 @@ export function GameOverModal({
               <View style={styles.scoreItem}>
                 <ThemedText
                   variant="caption"
-                  style={{ color: theme.colors.player2 }}
+                  style={{ color: theme.colors.text }}
                 >
                   {nameOf('player2')}
                 </ThemedText>
@@ -141,7 +145,6 @@ export function GameOverModal({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,

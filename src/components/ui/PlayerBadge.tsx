@@ -33,7 +33,7 @@ export function PlayerBadge({
   const defaultLabel = player === 'player1' ? 'P1' : 'P2';
 
   return (
-    <View style={styles.wrapper}>
+    <View accessibilityRole="text" accessibilityLabel={label ?? (player === 'player1' ? 'Player 1' : 'Player 2')} style={styles.wrapper}>
       <View
         style={[
           styles.badge,
@@ -41,14 +41,16 @@ export function PlayerBadge({
             width: badgeDimension,
             height: badgeDimension,
             borderRadius: badgeDimension / 2,
-            backgroundColor: playerColor,
+            backgroundColor: theme.colors.surfaceRaised,
+            borderColor: playerColor,
+            borderWidth: 2,
           },
         ]}
       >
         <ThemedText
           style={[
             styles.badgeText,
-            { fontSize },
+            { fontSize, color: theme.colors.text },
           ]}
         >
           {(label ?? defaultLabel).charAt(0).toUpperCase()}
@@ -57,7 +59,7 @@ export function PlayerBadge({
       {label && (
         <ThemedText
           variant="caption"
-          style={[styles.label, { color: playerColor }]}
+          style={[styles.label, { color: theme.colors.text }]}
         >
           {label}
         </ThemedText>
@@ -77,7 +79,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   badgeText: {
-    color: '#FFFFFF',
     fontWeight: '700',
   },
   label: {

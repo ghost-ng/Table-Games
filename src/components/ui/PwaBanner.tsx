@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../../theme/ThemeProvider';
 import { usePwa } from '../../pwa/usePwa';
+import { Button } from './Button';
+import { Card } from './Card';
 
 const DISMISSED_KEY = 'pwa_install_banner_dismissed';
 
@@ -45,67 +47,18 @@ export function PwaBanner() {
   }
 
   return (
-    <View
-      style={[
-        styles.container,
-        {
-          backgroundColor: theme.colors.surface,
-          borderColor: theme.colors.border,
-          borderRadius: theme.borderRadius.lg,
-        },
-      ]}
-    >
-      <Text
-        style={[styles.message, { color: theme.colors.text, fontFamily: theme.fonts.body }]}
-      >
-        {message}
-      </Text>
-      {action && (
-        <Pressable
-          onPress={action.onPress}
-          style={[
-            styles.action,
-            { backgroundColor: theme.colors.primary, borderRadius: theme.borderRadius.md },
-          ]}
-        >
-          <Text style={[styles.actionLabel, { fontFamily: theme.fonts.body }]}>{action.label}</Text>
-        </Pressable>
-      )}
-      {onDismiss && (
-        <Pressable onPress={onDismiss} hitSlop={8} accessibilityLabel="Dismiss">
-          <Text style={[styles.dismiss, { color: theme.colors.textMuted }]}>✕</Text>
-        </Pressable>
-      )}
-    </View>
+    <Card style={styles.container}>
+      <Text accessibilityLiveRegion="polite" style={[styles.message, { color: theme.colors.text, fontFamily: theme.fonts.body }]}>{message}</Text>
+      <View style={styles.actions}>
+        {action ? <Button title={action.label} onPress={action.onPress} size="sm" /> : null}
+        {onDismiss ? <Button title="Dismiss" onPress={onDismiss} variant="ghost" size="sm" /> : null}
+      </View>
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginHorizontal: 16,
-    marginBottom: 16,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderWidth: 1,
-  },
-  message: {
-    flex: 1,
-    fontSize: 13,
-  },
-  action: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-  },
-  actionLabel: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  dismiss: {
-    fontSize: 16,
-    paddingHorizontal: 2,
-  },
+  container: { marginHorizontal: 16, marginBottom: 16, padding: 16, gap: 12 },
+  message: { fontSize: 14, lineHeight: 20 },
+  actions: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8 },
 });

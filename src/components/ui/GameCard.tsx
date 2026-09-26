@@ -1,93 +1,59 @@
-import React from 'react';
-import { Pressable, StyleSheet, Text } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-} from 'react-native-reanimated';
+import { Image, Pressable, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
 import { useTheme } from '../../theme/ThemeProvider';
 import { haptics } from '../../utils/haptics';
+import { useWebFocusRing } from '../../utils/useWebFocusRing';
 
 export interface GameCardProps {
   game: { id: string; name: string; emoji: string };
+  image: ImageSourcePropType;
+  subtitle?: string;
+  variant?: 'game' | 'tool';
   onPress: () => void;
   width: number;
 }
 
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
-
-export function GameCard({ game, onPress, width }: GameCardProps) {
+export function GameCard({ game, image, subtitle, variant = 'game', onPress, width }: GameCardProps) {
   const { theme } = useTheme();
-  const scale = useSharedValue(1);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
-  const handlePressIn = () => {
-    scale.value = withSpring(0.95, { damping: 15, stiffness: 300 });
-  };
-
-  const handlePressOut = () => {
-    scale.value = withSpring(1, { damping: 15, stiffness: 300 });
-  };
-
-  const handlePress = () => {
-    haptics.light();
-    onPress();
-  };
+  const focus = useWebFocusRing(theme.colors.focus);
+  const isTool = variant === 'tool';
 
   return (
-    <AnimatedPressable
-      onPress={handlePress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      accessibilityLabel={`Play ${game.name}`}
+    <Pressable
+      onPress={() => { haptics.light(); onPress(); }}
+      onFocus={focus.onFocus}
+      onBlur={focus.onBlur}
+      accessibilityLabel={(isTool ? 'Open ' : 'Play ') + game.name}
       accessibilityRole="button"
-      style={[
+      style={({ pressed }) => [
         styles.card,
+        isTool && styles.tool,
         {
           width,
-          backgroundColor: theme.colors.surface,
+          backgroundColor: isTool ? theme.colors.surfaceSunken : theme.colors.surfaceRaised,
           borderColor: theme.colors.border,
           borderRadius: theme.borderRadius.lg,
-          ...theme.shadows.md,
+          opacity: pressed ? 0.8 : 1,
+          ...(!isTool ? theme.shadows.sm : {}),
         },
-        animatedStyle,
+        focus.style,
       ]}
     >
-      <Text style={styles.emoji}>{game.emoji}</Text>
-      <Text
-        style={[
-          styles.name,
-          {
-            color: theme.colors.text,
-            fontFamily: theme.fonts.body,
-          },
-        ]}
-        numberOfLines={2}
-      >
-        {game.name}
-      </Text>
-    </AnimatedPressable>
+      <Image source={image} style={isTool ? styles.toolImage : [styles.image, { height: (width - 2) * 3 / 4 }]} resizeMode="cover" accessible={false} />
+      <View style={[styles.label, isTool && styles.toolLabel]}>
+        <Text style={[styles.name, { color: theme.colors.text, fontFamily: theme.fonts.body }]}>{game.name}</Text>
+        {subtitle ? <Text style={[styles.subtitle, { color: theme.colors.textMuted, fontFamily: theme.fonts.body }]}>{subtitle}</Text> : null}
+      </View>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    aspectRatio: 0.9,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    padding: 8,
-  },
-  emoji: {
-    fontSize: 32,
-    marginBottom: 8,
-  },
-  name: {
-    fontSize: 12,
-    fontWeight: '500',
-    textAlign: 'center',
-  },
+  card: { borderWidth: 1, overflow: 'hidden', minHeight: 44 },
+  image: { width: '100%', aspectRatio: 4 / 3 },
+  label: { paddingHorizontal: 12, paddingVertical: 14, minHeight: 68, justifyContent: 'center' },
+  name: { fontSize: 15, lineHeight: 20, fontWeight: '600' },
+  subtitle: { fontSize: 13, lineHeight: 18, marginTop: 4 },
+  tool: { flexDirection: 'row', alignItems: 'center', padding: 8, gap: 8 },
+  toolImage: { width: 44, height: 44, borderRadius: 8 },
+  toolLabel: { flex: 1, paddingHorizontal: 0, paddingVertical: 4, minHeight: 44 },
 });

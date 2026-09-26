@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../src/theme/ThemeProvider';
 import { getAllGameStats, type GameStats } from '../src/storage/scores';
 import { GAMES } from '../src/utils/constants';
 import { useResponsive } from '../src/utils/layout';
+import { Button } from '../src/components/ui/Button';
+import { Card } from '../src/components/ui/Card';
 
 const SCORED_GAMES = ['boggle', 'word-search', 'crossword'];
 
@@ -28,17 +30,7 @@ function GameStatCard({ stat }: { stat: GameStats }) {
   const isScoredGame = SCORED_GAMES.includes(stat.game);
 
   return (
-    <View
-      style={[
-        styles.card,
-        {
-          backgroundColor: theme.colors.surface,
-          borderColor: theme.colors.border,
-          borderRadius: theme.borderRadius.lg,
-          ...theme.shadows.sm,
-        },
-      ]}
-    >
+    <Card style={styles.card}>
       {/* Card header */}
       <Text
         style={[
@@ -226,7 +218,7 @@ function GameStatCard({ stat }: { stat: GameStats }) {
           </Text>
         </View>
       </View>
-    </View>
+    </Card>
   );
 }
 
@@ -281,12 +273,8 @@ export default function SettingsScreen() {
       ]}
     >
       {/* Header */}
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
-          <Text style={[styles.backText, { color: theme.colors.primary }]}>
-            ← Back
-          </Text>
-        </Pressable>
+      <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
+        <Button title="← Back" onPress={() => router.back()} variant="ghost" size="sm" />
         <Text
           style={[
             styles.title,
@@ -295,7 +283,6 @@ export default function SettingsScreen() {
         >
           Stats & Settings
         </Text>
-        <View style={styles.backButton} />
       </View>
 
       <ScrollView
@@ -313,29 +300,11 @@ export default function SettingsScreen() {
         </Text>
 
         {loading ? (
-          <View
-            style={[
-              styles.emptySection,
-              {
-                backgroundColor: theme.colors.surface,
-                borderColor: theme.colors.border,
-                borderRadius: theme.borderRadius.lg,
-              },
-            ]}
-          >
+          <Card style={styles.emptySection}>
             <ActivityIndicator color={theme.colors.primary} />
-          </View>
+          </Card>
         ) : stats.length === 0 ? (
-          <View
-            style={[
-              styles.emptySection,
-              {
-                backgroundColor: theme.colors.surface,
-                borderColor: theme.colors.border,
-                borderRadius: theme.borderRadius.lg,
-              },
-            ]}
-          >
+          <Card style={styles.emptySection}>
             <Text
               style={[
                 styles.emptyText,
@@ -344,7 +313,7 @@ export default function SettingsScreen() {
             >
               No scores yet. Go play something.
             </Text>
-          </View>
+          </Card>
         ) : (
           <>
             {/* Multiplayer games */}
@@ -384,16 +353,7 @@ export default function SettingsScreen() {
         )}
 
         {/* Remove Ads section */}
-        <View
-          style={[
-            styles.section,
-            {
-              backgroundColor: theme.colors.surface,
-              borderColor: theme.colors.border,
-              borderRadius: theme.borderRadius.lg,
-            },
-          ]}
-        >
+        <Card style={styles.section}>
           <Text
             style={[
               styles.sectionTitle,
@@ -410,50 +370,14 @@ export default function SettingsScreen() {
           >
             Like it ad-free? $2.99, once, forever.
           </Text>
-          <Pressable
-            onPress={handlePurchase}
-            style={({ pressed }) => [
-              styles.purchaseButton,
-              {
-                backgroundColor: theme.colors.primary,
-                borderRadius: theme.borderRadius.md,
-                opacity: pressed ? 0.8 : 1,
-              },
-            ]}
-          >
-            <Text style={[styles.purchaseButtonText, { fontFamily: theme.fonts.body }]}>
-              Remove Ads — $2.99
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={handleRestore}
-            style={({ pressed }) => [
-              styles.restoreButton,
-              { opacity: pressed ? 0.6 : 1 },
-            ]}
-          >
-            <Text
-              style={[
-                styles.restoreButtonText,
-                { color: theme.colors.primary, fontFamily: theme.fonts.body },
-              ]}
-            >
-              Restore Purchases
-            </Text>
-          </Pressable>
-        </View>
+          <View style={styles.purchaseActions}>
+            <Button title="Remove Ads — $2.99" onPress={handlePurchase} />
+            <Button title="Restore Purchases" onPress={handleRestore} variant="ghost" size="sm" />
+          </View>
+        </Card>
 
         {/* About section */}
-        <View
-          style={[
-            styles.section,
-            {
-              backgroundColor: theme.colors.surface,
-              borderColor: theme.colors.border,
-              borderRadius: theme.borderRadius.lg,
-            },
-          ]}
-        >
+        <Card style={styles.section}>
           <Text
             style={[
               styles.sectionTitle,
@@ -486,7 +410,7 @@ export default function SettingsScreen() {
           >
             Your board game drawer, in your pocket.
           </Text>
-        </View>
+        </Card>
       </ScrollView>
     </View>
   );
@@ -501,24 +425,20 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 12,
+    borderBottomWidth: 1,
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
-  backButton: {
-    width: 70,
-  },
-  backText: {
-    fontSize: 16,
-    fontWeight: '500',
-  },
   title: {
+    flex: 1,
     fontSize: 20,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   content: {
     padding: 16,
-    gap: 12,
+    paddingTop: 24,
+    gap: 16,
   },
   sectionHeader: {
     fontSize: 22,
@@ -595,7 +515,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   wldLabel: {
-    fontSize: 12,
+    fontSize: 13,
     marginTop: 2,
   },
   streakRow: {
@@ -616,7 +536,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   streakLabel: {
-    fontSize: 11,
+    fontSize: 13,
     marginTop: 2,
     textAlign: 'center',
   },
@@ -646,23 +566,5 @@ const styles = StyleSheet.create({
     marginTop: 4,
     lineHeight: 20,
   },
-  purchaseButton: {
-    marginTop: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  purchaseButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  restoreButton: {
-    marginTop: 10,
-    paddingVertical: 8,
-    alignItems: 'center',
-  },
-  restoreButtonText: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
+  purchaseActions: { marginTop: 16, gap: 8 },
 });

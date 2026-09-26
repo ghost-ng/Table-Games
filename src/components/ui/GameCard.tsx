@@ -26,7 +26,6 @@ export function GameCard({ game, image, subtitle, variant = 'game', onPress, wid
       accessibilityRole="button"
       style={({ pressed }) => [
         styles.card,
-        isTool && styles.tool,
         {
           width,
           backgroundColor: isTool ? theme.colors.surfaceSunken : theme.colors.surfaceRaised,
@@ -38,8 +37,8 @@ export function GameCard({ game, image, subtitle, variant = 'game', onPress, wid
         focus.style,
       ]}
     >
-      <Image source={image} style={isTool ? styles.toolImage : [styles.image, { height: (width - 2) * 3 / 4 }]} resizeMode="cover" accessible={false} />
-      <View style={[styles.label, isTool && styles.toolLabel]}>
+      <Image source={image} style={[styles.image, { height: (width - 2) * 3 / 4 }]} resizeMode="cover" accessible={false} />
+      <View style={styles.label}>
         <Text style={[styles.name, { color: theme.colors.text, fontFamily: theme.fonts.body }]}>{game.name}</Text>
         {subtitle ? <Text style={[styles.subtitle, { color: theme.colors.textMuted, fontFamily: theme.fonts.body }]}>{subtitle}</Text> : null}
       </View>
@@ -53,7 +52,4 @@ const styles = StyleSheet.create({
   label: { paddingHorizontal: 12, paddingVertical: 14, minHeight: 68, justifyContent: 'center' },
   name: { fontSize: 15, lineHeight: 20, fontWeight: '600' },
   subtitle: { fontSize: 13, lineHeight: 18, marginTop: 4 },
-  tool: { flexDirection: 'row', alignItems: 'center', padding: 8, gap: 8 },
-  toolImage: { width: 44, height: 44, borderRadius: 8 },
-  toolLabel: { flex: 1, paddingHorizontal: 0, paddingVertical: 4, minHeight: 44 },
 });

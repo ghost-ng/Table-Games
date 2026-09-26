@@ -1,4 +1,5 @@
 import { Modal, View, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { useReducedMotion } from 'react-native-reanimated';
 import { useTheme } from '../../theme/ThemeProvider';
 import { ThemedText } from './ThemedText';
 import { Button } from './Button';
@@ -37,8 +38,9 @@ function DifficultyOption({ option, onSelect }: { option: (typeof DIFFICULTY_OPT
 
 export function DifficultySelector({ visible, onSelect, onClose, gameName }: DifficultySelectorProps) {
   const { theme } = useTheme();
+  const reducedMotion = useReducedMotion();
   return (
-    <Modal accessibilityLabel={gameName + ' difficulty'} visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal accessibilityLabel={gameName + ' difficulty'} visible={visible} transparent animationType={reducedMotion ? 'none' : 'fade'} onRequestClose={onClose}>
       <View style={[styles.backdrop, { backgroundColor: theme.colors.overlay }]}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} tabIndex={-1} focusable={false} accessible={false} importantForAccessibility="no" />
         <ScrollView contentContainerStyle={styles.scroll} style={styles.scrollView}>

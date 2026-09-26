@@ -1,4 +1,5 @@
 import { Modal, View, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { useReducedMotion } from 'react-native-reanimated';
 import { useTheme } from '../../theme/ThemeProvider';
 import { ThemedText } from './ThemedText';
 import { Button } from './Button';
@@ -13,8 +14,9 @@ export interface ModeSelectorProps {
 
 export function ModeSelector({ visible, onSelect, onClose, gameName }: ModeSelectorProps) {
   const { theme } = useTheme();
+  const reducedMotion = useReducedMotion();
   return (
-    <Modal accessibilityLabel={gameName + ' game mode'} visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal accessibilityLabel={gameName + ' game mode'} visible={visible} transparent animationType={reducedMotion ? 'none' : 'fade'} onRequestClose={onClose}>
       <View style={[styles.backdrop, { backgroundColor: theme.colors.overlay }]}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} tabIndex={-1} focusable={false} accessible={false} importantForAccessibility="no" />
         <ScrollView contentContainerStyle={styles.scroll} style={styles.scrollView}>

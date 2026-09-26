@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet, Modal, Pressable, ScrollView } from 'react-native';
+import { useReducedMotion } from 'react-native-reanimated';
 import { useTheme } from '../../theme/ThemeProvider';
 import { retroTheme } from '../../theme/themes/retro';
 import { arcadeTheme } from '../../theme/themes/arcade';
@@ -40,8 +41,9 @@ function ThemeOption({ option, onClose }: { option: (typeof THEME_OPTIONS)[numbe
 
 export function ThemePicker({ visible, onClose }: ThemePickerProps) {
   const { theme } = useTheme();
+  const reducedMotion = useReducedMotion();
   return (
-    <Modal accessibilityLabel="Choose your vibe" visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal accessibilityLabel="Choose your vibe" visible={visible} transparent animationType={reducedMotion ? 'none' : 'fade'} onRequestClose={onClose}>
       <View style={[styles.backdrop, { backgroundColor: theme.colors.overlay }]}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} tabIndex={-1} focusable={false} accessible={false} importantForAccessibility="no" />
         <ScrollView style={styles.scrollView} contentContainerStyle={styles.scroll}>

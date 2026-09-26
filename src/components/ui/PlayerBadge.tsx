@@ -53,7 +53,7 @@ export function PlayerBadge({
             { fontSize, color: theme.colors.text },
           ]}
         >
-          {(label ?? defaultLabel).charAt(0).toUpperCase()}
+          {label === undefined ? defaultLabel : label.charAt(0).toUpperCase()}
         </ThemedText>
       </View>
       {label && (

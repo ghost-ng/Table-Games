@@ -257,7 +257,7 @@ export default function WordleScreen() {
           accessibilityLabel={`Guess ${row + 1}, letter ${col + 1}: ${letter}, ${evaluation}`}
         >
           {text}
-          <ThemedText variant="caption" style={{ position: 'absolute', bottom: 1, fontSize: Math.max(9, tileSize * 0.18), color: theme.name === 'arcade' ? theme.colors.background : theme.colors.onPrimary }}>
+          <ThemedText variant="caption" style={{ position: 'absolute', bottom: 1, fontSize: Math.max(9, tileSize * 0.18), color: theme.colors.text, backgroundColor: theme.colors.surfaceRaised, borderRadius: 2, paddingHorizontal: 2 }}>
             {evaluation === 'correct' ? '✓' : evaluation === 'present' ? '•' : '×'}
           </ThemedText>
         </Animated.View>
@@ -290,7 +290,7 @@ export default function WordleScreen() {
             width: wide ? keyWidth * 1.5 + KEY_GAP / 2 : keyWidth,
             height: keyHeight,
             borderRadius: theme.borderRadius.sm,
-            backgroundColor: state ? stateColor(state) : theme.colors.surface,
+            backgroundColor: state ? theme.colors.surfaceRaised : theme.colors.surface,
             borderColor: state ? stateColor(state) : theme.colors.border,
             opacity: pressed ? 0.7 : 1,
             borderBottomWidth: state ? 3 : 1,
@@ -302,7 +302,7 @@ export default function WordleScreen() {
           style={[
             styles.keyLabel,
             {
-              color: state ? (theme.name === 'arcade' ? theme.colors.background : theme.colors.onPrimary) : theme.colors.text,
+              color: theme.colors.text,
               fontSize: wide ? 10 : 14,
             },
           ]}
@@ -310,7 +310,7 @@ export default function WordleScreen() {
           {key === 'BACK' ? 'DEL' : key}
 
         </ThemedText>
-        {state ? <ThemedText variant="caption" style={{ position: 'absolute', bottom: 1, right: 2, fontSize: 9, color: theme.name === 'arcade' ? theme.colors.background : theme.colors.onPrimary }}>{state === 'correct' ? '✓' : state === 'present' ? '•' : '×'}</ThemedText> : null}
+        {state ? <ThemedText variant="caption" style={{ position: 'absolute', bottom: 1, right: 2, fontSize: 9, color: theme.colors.text, backgroundColor: theme.colors.surfaceRaised, borderRadius: 2, paddingHorizontal: 2 }}>{state === 'correct' ? '✓' : state === 'present' ? '•' : '×'}</ThemedText> : null}
       </GamePressable>
     );
   };

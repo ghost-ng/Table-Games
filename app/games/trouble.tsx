@@ -973,7 +973,13 @@ export default function TroubleScreen() {
       </Animated.View>
     ) : (
       <View style={styles.bottomButtons}>
-        <Button title="Restart" onPress={() => startGame(totalPlayers)} variant="secondary" size="sm" />
+        <ScrollView horizontal style={{ flexGrow: 0, maxWidth: '100%' }} contentContainerStyle={{ gap: 8, paddingHorizontal: 4 }}>
+          <Button title="Roll" onPress={doRoll} disabled={!canRoll} size="sm" />
+          {phase === 'choosing' && humanTurn && legal.map((move) => (
+            <Button key={move.peg} title={`Move peg ${move.peg + 1}`} onPress={() => onTargetPress(move)} size="sm" />
+          ))}
+          <Button title="Restart" onPress={() => startGame(totalPlayers)} variant="secondary" size="sm" />
+        </ScrollView>
       </View>
     );
 

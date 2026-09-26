@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { getHangmanStage } from './hangmanStages';
 
-test('each miss maps directly to its image, including the empty gallows', () => {
+test('each miss maps directly to its image, including the empty platform', () => {
   for (const stage of [0, 1, 2, 3, 4, 5, 6] as const) {
     assert.equal(getHangmanStage(stage), stage);
   }

@@ -85,7 +85,7 @@ function AnimatedPiece({
         animatedStyle,
       ]}
     >
-      <ThemedText variant="label" style={{ color: theme.colors.text, fontSize: Math.max(11, size * 0.24) }}>{isWinning ? '✓' : mark}</ThemedText>
+      <ThemedText variant="label" style={{ color: theme.colors.text, backgroundColor: theme.colors.surfaceRaised, borderRadius: size / 2, paddingHorizontal: 3, fontSize: Math.max(11, size * 0.24) }}>{isWinning ? '✓' : mark}</ThemedText>
     </Animated.View>
   );
 }

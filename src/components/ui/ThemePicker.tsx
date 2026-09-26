@@ -32,7 +32,7 @@ function ThemeOption({ option, onClose }: { option: (typeof THEME_OPTIONS)[numbe
         <Text style={[styles.optionName, { color: theme.colors.text, fontFamily: theme.fonts.heading }]}>{option.name}{isActive ? ' ✓' : ''}</Text>
         <Text style={[styles.optionDesc, { color: theme.colors.textMuted, fontFamily: theme.fonts.body }]}>{option.description}</Text>
         <View style={styles.colorSwatches} accessible={false}>
-          {[colors.background, colors.primary, colors.accent, colors.success].map((color, i) => <View key={i} style={[styles.swatch, { backgroundColor: color, borderColor: theme.colors.border }]} />)}
+          {[colors.background, colors.primary, colors.accent ?? colors.secondary, colors.success].map((color, i) => <View key={i} style={[styles.swatch, { backgroundColor: color, borderColor: theme.colors.border }]} />)}
         </View>
       </View>
     </Pressable>

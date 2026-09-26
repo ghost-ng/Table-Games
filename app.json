@@ -1,18 +1,20 @@
 {
   "expo": {
-    "name": "table-games",
+    "name": "Table Games",
     "slug": "table-games",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/icon-new.png",
     "userInterfaceStyle": "light",
+    "scheme": "table-games",
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/splash-icon-new.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#FAFAFA"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.tablegames.app"
     },
     "android": {
       "adaptiveIcon": {
@@ -21,10 +23,21 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "package": "com.tablegames.app"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
-    }
+      "name": "Table Games",
+      "shortName": "Table Games",
+      "description": "Classic table games you can play solo or pass-and-play, fully offline.",
+      "themeColor": "#243A49",
+      "backgroundColor": "#243A49",
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font"
+    ]
   }
 }

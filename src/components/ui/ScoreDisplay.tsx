@@ -1,0 +1,97 @@
+import React from 'react';
+import { View, StyleSheet } from 'react-native';
+import { useTheme } from '../../theme/ThemeProvider';
+import { ThemedText } from './ThemedText';
+
+export interface ScoreDisplayProps {
+  scores: {
+    player1: number;
+    player2: number;
+  };
+  labels?: {
+    player1: string;
+    player2: string;
+  };
+}
+
+export function ScoreDisplay({
+  scores,
+  labels = { player1: 'Player 1', player2: 'Player 2' },
+}: ScoreDisplayProps) {
+  const { theme } = useTheme();
+
+  return (
+    <View
+      style={[
+        styles.container,
+        {
+          backgroundColor: theme.colors.surface,
+          borderTopWidth: 1,
+          borderTopColor: theme.colors.border,
+        },
+      ]}
+    >
+      <View style={styles.playerScore}>
+        <ThemedText
+          variant="caption"
+          style={[styles.label, { color: theme.colors.player1 }]}
+        >
+          {labels.player1}
+        </ThemedText>
+        <ThemedText
+          variant="heading"
+          style={[styles.score, { color: theme.colors.player1 }]}
+        >
+          {scores.player1}
+        </ThemedText>
+      </View>
+
+      <View
+        style={[styles.divider, { backgroundColor: theme.colors.border }]}
+      />
+
+      <View style={styles.playerScore}>
+        <ThemedText
+          variant="caption"
+          style={[styles.label, { color: theme.colors.player2 }]}
+        >
+          {labels.player2}
+        </ThemedText>
+        <ThemedText
+          variant="heading"
+          style={[styles.score, { color: theme.colors.player2 }]}
+        >
+          {scores.player2}
+        </ThemedText>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    width: '100%',
+  },
+  playerScore: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  label: {
+    marginBottom: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  score: {
+    fontSize: 28,
+  },
+  divider: {
+    width: 1,
+    height: 40,
+    marginHorizontal: 16,
+  },
+});

@@ -6,6 +6,8 @@ Games: Tic Tac Toe, Four in a Row, Checkers, Chinese Checkers, Mancala, Pop & Ra
 
 Tools: Coin Flip and Dice.
 
+Game labels use generic or descriptive names and should avoid implying affiliation with or endorsement by another product or rights holder. If a rights holder raises a concern about a label, change it to an appropriate alternative; this naming policy makes no legal guarantees.
+
 The source is publicly visible for inspection. It is proprietary and is not open source; see the [no-reuse terms](LICENSE).
 
 ## Install in WSL 2 / Linux
@@ -65,6 +67,10 @@ npm run build:pages
 That build targets `/Table-Games/`; a custom deployment can set `EXPO_BASE_URL` to its own base path. Use a root-path build for the root-path local preview above. Pages deployment uses the workflow in `.github/workflows/deploy-pages.yml` and requires GitHub Pages configured for GitHub Actions in repository settings.
 
 ## Architecture
+
+Each game is generally split among its screen under `app/games/`, a pure rules/state engine under `src/engines/`, and AI or strategy code under `src/ai/` where applicable. The screen coordinates player input and rendering; the engine handles game state independently of the interface.
+
+`ModeSelector` in `src/components/ui/` is the reusable pre-game choice pattern for games that need Solo or Pass & Play selection. Some tools and utilities intentionally open directly: Coin Flip and Dice bypass the full pre-game selector and game-flow entry pattern while still reusing the shared `GameShell` layout.
 
 | Location | Responsibility |
 | --- | --- |

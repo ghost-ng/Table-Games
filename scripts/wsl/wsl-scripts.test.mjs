@@ -1,3 +1,4 @@
+import './preview-server.test.mjs';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { accessSync, chmodSync, constants, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
@@ -83,6 +84,14 @@ test('preview mode forwards an explicit numeric port', (t) => {
   const f = fixture(t);
   success(f.run('run.sh', ['preview', '4321']));
   assert.ok(f.calls().endsWith('arg=run\narg=preview\narg=--\narg=4321\n'));
+});
+
+test('preview mode forwards a configured base with and without a port', (t) => {
+  const f = fixture(t);
+  success(f.run('run.sh', ['preview', '--base', '/Table-Games/']));
+  assert.ok(f.calls().endsWith('arg=run\narg=preview\narg=--\narg=--base\narg=/Table-Games/\n'));
+  success(f.run('run.sh', ['preview', '4321', '--base', '/Table-Games/']));
+  assert.ok(f.calls().endsWith('arg=run\narg=preview\narg=--\narg=4321\narg=--base\narg=/Table-Games/\n'));
 });
 
 test('development mode forwards an explicit numeric port', (t) => {

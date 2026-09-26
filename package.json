@@ -1,16 +1,37 @@
 {
   "name": "table-games",
   "version": "1.0.0",
+  "description": "A collection of local multiplayer table games and game-night tools built with Expo.",
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ghost-ng/Table-Games.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ghost-ng/Table-Games/issues"
+  },
+  "homepage": "https://ghost-ng.github.io/Table-Games/",
+  "engines": {
+    "node": ">=22 <23",
+    "npm": ">=10"
+  },
+  "packageManager": "npm@11.4.2",
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start --web",
+    "dev": "npm run start",
     "start:native": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "build": "expo export -p web --clear && node scripts/build-pwa.mjs",
+    "build:pages": "EXPO_BASE_URL=/Table-Games npm run build",
     "preview": "node scripts/serve.mjs",
     "typecheck": "tsc --noEmit",
-    "test:unit": "tsx --test src/utils/responsive.test.ts src/engines/hangman.test.ts src/utils/hangmanStages.test.ts"
+    "test:unit": "tsx --test src/utils/responsive.test.ts src/engines/hangman.test.ts src/utils/hangmanStages.test.ts",
+    "test:wsl": "node --test scripts/wsl/wsl-scripts.test.mjs",
+    "verify": "npm run test:unit && npm run typecheck && npm run build",
+    "verify:all": "npm run test:wsl && npm run verify",
+    "clean": "node scripts/clean.mjs"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^3.0.1",

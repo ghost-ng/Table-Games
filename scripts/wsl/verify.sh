@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
+source "$(dirname -- "${BASH_SOURCE[0]}")/lib.sh"
+
+cd -- "$(repo_root)"
+require_node_22
+require_npm_10
+exec npm run verify:all

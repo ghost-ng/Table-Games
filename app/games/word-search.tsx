@@ -705,6 +705,7 @@ export default function WordSearchScreen() {
         onRematch={handleRematch}
         onHome={handleHome}
         gameName="Word Search"
+        playerNames={playerNames}
       />
     </View>
   );

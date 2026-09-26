@@ -742,21 +742,13 @@ export default function BoggleScreen() {
       } else {
         const p1 = gameState.scoreP1;
         const p2 = gameState.scoreP2;
-        const winner = p1 > p2 ? 'win' : p1 < p2 ? 'loss' : 'draw';
+        // One record per game (like the other games): the winner, or a single draw.
         recordGameResult({
           game: 'boggle',
           mode: 'multiplayer',
-          player: 'Player 1',
-          score: p1,
-          result: winner,
-          durationSeconds,
-        });
-        recordGameResult({
-          game: 'boggle',
-          mode: 'multiplayer',
-          player: 'Player 2',
-          score: p2,
-          result: winner === 'win' ? 'loss' : winner === 'loss' ? 'win' : 'draw',
+          player: p1 >= p2 ? 'Player 1' : 'Player 2',
+          score: Math.max(p1, p2),
+          result: p1 === p2 ? 'draw' : 'win',
           durationSeconds,
         });
       }
@@ -846,7 +838,7 @@ export default function BoggleScreen() {
       <Stack.Screen
         options={{
           headerShown: true,
-          title: 'Boggle',
+          title: 'Word Grid',
           headerStyle: { backgroundColor: theme.colors.surface },
           headerTintColor: theme.colors.text,
           headerLeft: () => (
@@ -1135,7 +1127,7 @@ export default function BoggleScreen() {
         result={getModalResult()}
         onRematch={handleRematch}
         onHome={handleHome}
-        gameName="Boggle"
+        gameName="Word Grid"
       />
     </View>
   );

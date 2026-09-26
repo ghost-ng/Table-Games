@@ -18,6 +18,8 @@ export interface GameOverModalProps {
   onRematch: () => void;
   onHome: () => void;
   gameName: string;
+  /** Display names, e.g. { player1: 'You', player2: 'AI' } in single-player games. */
+  playerNames?: { player1: string; player2: string };
 }
 
 export function GameOverModal({
@@ -26,12 +28,16 @@ export function GameOverModal({
   onRematch,
   onHome,
   gameName,
+  playerNames,
 }: GameOverModalProps) {
   const { theme } = useTheme();
+  const nameOf = (p: 'player1' | 'player2') =>
+    playerNames?.[p] || (p === 'player1' ? 'Player 1' : 'Player 2');
 
   const getWinnerText = () => {
     if (result.winner === 'draw') return 'Draw!';
-    return result.winner === 'player1' ? 'Player 1 Wins!' : 'Player 2 Wins!';
+    const name = nameOf(result.winner);
+    return name === 'You' ? 'You Win!' : `${name} Wins!`;
   };
 
   const getWinnerColor = () => {
@@ -80,7 +86,7 @@ export function GameOverModal({
                   variant="caption"
                   style={{ color: theme.colors.player1 }}
                 >
-                  Player 1
+                  {nameOf('player1')}
                 </ThemedText>
                 <ThemedText
                   variant="heading"
@@ -99,7 +105,7 @@ export function GameOverModal({
                   variant="caption"
                   style={{ color: theme.colors.player2 }}
                 >
-                  Player 2
+                  {nameOf('player2')}
                 </ThemedText>
                 <ThemedText
                   variant="heading"

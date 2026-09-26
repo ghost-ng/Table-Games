@@ -40,11 +40,12 @@ export function TurnIndicator({
   });
 
   const displayName = playerNames[currentPlayer];
+  const label = displayName === 'You' ? 'Your Turn' : `${displayName}'s Turn`;
 
   return (
     <Animated.View style={[styles.container, animatedStyle]}>
       <ThemedText variant="label" style={styles.text}>
-        {displayName}'s Turn
+        {label}
       </ThemedText>
     </Animated.View>
   );

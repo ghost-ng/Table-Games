@@ -616,6 +616,7 @@ export default function CheckersScreen() {
         onRematch={resetGame}
         onHome={() => router.back()}
         gameName="Checkers"
+        playerNames={playerNames}
       />
     </View>
   );

@@ -482,6 +482,7 @@ export default function HangmanScreen() {
         onRematch={handleRematch}
         onHome={handleHome}
         gameName="Hangman"
+        playerNames={playerNames}
       />
     </View>
   );

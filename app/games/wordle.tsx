@@ -157,20 +157,13 @@ export default function WordleScreen() {
         durationSeconds,
       });
     } else {
+      // One record per game (like the other games): the winner of the round.
       recordGameResult({
         game: 'wordle',
         mode: 'multiplayer',
-        player: PLAYER_LABEL[guesser],
+        player: PLAYER_LABEL[gameState.isWon ? guesser : setter],
         score,
-        result: gameState.isWon ? 'win' : 'loss',
-        durationSeconds,
-      });
-      recordGameResult({
-        game: 'wordle',
-        mode: 'multiplayer',
-        player: PLAYER_LABEL[setter],
-        score: 0,
-        result: gameState.isWon ? 'loss' : 'win',
+        result: 'win',
         durationSeconds,
       });
     }
@@ -338,7 +331,7 @@ export default function WordleScreen() {
           </ThemedText>
         </Pressable>
         <ThemedText variant="heading" style={styles.title}>
-          Wordle
+          Word Guess
         </ThemedText>
         <View style={styles.backButton} />
       </View>

@@ -11,7 +11,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../src/theme/ThemeProvider';
-import { GAMES, GAME_THUMBNAILS } from '../src/utils/constants';
+import { GAMES, GAME_THUMBNAILS, TOOLS } from '../src/utils/constants';
 import { ModeSelector } from '../src/components/ui/ModeSelector';
 import { ThemePicker } from '../src/components/ui/ThemePicker';
 import { PwaBanner } from '../src/components/ui/PwaBanner';
@@ -25,8 +25,8 @@ export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { isTablet, contentMaxWidth, contentWidth } = useResponsive();
-  // 9 games → a 3×3 grid at every size; cards simply grow with the content column.
-  const numColumns = 3;
+  // 12 games → 3 columns on phones, 4 on tablets/desktop; both fill whole rows.
+  const numColumns = isTablet ? 4 : 3;
   const cardWidth =
     (contentWidth - GRID_PADDING * 2 - CARD_GAP * (numColumns - 1)) / numColumns;
   const [selectedGame, setSelectedGame] = useState<string | null>(null);
@@ -129,7 +129,7 @@ export default function HomeScreen() {
         </Pressable>
       </View>
 
-      {/* Game Grid */}
+      {/* Game Grid (tools follow as a footer section) */}
       <FlatList
         data={GAMES}
         renderItem={renderGameCard}
@@ -140,6 +140,45 @@ export default function HomeScreen() {
         contentContainerStyle={styles.grid}
         columnWrapperStyle={styles.row}
         showsVerticalScrollIndicator={false}
+        ListFooterComponent={
+          <View style={styles.toolsSection}>
+            <Text
+              style={[
+                styles.sectionTitle,
+                { color: theme.colors.text, fontFamily: theme.fonts.heading },
+              ]}
+            >
+              Tools
+            </Text>
+            <View style={styles.row}>
+              {TOOLS.map((tool) => (
+                <Pressable
+                  key={tool.id}
+                  onPress={() => router.push(`/games/${tool.id}`)}
+                  style={({ pressed }) => [
+                    styles.toolCard,
+                    {
+                      backgroundColor: theme.colors.surface,
+                      borderColor: theme.colors.border,
+                      borderRadius: theme.borderRadius.lg,
+                      transform: [{ scale: pressed ? 0.97 : 1 }],
+                    },
+                  ]}
+                >
+                  <Image source={GAME_THUMBNAILS[tool.id]} style={styles.toolImage} resizeMode="cover" />
+                  <Text
+                    style={[
+                      styles.toolName,
+                      { color: theme.colors.text, fontFamily: theme.fonts.body, fontSize: isTablet ? 16 : 14 },
+                    ]}
+                  >
+                    {tool.name}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        }
       />
 
       <PwaBanner />
@@ -164,6 +203,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    overflow: 'hidden',
     alignSelf: 'center' as const,
     width: '100%' as const,
   },
@@ -213,6 +253,31 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 4,
     alignItems: 'center',
+  },
+  toolsSection: {
+    marginTop: 8,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  toolCard: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    overflow: 'hidden',
+    height: 64,
+  },
+  toolImage: {
+    width: 64,
+    height: 64,
+  },
+  toolName: {
+    flex: 1,
+    paddingHorizontal: 12,
+    fontWeight: '600',
   },
   cardName: {
     fontSize: 11,

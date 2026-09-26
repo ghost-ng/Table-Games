@@ -309,6 +309,7 @@ export default function TicTacToeScreen() {
         onRematch={handleRematch}
         onHome={handleHome}
         gameName="Tic Tac Toe"
+        playerNames={playerNames}
       />
     </View>
   );

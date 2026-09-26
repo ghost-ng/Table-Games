@@ -282,7 +282,7 @@ export default function ConnectFourScreen() {
           visible={showDifficultySelector}
           onSelect={handleDifficultySelect}
           onClose={() => router.back()}
-          gameName="Connect 4"
+          gameName="Four in a Row"
         />
       </View>
     );
@@ -308,7 +308,7 @@ export default function ConnectFourScreen() {
           </ThemedText>
         </Pressable>
         <ThemedText variant="heading" style={styles.title}>
-          Connect 4
+          Four in a Row
         </ThemedText>
         <View style={styles.backButton} />
       </View>
@@ -456,7 +456,8 @@ export default function ConnectFourScreen() {
         result={gameOverResult}
         onRematch={handleRematch}
         onHome={handleHome}
-        gameName="Connect 4"
+        gameName="Four in a Row"
+        playerNames={playerNames}
       />
     </View>
   );

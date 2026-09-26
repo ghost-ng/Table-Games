@@ -33,6 +33,7 @@ export function GameShell({
   return (
     <ImageBackground
       source={theme.backgroundImage}
+      imageStyle={styles.backgroundImage}
       style={[
         styles.background,
         {
@@ -67,7 +68,8 @@ export function GameShell({
 }
 
 const styles = StyleSheet.create({
-  background: { flex: 1 },
+  background: { flex: 1, overflow: 'hidden' },
+  backgroundImage: { width: '100%', height: '100%' },
   canvas: { flex: 1, minHeight: 0, width: '100%', alignSelf: 'center' },
   content: { flex: 1, minHeight: 0, alignSelf: 'stretch' },
   scrollContent: { flexGrow: 1, paddingVertical: 12 },

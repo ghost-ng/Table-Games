@@ -1,5 +1,7 @@
 // Hangman game engine - pure game logic with no UI dependencies
 
+export const MAX_WRONG_GUESSES = 6;
+
 export type GameState = {
   secretWord: string;           // The word to guess (uppercase)
   guessedLetters: Set<string>;  // Letters already guessed
@@ -55,7 +57,7 @@ export function createGame(word: string): GameState {
     secretWord,
     guessedLetters: new Set<string>(),
     wrongGuesses: 0,
-    maxWrongGuesses: 6,
+    maxWrongGuesses: MAX_WRONG_GUESSES,
     displayWord: [],
     isGameOver: false,
     isWinner: false,

@@ -10,7 +10,7 @@
     "build": "expo export -p web --clear && node scripts/build-pwa.mjs",
     "preview": "node scripts/serve.mjs",
     "typecheck": "tsc --noEmit",
-    "test:unit": "tsx --test src/utils/responsive.test.ts"
+    "test:unit": "tsx --test src/utils/responsive.test.ts src/engines/hangman.test.ts src/utils/hangmanStages.test.ts"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^3.0.1",

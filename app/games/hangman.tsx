@@ -11,7 +11,9 @@ import { useRouter, Stack, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useTheme } from '../../src/theme/ThemeProvider';
-import { TurnIndicator } from '../../src/components/ui/TurnIndicator';
+import { GameShell } from '../../src/components/ui/GameShell';
+import { Card } from '../../src/components/ui/Card';
+import { StatusRail } from '../../src/components/ui/StatusRail';
 import { GameOverModal } from '../../src/components/ui/GameOverModal';
 import { ThemedText } from '../../src/components/ui/ThemedText';
 import { Button } from '../../src/components/ui/Button';
@@ -24,6 +26,8 @@ import {
 import { selectWord } from '../../src/ai/hangman-ai';
 import { DifficultySelector, type Difficulty } from '../../src/components/ui/DifficultySelector';
 import { useResponsive } from '../../src/utils/layout';
+import { getHangmanStage } from '../../src/utils/hangmanStages';
+import { useWebFocusRing } from '../../src/utils/useWebFocusRing';
 
 
 // ─── QWERTY keyboard rows ───────────────────────────────────────────────────
@@ -34,36 +38,62 @@ const KEYBOARD_ROWS = [
 ];
 
 // ─── Hangman Figure ─────────────────────────────────────────────────────────
-// Pure image-based: each stage is a unique DALL-E illustration with correct progression
-const HANGMAN_STAGES = [
-  require('../../assets/pieces/hangman-1.webp'), // empty gallows
-  require('../../assets/pieces/hangman-2.webp'), // head only
-  require('../../assets/pieces/hangman-3.webp'), // head + body
-  require('../../assets/pieces/hangman-4.webp'), // head + body + arms
-  require('../../assets/pieces/hangman-5.webp'), // head + body + arms + 1 leg
-  require('../../assets/pieces/hangman-6.webp'), // complete figure
+const HANGMAN_STAGE_IMAGES = [
+  require('../../assets/pieces/hangman/hangman-0.webp'),
+  require('../../assets/pieces/hangman/hangman-1.webp'),
+  require('../../assets/pieces/hangman/hangman-2.webp'),
+  require('../../assets/pieces/hangman/hangman-3.webp'),
+  require('../../assets/pieces/hangman/hangman-4.webp'),
+  require('../../assets/pieces/hangman/hangman-5.webp'),
+  require('../../assets/pieces/hangman/hangman-6.webp'),
 ];
 
 interface HangmanFigureProps {
   wrongGuesses: number;
-  color: string;
-  gallowsColor: string;
   size: number;
 }
 
 function HangmanFigure({ wrongGuesses, size }: HangmanFigureProps) {
-  const stageIndex = Math.min(wrongGuesses, 6) - 1;
+  const stage = getHangmanStage(wrongGuesses);
 
   return (
     <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
-      {wrongGuesses > 0 && (
         <Image
-          source={HANGMAN_STAGES[stageIndex]}
+          source={HANGMAN_STAGE_IMAGES[stage]}
+          accessibilityLabel={`Hangman stage ${stage} of 6`}
+          testID={`hangman-stage-${stage}`}
           style={{ width: size, height: size }}
           resizeMode="contain"
         />
-      )}
     </View>
+  );
+}
+
+function LetterKey({ letter, guessed, correct, disabled, onPress }: {
+  letter: string; guessed: boolean; correct: boolean; disabled: boolean; onPress: () => void;
+}) {
+  const { theme } = useTheme();
+  const focus = useWebFocusRing(theme.colors.focus);
+  const color = guessed ? (correct ? theme.colors.success : theme.colors.error) : theme.colors.text;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={guessed ? `${letter}, ${correct ? 'correct' : 'incorrect'}` : letter}
+      accessibilityState={{ disabled }}
+      disabled={disabled}
+      onPress={onPress}
+      onFocus={focus.onFocus}
+      onBlur={focus.onBlur}
+      style={({ pressed }) => [styles.key, {
+        backgroundColor: guessed ? theme.colors.surfaceSunken : theme.colors.surfaceRaised,
+        borderColor: guessed ? color : theme.colors.border,
+        borderRadius: theme.borderRadius.md,
+        opacity: disabled && !guessed ? 0.45 : pressed ? 0.75 : 1,
+      }, focus.style]}
+    >
+      <ThemedText variant="label" style={{ color, fontSize: 17 }}>{letter}</ThemedText>
+      {guessed && <ThemedText style={{ color, fontSize: 10, lineHeight: 11 }}>{correct ? '✓' : '×'}</ThemedText>}
+    </Pressable>
   );
 }
 
@@ -74,15 +104,15 @@ export default function HangmanScreen() {
   const { theme } = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { contentWidth, contentMaxWidth, height, isTablet } = useResponsive();
+  const { contentWidth, height, isTablet } = useResponsive();
   // Shrinks on short/landscape screens so the word and keyboard stay in view.
-  const figureSize = Math.min(contentWidth - 64, isTablet ? 280 : 220, Math.max(140, height * 0.3));
+  const figureSize = Math.min(contentWidth - 64, isTablet ? 280 : 200, Math.max(120, height * 0.24));
 
   // Mode & phase
   const { mode: modeParam } = useLocalSearchParams<{ mode: string }>();
   const resolvedMode = (modeParam === 'multiplayer' ? 'multiplayer' : 'single') as 'single' | 'multiplayer';
 
-  const [mode, setMode] = useState<'single' | 'multiplayer'>(resolvedMode);
+  const [mode] = useState<'single' | 'multiplayer'>(resolvedMode);
   const [phase, setPhase] = useState<Phase>(resolvedMode === 'multiplayer' ? 'wordEntry' : 'modeSelect');
   const [showDifficultySelector, setShowDifficultySelector] = useState(resolvedMode === 'single');
   const [difficulty, setDifficulty] = useState<Difficulty>('medium');
@@ -191,7 +221,7 @@ export default function HangmanScreen() {
       setGameState(null);
       setPhase('wordEntry');
     }
-  }, [isSinglePlayer]);
+  }, [isSinglePlayer, difficulty]);
 
   const handleHome = useCallback(() => {
     setShowModal(false);
@@ -213,36 +243,14 @@ export default function HangmanScreen() {
     ? { player1: 'You', player2: 'AI' }
     : { player1: 'Player 1', player2: 'Player 2' };
 
-  // ── Render helpers ──────────────────────────────────────────────────────
-  const getLetterColor = (letter: string) => {
-    if (!gameState) return undefined;
-    if (!gameState.guessedLetters.has(letter)) return undefined;
-    return gameState.secretWord.includes(letter)
-      ? theme.colors.success
-      : theme.colors.error;
-  };
-
-  const isLetterDisabled = (letter: string) => {
-    if (!gameState) return true;
-    return gameState.guessedLetters.has(letter) || gameState.isGameOver;
-  };
+  const remaining = gameState ? gameState.maxWrongGuesses - gameState.wrongGuesses : 6;
 
   // ─── RENDER ─────────────────────────────────────────────────────────────
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background, maxWidth: contentMaxWidth }]}>
+    <GameShell title="Hangman" onBack={() => router.back()} contentMaxWidth={760}>
       <Stack.Screen
         options={{
-          headerShown: true,
-          title: 'Hangman',
-          headerStyle: { backgroundColor: theme.colors.surface },
-          headerTintColor: theme.colors.text,
-          headerLeft: () => (
-            <Pressable onPress={() => router.back()} style={styles.backButton}>
-              <Animated.Text style={{ color: theme.colors.text, fontSize: 16 }}>
-                ← Back
-              </Animated.Text>
-            </Pressable>
-          ),
+          headerShown: false,
         }}
       />
 
@@ -257,6 +265,8 @@ export default function HangmanScreen() {
       {/* ── 2P: Enter Word ────────────────────────────────────────────── */}
       {phase === 'wordEntry' && (
         <View style={styles.centeredPhase}>
+          <Card style={styles.setupCard}>
+          <ThemedText variant="caption" style={{ color: theme.colors.primary, textAlign: 'center', marginBottom: 12 }}>PASS & PLAY</ThemedText>
           <ThemedText variant="heading" style={styles.phaseTitle}>
             Player 1
           </ThemedText>
@@ -278,12 +288,14 @@ export default function HangmanScreen() {
             autoCapitalize="characters"
             autoCorrect={false}
             secureTextEntry
+            accessibilityLabel="Secret word"
+            onSubmitEditing={handleWordSubmit}
             style={[
               styles.textInput,
               {
                 color: theme.colors.text,
                 borderColor: wordError ? theme.colors.error : theme.colors.border,
-                backgroundColor: theme.colors.surface,
+                backgroundColor: theme.colors.surfaceSunken,
                 borderRadius: theme.borderRadius.md,
                 fontFamily: theme.fonts.body,
               },
@@ -302,12 +314,15 @@ export default function HangmanScreen() {
           <View style={{ marginTop: 20, width: '100%', maxWidth: 260 }}>
             <Button title="Submit" onPress={handleWordSubmit} variant="primary" size="lg" />
           </View>
+          </Card>
         </View>
       )}
 
       {/* ── 2P: Pass device ───────────────────────────────────────────── */}
       {phase === 'passDevice' && (
         <View style={styles.centeredPhase}>
+          <Card style={styles.setupCard}>
+          <ThemedText variant="caption" style={{ color: theme.colors.primary, textAlign: 'center', marginBottom: 12 }}>YOUR WORD IS READY</ThemedText>
           <ThemedText variant="heading" style={styles.phaseTitle}>
             Pass to Player 2
           </ThemedText>
@@ -320,41 +335,36 @@ export default function HangmanScreen() {
           <View style={{ marginTop: 24, width: '100%', maxWidth: 260 }}>
             <Button title="Ready" onPress={handlePassReady} variant="primary" size="lg" />
           </View>
+          </Card>
         </View>
       )}
 
       {/* ── Playing ───────────────────────────────────────────────────── */}
       {phase === 'playing' && gameState && (
         <ScrollView
+          style={{ backgroundColor: theme.colors.surface, borderRadius: theme.borderRadius.lg }}
           contentContainerStyle={[
             styles.playContent,
             { paddingBottom: insets.bottom + 16 },
           ]}
           bounces={false}
+          keyboardShouldPersistTaps="handled"
         >
-          {/* Turn indicator */}
-          {!gameState.isGameOver && (
-            <TurnIndicator
-              currentPlayer="player2"
-              playerNames={
-                isSinglePlayer
-                  ? { player1: 'AI', player2: 'You' }
-                  : { player1: 'Player 1', player2: 'Player 2' }
-              }
-            />
-          )}
+          <StatusRail style={{ width: '100%' }}>
+            <ThemedText variant="label" style={{ textAlign: 'center' }}>
+              {gameState.isGameOver ? (gameState.isWinner ? 'Word solved!' : 'No guesses left') : (isSinglePlayer ? 'Your turn to guess' : 'Player 2 · Your turn to guess')}
+            </ThemedText>
           {isSinglePlayer && (
             <ThemedText variant="caption" style={{ color: theme.colors.textMuted, textAlign: 'center', marginTop: 2 }}>
               Difficulty: {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
             </ThemedText>
           )}
+          </StatusRail>
 
           {/* Hangman figure */}
           <View style={styles.figureWrapper}>
             <HangmanFigure
               wrongGuesses={gameState.wrongGuesses}
-              color={theme.colors.error}
-              gallowsColor={theme.colors.textMuted}
               size={figureSize}
             />
           </View>
@@ -372,7 +382,7 @@ export default function HangmanScreen() {
               },
             ]}
           >
-            {gameState.maxWrongGuesses - gameState.wrongGuesses} guesses remaining
+            {remaining} {remaining === 1 ? 'guess' : 'guesses'} remaining
           </ThemedText>
 
           {/* Word display */}
@@ -388,7 +398,10 @@ export default function HangmanScreen() {
                   {
                     borderBottomColor:
                       ch === '_' ? theme.colors.border : theme.colors.primary,
-                    minWidth: Math.min(36, (contentWidth - 64) / gameState.secretWord.length - 6),
+                    backgroundColor: theme.colors.surfaceSunken,
+                    borderColor: theme.colors.border,
+                    borderRadius: theme.borderRadius.sm,
+                    minWidth: 32,
                   },
                 ]}
               >
@@ -425,52 +438,19 @@ export default function HangmanScreen() {
 
           {/* Keyboard */}
           <View style={styles.keyboard}>
-            {KEYBOARD_ROWS.map((row, rowIdx) => (
-              <View key={rowIdx} style={styles.keyboardRow}>
-                {row.map((letter) => {
+            {KEYBOARD_ROWS.flat().map((letter) => {
                   const guessed = gameState.guessedLetters.has(letter);
-                  const letterColor = getLetterColor(letter);
-                  const disabled = isLetterDisabled(letter);
-
                   return (
-                    <Pressable
+                    <LetterKey
                       key={letter}
+                      letter={letter}
+                      guessed={guessed}
+                      correct={gameState.secretWord.includes(letter)}
                       onPress={() => handleLetterPress(letter)}
-                      disabled={disabled}
-                      style={[
-                        styles.key,
-                        {
-                          backgroundColor: guessed
-                            ? letterColor
-                              ? letterColor + '30'
-                              : theme.colors.surface
-                            : theme.colors.surface,
-                          borderColor: guessed
-                            ? letterColor ?? theme.colors.border
-                            : theme.colors.border,
-                          borderRadius: theme.borderRadius.sm,
-                          opacity: disabled && !guessed ? 0.4 : 1,
-                          ...theme.shadows.sm,
-                        },
-                      ]}
-                    >
-                      <ThemedText
-                        variant="label"
-                        style={{
-                          color: guessed
-                            ? letterColor ?? theme.colors.textMuted
-                            : theme.colors.text,
-                          fontWeight: '700',
-                          fontSize: 16,
-                        }}
-                      >
-                        {letter}
-                      </ThemedText>
-                    </Pressable>
+                      disabled={guessed || gameState.isGameOver}
+                    />
                   );
-                })}
-              </View>
-            ))}
+            })}
           </View>
         </ScrollView>
       )}
@@ -484,28 +464,25 @@ export default function HangmanScreen() {
         gameName="Hangman"
         playerNames={playerNames}
       />
-    </View>
+    </GameShell>
   );
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignSelf: 'center' as const,
-    width: '100%' as const,
-  },
-  backButton: {
-    padding: 8,
-    marginLeft: -4,
-  },
-
   // Phase screens (word entry, pass device)
   centeredPhase: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 32,
+    paddingHorizontal: 8,
+    paddingVertical: 16,
+  },
+  setupCard: {
+    alignItems: 'center',
+    width: '100%',
+    maxWidth: 440,
+    paddingVertical: 32,
   },
   phaseTitle: {
     textAlign: 'center',
@@ -529,7 +506,7 @@ const styles = StyleSheet.create({
   // Playing screen
   playContent: {
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 4,
   },
   figureWrapper: {
     alignItems: 'center',
@@ -549,8 +526,10 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   letterBlank: {
+    borderWidth: 1,
     borderBottomWidth: 3,
-    paddingBottom: 2,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -564,17 +543,16 @@ const styles = StyleSheet.create({
   keyboard: {
     marginTop: 12,
     width: '100%',
-    alignItems: 'center',
-    gap: 6,
-  },
-  keyboardRow: {
+    maxWidth: 510,
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'center',
-    gap: 5,
+    alignItems: 'center',
+    gap: 4,
   },
   key: {
-    width: 34,
-    height: 42,
+    width: 44,
+    height: 48,
     borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',

@@ -233,6 +233,7 @@ export default function WordleScreen() {
             ? theme.colors.text
             : theme.colors.border,
         backgroundColor: evaluation ? stateColor(evaluation) : theme.colors.surface,
+        gap: evaluation ? 1 : 0,
       },
     ];
     const text = (
@@ -240,7 +241,14 @@ export default function WordleScreen() {
         variant="heading"
         style={[
           styles.tileLetter,
-          { fontSize: tileSize * 0.5, color: evaluation ? (theme.name === 'arcade' ? theme.colors.background : theme.colors.onPrimary) : theme.colors.text },
+          {
+            fontSize: tileSize * (evaluation ? 0.42 : 0.5),
+            lineHeight: evaluation ? tileSize * 0.48 : undefined,
+            color: theme.colors.text,
+            backgroundColor: evaluation ? theme.colors.surfaceRaised : undefined,
+            borderRadius: 2,
+            paddingHorizontal: evaluation ? 2 : 0,
+          },
         ]}
       >
         {letter}
@@ -257,7 +265,7 @@ export default function WordleScreen() {
           accessibilityLabel={`Guess ${row + 1}, letter ${col + 1}: ${letter}, ${evaluation}`}
         >
           {text}
-          <ThemedText variant="caption" style={{ position: 'absolute', bottom: 1, fontSize: Math.max(9, tileSize * 0.18), color: theme.colors.text, backgroundColor: theme.colors.surfaceRaised, borderRadius: 2, paddingHorizontal: 2 }}>
+          <ThemedText variant="caption" style={{ fontSize: Math.max(9, tileSize * 0.16), lineHeight: Math.max(9, tileSize * 0.18), color: theme.colors.text, backgroundColor: theme.colors.surfaceRaised, borderRadius: 2, paddingHorizontal: 2 }}>
             {evaluation === 'correct' ? '✓' : evaluation === 'present' ? '•' : '×'}
           </ThemedText>
         </Animated.View>

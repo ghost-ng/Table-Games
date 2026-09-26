@@ -36,3 +36,36 @@ test('six distinct misses advance one step each and lose only on the sixth', () 
   }
   assert.equal(guessLetter(state, 'Z'), state);
 });
+
+test('invalid secret words are rejected before a round is created', () => {
+  for (const word of ['', '   ', 'A1', 'TWO WORDS', 'APPLE!']) {
+    assert.throws(() => createGame(word));
+  }
+});
+
+test('invalid guesses leave the current round and miss count unchanged', () => {
+  const state = guessLetter(createGame('APPLE'), 'B');
+  for (const letter of ['', '   ', 'AP', '1', '!', 'é']) {
+    assert.equal(guessLetter(state, letter), state);
+    assert.equal(state.wrongGuesses, 1);
+    assert.deepEqual([...state.guessedLetters], ['B']);
+    assert.deepEqual(state.displayWord, ['_', '_', '_', '_', '_']);
+  }
+});
+
+test('guessing every distinct letter wins and freezes the completed round', () => {
+  let state = createGame('APPLE');
+  for (const letter of ['a', 'p', 'l']) {
+    state = guessLetter(state, letter);
+    assert.equal(state.isWinner, false);
+    assert.equal(state.isGameOver, false);
+    assert.equal(state.wrongGuesses, 0);
+  }
+  state = guessLetter(state, 'e');
+  assert.deepEqual(state.displayWord, ['A', 'P', 'P', 'L', 'E']);
+  assert.equal(state.isWinner, true);
+  assert.equal(state.isGameOver, true);
+  assert.equal(state.wrongGuesses, 0);
+  assert.equal(state.maxWrongGuesses - state.wrongGuesses, 6);
+  assert.equal(guessLetter(state, 'Z'), state);
+});

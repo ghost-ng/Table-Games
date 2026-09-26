@@ -1,17 +1,18 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   Easing,
   useAnimatedStyle,
   useSharedValue,
+  useReducedMotion,
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { ThemedText } from '../../src/components/ui/ThemedText';
 import { Button } from '../../src/components/ui/Button';
+import { GameShell } from '../../src/components/ui/GameShell';
 import { useBoardFit, useResponsive } from '../../src/utils/layout';
 import { haptics } from '../../src/utils/haptics';
 import { randomInt } from '../../src/utils/random';
@@ -20,20 +21,16 @@ type Side = 'H' | 'T';
 
 const FLIP_MS = 1100;
 const HISTORY_LENGTH = 30;
-// A coin is gold on every theme.
-const GOLD = '#E7B94C';
-const GOLD_EDGE = '#B8862B';
-const GOLD_INK = '#6E4B0E';
 
 export default function CoinFlipScreen() {
   const { theme } = useTheme();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
-  const { contentMaxWidth, isLandscape, height } = useResponsive();
+  const reducedMotion = useReducedMotion();
+  const { isLandscape, height, isDesktop } = useResponsive();
   // Phones on their side: coin on the left, result and controls on the right.
   const sideBySide = isLandscape && height < 560;
   const { onLayout: onCoinAreaLayout, size: coinSize } = useBoardFit({
-    maxSize: 260,
+    maxSize: isDesktop ? 360 : 280,
     minSize: 110,
     inset: 24,
   });
@@ -86,15 +83,15 @@ export default function CoinFlipScreen() {
   }, []);
 
   const liftStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: -lift.value * coinSize * 0.35 }, { scale: 1 + lift.value * 0.15 }],
+    transform: [{ translateY: reducedMotion ? 0 : -lift.value * coinSize * 0.12 }, { scale: reducedMotion ? 1 : 1 + lift.value * 0.04 }],
   }));
   // Each face carries its own rotation (tails offset by 180°) with its back hidden,
   // which renders correctly on web without needing preserve-3d on the parent.
   const headsStyle = useAnimatedStyle(() => ({
-    transform: [{ perspective: 800 }, { rotateY: `${rotation.value}deg` }],
+    transform: [{ perspective: 800 }, { rotateY: `${reducedMotion ? (result === 'T' ? 180 : 0) : rotation.value}deg` }],
   }));
   const tailsStyle = useAnimatedStyle(() => ({
-    transform: [{ perspective: 800 }, { rotateY: `${rotation.value + 180}deg` }],
+    transform: [{ perspective: 800 }, { rotateY: `${(reducedMotion ? (result === 'T' ? 180 : 0) : rotation.value) + 180}deg` }],
   }));
 
   const total = counts.H + counts.T;
@@ -104,254 +101,101 @@ export default function CoinFlipScreen() {
     else break;
   }
 
-  const resultLine = (
-      <View style={styles.resultRow}>
-        <ThemedText variant="heading" style={{ fontSize: 28, color: theme.colors.text }}>
-          {flipping ? '…' : result === 'H' ? 'Heads!' : result === 'T' ? 'Tails!' : 'Tap to flip'}
-        </ThemedText>
-        <ThemedText variant="caption" style={{ color: theme.colors.textMuted, minHeight: 18 }}>
-          {!flipping && streak > 1 ? `${streak} in a row` : ' '}
-        </ThemedText>
-      </View>
-  );
-
-  const renderFace = (side: Side) => (
-    <View
-      style={[
-        styles.face,
-        {
-          width: coinSize,
-          height: coinSize,
-          borderRadius: coinSize / 2,
-          borderWidth: Math.max(4, coinSize * 0.045),
-        },
-      ]}
-    >
-      <View
-        style={[
-          styles.faceInner,
-          {
-            width: coinSize * 0.78,
-            height: coinSize * 0.78,
-            borderRadius: coinSize * 0.39,
-            borderWidth: Math.max(2, coinSize * 0.015),
-          },
-        ]}
-      >
-        <ThemedText style={{ fontSize: coinSize * 0.3, lineHeight: coinSize * 0.36, color: GOLD_INK }}>
-          {side === 'H' ? '♛' : '★'}
-        </ThemedText>
-        <ThemedText
-          variant="heading"
-          style={{ fontSize: coinSize * 0.1, color: GOLD_INK, letterSpacing: 2, fontWeight: '800' }}
-        >
-          {side === 'H' ? 'HEADS' : 'TAILS'}
-        </ThemedText>
-      </View>
-    </View>
-  );
-
   return (
-    <View
-      style={[
-        styles.container,
-        {
-          backgroundColor: theme.colors.background,
-          paddingTop: insets.top,
-          paddingBottom: insets.bottom,
-          maxWidth: contentMaxWidth,
-        },
-      ]}
-    >
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
-          <ThemedText variant="body" style={{ color: theme.colors.primary }}>
-            Back
-          </ThemedText>
-        </Pressable>
-        <ThemedText variant="heading" style={styles.title}>
-          Coin Flip
-        </ThemedText>
-        <View style={styles.backButton} />
-      </View>
-
-      <View style={[styles.body, { flexDirection: sideBySide ? 'row' : 'column' }]}>
-      {!sideBySide && resultLine}
-
-      <Pressable
-        style={styles.coinArea}
-        onLayout={onCoinAreaLayout}
-        onPress={flip}
-        accessibilityRole="button"
-        accessibilityLabel="Flip coin"
-      >
-        <Animated.View style={[{ width: coinSize, height: coinSize }, liftStyle]}>
-          <Animated.View style={[StyleSheet.absoluteFill, styles.faceHolder, headsStyle]}>
-            {renderFace('H')}
-          </Animated.View>
-          <Animated.View style={[StyleSheet.absoluteFill, styles.faceHolder, tailsStyle]}>
-            {renderFace('T')}
-          </Animated.View>
-        </Animated.View>
-      </Pressable>
-
-      <View style={[styles.panel, sideBySide && styles.panelSide]}>
-      {sideBySide && resultLine}
-      {/* Tally */}
-      <View style={[styles.tally, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, borderRadius: theme.borderRadius.lg }]}>
-        {(['H', 'T'] as const).map((side) => (
-          <View key={side} style={styles.tallyItem}>
-            <ThemedText variant="caption" style={{ color: theme.colors.textMuted }}>
-              {side === 'H' ? 'Heads' : 'Tails'}
+    <GameShell
+      title="Coin Flip"
+      onBack={() => router.back()}
+      status={
+        <View style={styles.status} accessibilityLiveRegion="polite">
+          <View>
+            <ThemedText variant="heading" style={{ fontSize: 28 }}>
+              {flipping ? 'Flipping…' : result === 'H' ? 'Heads!' : result === 'T' ? 'Tails!' : 'Tap to flip'}
             </ThemedText>
-            <ThemedText variant="heading" style={{ fontSize: 26, color: theme.colors.text }}>
-              {counts[side]}
-            </ThemedText>
-            <ThemedText variant="caption" style={{ color: theme.colors.textMuted }}>
-              {total ? `${Math.round((counts[side] / total) * 100)}%` : '–'}
+            <ThemedText variant="caption" style={{ minHeight: 18 }}>
+              {!flipping && streak > 1 ? `${streak} in a row` : ' '}
             </ThemedText>
           </View>
-        ))}
-      </View>
-
-      {/* History, newest first */}
-      <View style={styles.history}>
-        {history.map((side, i) => (
-          <View
-            key={history.length - i}
-            style={[
-              styles.historyChip,
-              {
-                backgroundColor: side === 'H' ? GOLD : theme.colors.surface,
-                borderColor: side === 'H' ? GOLD_EDGE : theme.colors.border,
-                opacity: 1 - i / (HISTORY_LENGTH * 1.3),
-              },
-            ]}
-          >
-            <ThemedText variant="caption" style={{ color: side === 'H' ? GOLD_INK : theme.colors.text, fontWeight: '700' }}>
-              {side}
-            </ThemedText>
-          </View>
-        ))}
-      </View>
-
-      <View style={styles.buttons}>
-        <View style={styles.buttonWide}>
-          <Button title="Flip" onPress={flip} variant="primary" size="lg" disabled={flipping} />
+          <ThemedText variant="caption">{total} {total === 1 ? 'flip' : 'flips'}</ThemedText>
         </View>
-        {total > 0 && (
-          <Button title="Reset" onPress={reset} variant="ghost" size="sm" />
-        )}
+      }
+      footer={
+        <View style={styles.buttons}>
+          <View style={styles.buttonWide}>
+            <Button title="Flip" onPress={flip} size="lg" disabled={flipping} />
+          </View>
+          <View style={styles.resetSlot}>
+            {total > 0 ? <Button title="Reset" onPress={reset} variant="ghost" size="sm" /> : null}
+          </View>
+        </View>
+      }
+    >
+      <View style={[styles.body, { flexDirection: sideBySide ? 'row' : 'column' }]}>
+        <View style={styles.coinArea} onLayout={onCoinAreaLayout}
+          accessibilityLabel={flipping ? 'Coin flipping' : result === 'T' ? 'Coin showing Tails' : 'Coin showing Heads'}>
+          <Animated.View style={[{ width: coinSize, height: coinSize }, liftStyle]}>
+            {(['H', 'T'] as const).map((side) => (
+              <Animated.View key={side} style={[StyleSheet.absoluteFill, styles.faceHolder, side === 'H' ? headsStyle : tailsStyle]}>
+                <View style={[styles.face, {
+                  width: coinSize, height: coinSize, borderRadius: coinSize / 2,
+                  borderWidth: Math.max(4, coinSize * 0.025), borderBottomWidth: Math.max(8, coinSize * 0.05),
+                  backgroundColor: theme.colors.board, borderColor: theme.colors.boardAlt, ...theme.shadows.md,
+                }]}>
+                  <View style={[styles.faceInner, {
+                    width: coinSize * 0.76, height: coinSize * 0.76, borderRadius: coinSize * 0.38,
+                    borderColor: theme.colors.primary,
+                  }]}>
+                    <ThemedText variant="heading" style={{ fontSize: coinSize * 0.32, lineHeight: coinSize * 0.39, color: theme.colors.primary }}>
+                      {side}
+                    </ThemedText>
+                    <ThemedText variant="label" style={{ fontSize: Math.max(12, coinSize * 0.075), letterSpacing: 2 }}>
+                      {side === 'H' ? 'HEADS' : 'TAILS'}
+                    </ThemedText>
+                  </View>
+                </View>
+              </Animated.View>
+            ))}
+          </Animated.View>
+        </View>
+        <View style={[styles.panel, sideBySide && styles.panelSide]}>
+          <View accessibilityLabel={`Heads ${counts.H}, Tails ${counts.T}`} style={[styles.tally, {
+            backgroundColor: theme.colors.surfaceRaised, borderColor: theme.colors.border, borderRadius: theme.borderRadius.lg,
+          }]}>
+            {(['H', 'T'] as const).map((side) => (
+              <View key={side} style={styles.tallyItem}>
+                <ThemedText variant="caption">{side === 'H' ? 'Heads' : 'Tails'}</ThemedText>
+                <ThemedText variant="heading" style={{ fontSize: 28 }}>{counts[side]}</ThemedText>
+                <ThemedText variant="caption">{total ? `${Math.round((counts[side] / total) * 100)}%` : '–'}</ThemedText>
+              </View>
+            ))}
+          </View>
+          <View style={styles.history}>
+            {history.map((side, i) => (
+              <View key={history.length - i} accessibilityLabel={`${i === 0 ? 'Latest flip' : `Flip ${total - i}`}: ${side === 'H' ? 'Heads' : 'Tails'}`}
+                style={[styles.historyChip, { backgroundColor: side === 'H' ? theme.colors.board : theme.colors.surfaceRaised, borderColor: theme.colors.border }]}>
+                <ThemedText variant="caption" style={{ color: theme.colors.text, fontWeight: '700' }}>{side}</ThemedText>
+              </View>
+            ))}
+          </View>
+        </View>
       </View>
-      </View>
-      </View>
-    </View>
+    </GameShell>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignSelf: 'center' as const,
-    width: '100%' as const,
-    alignItems: 'center',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
-    paddingHorizontal: 16,
-    height: 48,
-  },
-  backButton: {
-    width: 60,
-  },
-  title: {
-    textAlign: 'center',
-    flex: 1,
-  },
-  body: {
-    flex: 1,
-    alignSelf: 'stretch',
-  },
-  panel: {
-    alignItems: 'center',
-    alignSelf: 'stretch',
-  },
-  panelSide: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  resultRow: {
-    alignItems: 'center',
-    minHeight: 60,
-    justifyContent: 'center',
-  },
-  coinArea: {
-    flex: 1,
-    alignSelf: 'stretch',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  faceHolder: {
-    backfaceVisibility: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  face: {
-    backgroundColor: GOLD,
-    borderColor: GOLD_EDGE,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 6,
-  },
-  faceInner: {
-    borderColor: GOLD_EDGE,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  tally: {
-    flexDirection: 'row',
-    borderWidth: 1,
-    paddingVertical: 8,
-    width: '90%',
-    maxWidth: 360,
-  },
-  tallyItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  history: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: 4,
-    paddingHorizontal: 16,
-    marginTop: 10,
-    minHeight: 26,
-    maxWidth: 420,
-  },
-  historyChip: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  buttons: {
-    alignItems: 'center',
-    gap: 4,
-    paddingTop: 12,
-    paddingBottom: 16,
-    minHeight: 110,
-  },
-  buttonWide: {
-    width: 220,
-  },
+  status: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  body: { flex: 1, minHeight: 0, gap: 12 },
+  coinArea: { flex: 1, minHeight: 0, alignItems: 'center', justifyContent: 'center' },
+  faceHolder: { backfaceVisibility: 'hidden', alignItems: 'center', justifyContent: 'center' },
+  face: { alignItems: 'center', justifyContent: 'center' },
+  faceInner: { borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
+  panel: { alignItems: 'center', paddingVertical: 8 },
+  panelSide: { flex: 1, justifyContent: 'center' },
+  tally: { flexDirection: 'row', borderWidth: 1, paddingVertical: 8, width: '100%', maxWidth: 420 },
+  tallyItem: { flex: 1, alignItems: 'center' },
+  history: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', alignContent: 'center', gap: 4, height: 80, maxWidth: 420, paddingHorizontal: 8 },
+  historyChip: { width: 22, height: 22, borderRadius: 11, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  buttons: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12 },
+  buttonWide: { flex: 1, maxWidth: 360 },
+  resetSlot: { width: 76, height: 44 },
 });

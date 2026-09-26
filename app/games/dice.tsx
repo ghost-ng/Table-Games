@@ -1,16 +1,18 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
+  useReducedMotion,
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { ThemedText } from '../../src/components/ui/ThemedText';
 import { Button } from '../../src/components/ui/Button';
+import { GameShell } from '../../src/components/ui/GameShell';
+import { useWebFocusRing } from '../../src/utils/useWebFocusRing';
 import { useResponsive } from '../../src/utils/layout';
 import { haptics } from '../../src/utils/haptics';
 import { randomInt } from '../../src/utils/random';
@@ -44,6 +46,7 @@ function Die({
   size,
   held,
   rolling,
+  canHold,
   onPress,
 }: {
   value: number;
@@ -51,13 +54,16 @@ function Die({
   size: number;
   held: boolean;
   rolling: boolean;
+  canHold: boolean;
   onPress: () => void;
 }) {
   const { theme } = useTheme();
   const wobble = useSharedValue(0);
+  const reducedMotion = useReducedMotion();
+  const focus = useWebFocusRing(theme.colors.focus);
 
   useEffect(() => {
-    if (rolling && !held) {
+    if (rolling && !held && !reducedMotion) {
       wobble.value = withSequence(
         withTiming(-14, { duration: 90 }),
         withTiming(12, { duration: 110 }),
@@ -66,7 +72,8 @@ function Die({
         withTiming(0, { duration: 120 }),
       );
     }
-  }, [rolling, held, wobble]);
+    else wobble.value = 0;
+  }, [rolling, held, wobble, reducedMotion]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ rotate: `${wobble.value}deg` }, { scale: 1 - Math.abs(wobble.value) / 140 }],
@@ -78,7 +85,12 @@ function Die({
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`d${sides} showing ${value}${held ? ', held' : ''}`}
+      accessibilityLabel={`d${sides} showing ${rolling && !held ? 'rolling' : value}${held ? ', held, tap to release' : canHold ? ', tap to hold' : ', tap to roll'}`}
+      accessibilityState={{ selected: held, disabled: rolling }}
+      disabled={rolling}
+      onFocus={focus.onFocus}
+      onBlur={focus.onBlur}
+      style={[{ borderRadius: theme.borderRadius.md }, focus.style]}
     >
       <Animated.View
         style={[
@@ -86,15 +98,18 @@ function Die({
           {
             width: size,
             height: size,
-            borderRadius: size * (sides === 6 ? 0.18 : 0.26),
-            backgroundColor: held ? theme.colors.primary + '22' : theme.colors.surface,
+            borderRadius: size * 0.18,
+            borderBottomWidth: 5,
+            backgroundColor: held ? theme.colors.board : theme.colors.surfaceRaised,
             borderColor: held ? theme.colors.primary : theme.colors.border,
             ...theme.shadows.md,
           },
           animatedStyle,
         ]}
       >
-        {sides === 6 ? (
+        {rolling && reducedMotion && !held ? (
+          <ThemedText variant="heading" style={{ fontSize: size * 0.3 }}>…</ThemedText>
+        ) : sides === 6 ? (
           <View style={{ width: size * 0.7, height: size * 0.7 }}>
             {PIPS[value].map(([r, c], i) => (
               <View
@@ -124,14 +139,10 @@ function Die({
             </ThemedText>
           </>
         )}
-        {held && (
-          <View style={[styles.heldBadge, { backgroundColor: theme.colors.primary }]}>
-            <ThemedText variant="caption" style={{ color: '#FFFFFF', fontSize: 9, fontWeight: '700' }}>
-              HELD
-            </ThemedText>
-          </View>
-        )}
       </Animated.View>
+      <ThemedText variant="caption" style={{ height: 24, lineHeight: 24, textAlign: 'center', fontSize: 11, color: held ? theme.colors.primary : theme.colors.textMuted, fontWeight: held ? '700' : '400' }}>
+        {rolling && !held ? 'Rolling…' : `${value}${held ? ' Held' : ''}`}
+      </ThemedText>
     </Pressable>
   );
 }
@@ -139,8 +150,8 @@ function Die({
 export default function DiceScreen() {
   const { theme } = useTheme();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
-  const { contentMaxWidth } = useResponsive();
+  const { isLandscape, width, height, isDesktop } = useResponsive();
+  const sideBySide = isLandscape && height < 560;
 
   const [sides, setSides] = useState<DieType>(6);
   const [count, setCount] = useState(2);
@@ -169,9 +180,9 @@ export default function DiceScreen() {
     Math.max(
       44,
       Math.min(
-        140,
+        isDesktop ? 180 : 150,
         (area.width - 32 - gap * (perRow - 1)) / perRow,
-        (area.height - 16 - gap * (rows - 1)) / rows,
+        (area.height - 16 - gap * (rows - 1) - rows * 24) / rows,
       ),
     ),
   );
@@ -229,223 +240,93 @@ export default function DiceScreen() {
   const total = shown.reduce((a, b) => a + b, 0);
   const anyHeld = held.slice(0, count).some(Boolean);
 
+  const allHeld = held.slice(0, count).every(Boolean);
+
   return (
-    <View
-      style={[
-        styles.container,
-        {
-          backgroundColor: theme.colors.background,
-          paddingTop: insets.top,
-          paddingBottom: insets.bottom,
-          maxWidth: contentMaxWidth,
-        },
-      ]}
+    <GameShell
+      title="Dice"
+      onBack={() => router.back()}
+      status={
+        <View style={[styles.status, width < 380 && { flexDirection: 'column', gap: 4 }]} accessibilityLiveRegion="polite">
+          <ThemedText variant="heading" style={{ fontSize: 28 }}>{rolling ? 'Rolling…' : `Total ${total}`}</ThemedText>
+          <ThemedText variant="caption" style={[styles.hint, width < 380 && { flex: 0, textAlign: 'center' }]}>
+            {count > 1 ? anyHeld ? 'Held dice keep their value. Tap to release.' : 'Tap a die to hold it between rolls.' : 'Tap the die or Roll.'}
+          </ThemedText>
+        </View>
+      }
+      footer={
+        <View style={styles.buttonWide}>
+          <Button title="Roll" onPress={roll} size="lg" disabled={rolling || allHeld} />
+        </View>
+      }
     >
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
-          <ThemedText variant="body" style={{ color: theme.colors.primary }}>
-            Back
-          </ThemedText>
-        </Pressable>
-        <ThemedText variant="heading" style={styles.title}>
-          Dice
-        </ThemedText>
-        <View style={styles.backButton} />
-      </View>
-
-      {/* Die type */}
-      <View style={styles.chips}>
-        {DIE_TYPES.map((d) => {
-          const active = d === sides;
-          return (
-            <Pressable
-              key={d}
-              onPress={() => changeSides(d)}
-              accessibilityRole="button"
-              accessibilityState={{ selected: active }}
-              style={[
-                styles.chip,
-                {
-                  backgroundColor: active ? theme.colors.primary : theme.colors.surface,
-                  borderColor: active ? theme.colors.primary : theme.colors.border,
-                  borderRadius: theme.borderRadius.md,
-                },
-              ]}
-            >
-              <ThemedText variant="label" style={{ color: active ? '#FFFFFF' : theme.colors.text, fontWeight: '700' }}>
-                d{d}
-              </ThemedText>
-            </Pressable>
-          );
-        })}
-      </View>
-
-      {/* Count */}
-      <View style={styles.countRow}>
-        <Pressable
-          onPress={() => changeCount(-1)}
-          accessibilityLabel="Fewer dice"
-          style={[styles.stepper, { borderColor: theme.colors.border, opacity: count <= 1 ? 0.4 : 1 }]}
-        >
-          <ThemedText variant="heading" style={{ color: theme.colors.text }}>−</ThemedText>
-        </Pressable>
-        <ThemedText variant="body" style={{ color: theme.colors.text, minWidth: 90, textAlign: 'center' }}>
-          {count} {count === 1 ? 'die' : 'dice'}
-        </ThemedText>
-        <Pressable
-          onPress={() => changeCount(1)}
-          accessibilityLabel="More dice"
-          style={[styles.stepper, { borderColor: theme.colors.border, opacity: count >= MAX_DICE ? 0.4 : 1 }]}
-        >
-          <ThemedText variant="heading" style={{ color: theme.colors.text }}>+</ThemedText>
-        </Pressable>
-      </View>
-
-      {/* Dice */}
-      <Pressable style={styles.diceArea} onLayout={onAreaLayout} onPress={roll} accessibilityLabel="Roll dice">
-        {area.width > 0 && (
-          <View style={[styles.diceGrid, { gap, maxWidth: perRow * dieSize + (perRow - 1) * gap }]}>
-            {shown.map((v, i) => (
-              <Die
-                key={i}
-                value={v}
-                sides={sides}
-                size={dieSize}
-                held={held[i] && count > 1}
-                rolling={rolling}
-                onPress={() => toggleHold(i)}
-              />
-            ))}
+      <View style={[styles.body, { flexDirection: sideBySide ? 'row-reverse' : 'column' }]}>
+        <View style={[styles.panel, sideBySide && styles.panelSide]}>
+          <View style={styles.chips}>
+            {DIE_TYPES.map((d) => {
+              const active = d === sides;
+              return <DieTypeControl key={d} sides={d} active={active} disabled={rolling} onPress={() => changeSides(d)} />;
+            })}
           </View>
-        )}
-      </Pressable>
-
-      {/* Total + hint (fixed height) */}
-      <View style={styles.totalRow}>
-        {count > 1 && (
-          <ThemedText variant="heading" style={{ fontSize: 30, color: theme.colors.text }}>
-            {rolling ? '…' : `Total ${total}`}
-          </ThemedText>
-        )}
-        <ThemedText variant="caption" style={{ color: theme.colors.textMuted, textAlign: 'center' }}>
-          {count > 1
-            ? anyHeld
-              ? 'Held dice keep their value. Tap to release.'
-              : 'Tap a die to hold it between rolls.'
-            : 'Tap the die or Roll.'}
-        </ThemedText>
+          <View style={styles.countRow}>
+            <CountControl title="Fewer dice" glyph="−" disabled={count <= 1 || rolling} onPress={() => changeCount(-1)} />
+            <ThemedText variant="label" style={{ minWidth: 90, textAlign: 'center' }}>{count} {count === 1 ? 'die' : 'dice'}</ThemedText>
+            <CountControl title="More dice" glyph="+" disabled={count >= MAX_DICE || rolling} onPress={() => changeCount(1)} />
+          </View>
+          {sideBySide ? <View style={styles.history}>{renderHistory()}</View> : null}
+        </View>
+        <View style={styles.diceArea} onLayout={onAreaLayout}>
+          {area.width > 0 ? (
+            <View style={[styles.diceGrid, { gap, maxWidth: perRow * dieSize + (perRow - 1) * gap }]}>
+              {shown.map((v, i) => <Die key={i} value={v} sides={sides} size={dieSize} held={held[i] && count > 1} rolling={rolling} canHold={count > 1} onPress={() => count === 1 ? roll() : toggleHold(i)} />)}
+            </View>
+          ) : null}
+        </View>
+        {!sideBySide ? <View style={styles.history}>{renderHistory()}</View> : null}
       </View>
-
-      <View style={styles.buttonWide}>
-        <Button title="Roll" onPress={roll} variant="primary" size="lg" disabled={rolling} />
-      </View>
-
-      {/* History */}
-      <View style={styles.history}>
-        {history.map((r, i) => (
-          <ThemedText
-            key={r.id}
-            variant="caption"
-            style={{ color: theme.colors.textMuted, opacity: 1 - i / (HISTORY_LENGTH + 2), textAlign: 'center' }}
-          >
-            {r.values.length}d{r.sides}: {r.values.join(' + ')}
-            {r.values.length > 1 ? ` = ${r.values.reduce((a, b) => a + b, 0)}` : ''}
-          </ThemedText>
-        ))}
-      </View>
-    </View>
+    </GameShell>
   );
+
+  function renderHistory() {
+    return <ScrollView contentContainerStyle={{ gap: 4 }}>
+      {history.map((r) => <ThemedText key={r.id} variant="caption" style={{ textAlign: 'center' }}>
+        {r.values.length}d{r.sides}: {r.values.join(' + ')}{r.values.length > 1 ? ` = ${r.values.reduce((a, b) => a + b, 0)}` : ''}
+      </ThemedText>)}
+    </ScrollView>;
+  }
+}
+
+function DieTypeControl({ sides, active, disabled, onPress }: { sides: DieType; active: boolean; disabled: boolean; onPress: () => void }) {
+  const { theme } = useTheme();
+  const focus = useWebFocusRing(theme.colors.focus);
+  return <Pressable accessibilityRole="button" accessibilityLabel={`d${sides}${active ? ', selected' : ''}`} accessibilityState={{ selected: active, disabled }} disabled={disabled} onPress={onPress} onFocus={focus.onFocus} onBlur={focus.onBlur}
+    style={[styles.chip, { backgroundColor: active ? theme.colors.primary : theme.colors.surfaceRaised, borderColor: active ? theme.colors.primary : theme.colors.border, borderRadius: theme.borderRadius.md, opacity: disabled ? 0.5 : 1 }, focus.style]}>
+    <ThemedText variant="label" style={{ fontSize: 13, fontWeight: '700', color: active ? theme.colors.onPrimary : theme.colors.text }}>{active ? '✓ ' : ''}d{sides}</ThemedText>
+  </Pressable>;
+}
+
+function CountControl({ title, glyph, disabled, onPress }: { title: string; glyph: string; disabled: boolean; onPress: () => void }) {
+  const { theme } = useTheme();
+  const focus = useWebFocusRing(theme.colors.focus);
+  return <Pressable accessibilityRole="button" accessibilityLabel={title} accessibilityState={{ disabled }} disabled={disabled} onPress={onPress} onFocus={focus.onFocus} onBlur={focus.onBlur}
+    style={[styles.stepper, { borderColor: theme.colors.border, backgroundColor: theme.colors.surfaceRaised, borderRadius: theme.borderRadius.md, opacity: disabled ? 0.4 : 1 }, focus.style]}>
+    <ThemedText variant="heading" style={{ fontSize: 24 }}>{glyph}</ThemedText>
+  </Pressable>;
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignSelf: 'center' as const,
-    width: '100%' as const,
-    alignItems: 'center',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
-    paddingHorizontal: 16,
-    height: 48,
-  },
-  backButton: {
-    width: 60,
-  },
-  title: {
-    textAlign: 'center',
-    flex: 1,
-  },
-  chips: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: 8,
-    paddingHorizontal: 12,
-  },
-  chip: {
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    minWidth: 48,
-    alignItems: 'center',
-  },
-  countRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 10,
-  },
-  stepper: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  diceArea: {
-    flex: 1,
-    alignSelf: 'stretch',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 120,
-  },
-  diceGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-  },
-  die: {
-    borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  heldBadge: {
-    position: 'absolute',
-    top: -8,
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: 6,
-  },
-  totalRow: {
-    alignItems: 'center',
-    minHeight: 64,
-    justifyContent: 'center',
-    paddingHorizontal: 16,
-  },
-  buttonWide: {
-    width: 220,
-    marginVertical: 8,
-  },
-  history: {
-    minHeight: 60,
-    maxHeight: 120,
-    overflow: 'hidden',
-    paddingBottom: 12,
-    gap: 2,
-  },
+  status: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  hint: { flex: 1, maxWidth: 260, textAlign: 'right' },
+  body: { flex: 1, minHeight: 0, gap: 12 },
+  panel: { alignItems: 'center', paddingVertical: 4 },
+  panelSide: { flex: 1, justifyContent: 'center' },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 6 },
+  chip: { borderWidth: 1, minWidth: 44, minHeight: 44, paddingHorizontal: 4, alignItems: 'center', justifyContent: 'center' },
+  countRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 12 },
+  stepper: { width: 44, height: 44, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  diceArea: { flex: 1, minHeight: 0, alignItems: 'center', justifyContent: 'center' },
+  diceGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center' },
+  die: { borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
+  buttonWide: { width: '100%', maxWidth: 420, alignSelf: 'center' },
+  history: { height: 44, width: '100%', maxWidth: 420, marginTop: 8 },
 });

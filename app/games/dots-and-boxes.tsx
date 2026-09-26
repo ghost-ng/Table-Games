@@ -15,6 +15,8 @@ import Animated, {
   FadeOut,
 } from 'react-native-reanimated';
 
+import { GameShell } from '../../src/components/ui/GameShell';
+import { StatusRail } from '../../src/components/ui/StatusRail';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { ThemedText } from '../../src/components/ui/ThemedText';
 import { Button } from '../../src/components/ui/Button';
@@ -42,16 +44,16 @@ const BOARD_SIZE_OPTIONS = [
 ];
 const DEFAULT_GRID_SIZE = 5;
 const DOT_SIZE = 10;
-const LINE_THICKNESS = 4;
-const TAP_ZONE = 28;
-const BOARD_PADDING = 16;
+const LINE_THICKNESS = 6;
+const TAP_ZONE = 44;
 
 export default function DotsAndBoxesScreen() {
   const { theme } = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { contentMaxWidth } = useResponsive();
-  const { onLayout: onBoardAreaLayout, size: boardSize } = useBoardFit();
+  const { contentMaxWidth, width, height } = useResponsive();
+  const shortLandscape = width > height && height < 560;
+  const { onLayout: onBoardAreaLayout, size: boardSize } = useBoardFit({ maxSize: 640, minSize: 132, inset: 24 });
 
   const { mode: modeParam } = useLocalSearchParams<{ mode: string }>();
   const resolvedMode = (modeParam === 'multiplayer' ? 'multiplayer' : 'single') as 'single' | 'multiplayer';
@@ -68,7 +70,9 @@ export default function DotsAndBoxesScreen() {
   const startTimeRef = useRef(Date.now());
   const prevPlayerRef = useRef<Player>('player1');
 
-  const cellSize = (boardSize - DOT_SIZE) / (gridSize - 1);
+  // Keep every outer 44px line target inside the board surface.
+  const gridInset = TAP_ZONE / 2;
+  const cellSize = (boardSize - TAP_ZONE - DOT_SIZE) / (gridSize - 1);
 
   const handleBoardSizeSelect = useCallback((size: number) => {
     setGridSize(size);
@@ -205,8 +209,8 @@ export default function DotsAndBoxesScreen() {
 
   // Compute dot positions
   const getDotPosition = (row: number, col: number) => ({
-    x: col * cellSize + DOT_SIZE / 2,
-    y: row * cellSize + DOT_SIZE / 2,
+    x: gridInset + col * cellSize + DOT_SIZE / 2,
+    y: gridInset + row * cellSize + DOT_SIZE / 2,
   });
 
   const getPlayerColor = (player: Player) =>
@@ -222,22 +226,24 @@ export default function DotsAndBoxesScreen() {
 
   if (showBoardSizeSelector) {
     return (
-      <View style={[styles.container, { backgroundColor: theme.colors.background, paddingTop: insets.top, maxWidth: contentMaxWidth }]}>
+      <GameShell title="Dots & Boxes" onBack={() => router.back()} scroll>
         <View style={styles.sizeSelector}>
           <ThemedText variant="heading" style={{ textAlign: 'center', marginBottom: 4 }}>
-            Dots & Boxes
+            Choose your board
           </ThemedText>
           <ThemedText variant="caption" style={{ textAlign: 'center', color: theme.colors.textMuted, marginBottom: 20 }}>
-            Choose board size
+            Join two dots. Close a box to score and play again.
           </ThemedText>
           {BOARD_SIZE_OPTIONS.map((opt) => (
             <Pressable
               key={opt.value}
+              accessibilityRole="button"
+              accessibilityLabel={`${opt.label} board, ${opt.description}`}
               onPress={() => handleBoardSizeSelect(opt.value)}
               style={[
                 styles.sizeOption,
                 {
-                  backgroundColor: opt.value === DEFAULT_GRID_SIZE ? theme.colors.primary : theme.colors.surface,
+                  backgroundColor: opt.value === DEFAULT_GRID_SIZE ? theme.colors.primary : theme.colors.surfaceRaised,
                   borderColor: theme.colors.border,
                   borderRadius: theme.borderRadius.md,
                 },
@@ -246,7 +252,7 @@ export default function DotsAndBoxesScreen() {
               <ThemedText
                 variant="heading"
                 style={{
-                  color: opt.value === DEFAULT_GRID_SIZE ? '#FFFFFF' : theme.colors.text,
+                  color: opt.value === DEFAULT_GRID_SIZE ? theme.colors.onPrimary : theme.colors.text,
                   fontSize: 18,
                 }}
               >
@@ -255,7 +261,7 @@ export default function DotsAndBoxesScreen() {
               <ThemedText
                 variant="caption"
                 style={{
-                  color: opt.value === DEFAULT_GRID_SIZE ? '#FFFFFFCC' : theme.colors.textMuted,
+                  color: opt.value === DEFAULT_GRID_SIZE ? theme.colors.onPrimary : theme.colors.textMuted,
                 }}
               >
                 {opt.description}
@@ -263,7 +269,7 @@ export default function DotsAndBoxesScreen() {
             </Pressable>
           ))}
         </View>
-      </View>
+      </GameShell>
     );
   }
 
@@ -280,33 +286,9 @@ export default function DotsAndBoxesScreen() {
     );
   }
 
-  return (
-    <View
-      style={[
-        styles.container,
-        {
-          backgroundColor: theme.colors.background,
-          paddingTop: insets.top,
-          paddingBottom: insets.bottom,
-          maxWidth: contentMaxWidth,
-        },
-      ]}
-    >
-      {/* Header */}
-      <View style={styles.header}>
-        <Pressable onPress={handleHome} style={styles.backButton}>
-          <ThemedText variant="body" style={{ color: theme.colors.primary }}>
-            Back
-          </ThemedText>
-        </Pressable>
-        <ThemedText variant="heading" style={styles.title}>
-          Dots & Boxes
-        </ThemedText>
-        <View style={styles.backButton} />
-      </View>
-
+  const gameStatus = (<>
       {/* Turn Indicator */}
-      {!gameState.isGameOver && (
+      {true && (
         <TurnIndicator
           currentPlayer={gameState.currentPlayer}
           playerNames={{
@@ -321,8 +303,16 @@ export default function DotsAndBoxesScreen() {
         </ThemedText>
       )}
 
+      <ThemedText variant="caption" style={{ color: theme.colors.textMuted, textAlign: 'center' }}>{gridSize}×{gridSize} dots · Complete a box to play again</ThemedText>
+      </>);
+
+  return (
+    <GameShell title="Dots & Boxes" onBack={handleHome} footer={shortLandscape ? undefined : <Button title="Rematch" onPress={handleRematch} variant="secondary" />} status={shortLandscape ? undefined : gameStatus}>
+      <View style={{ flex: 1, minHeight: 0, flexDirection: 'row', gap: 12 }}>
+      <View style={{ flex: 1, minHeight: 0 }}>
+
       {/* Score Display */}
-      <View style={styles.scoreContainer}>
+      <View style={[styles.scoreContainer, shortLandscape && { display: 'none' }]}>
         <View style={styles.scoreItem}>
           <View
             style={[styles.scoreDot, { backgroundColor: theme.colors.player1 }]}
@@ -365,7 +355,7 @@ export default function DotsAndBoxesScreen() {
       </View>
 
       {/* Extra Turn Banner (space is always reserved so the board doesn't resize) */}
-      <View style={styles.extraTurnRow}>
+      <View style={[styles.extraTurnRow, shortLandscape && { display: 'none' }]}>
       {showExtraTurn && (
         <Animated.View
           entering={FadeIn.duration(200)}
@@ -378,7 +368,7 @@ export default function DotsAndBoxesScreen() {
             },
           ]}
         >
-          <ThemedText variant="label" style={styles.extraTurnText}>
+          <ThemedText variant="label" style={[styles.extraTurnText, { color: theme.colors.onPrimary }]}>
             Extra turn!
           </ThemedText>
         </Animated.View>
@@ -393,6 +383,9 @@ export default function DotsAndBoxesScreen() {
             {
               width: boardSize,
               height: boardSize,
+              backgroundColor: theme.colors.surfaceRaised,
+              borderRadius: theme.borderRadius.md,
+              ...theme.shadows.sm,
             },
           ]}
         >
@@ -412,7 +405,9 @@ export default function DotsAndBoxesScreen() {
                       top: pos.y,
                       width: cellSize,
                       height: cellSize,
-                      backgroundColor: getPlayerColorAlpha(owner, 0.25),
+                      backgroundColor: getPlayerColorAlpha(owner, 0.2),
+                      borderWidth: 1,
+                      borderColor: getPlayerColor(owner),
                       borderRadius: 2,
                     },
                   ]}
@@ -495,13 +490,16 @@ export default function DotsAndBoxesScreen() {
               return (
                 <Pressable
                   key={`htap-${r}-${c}`}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Horizontal line, row ${r + 1}, column ${c + 1}`}
+                  disabled={aiThinking || gameState.isGameOver || (mode === 'single' && gameState.currentPlayer === 'player2')}
                   onPress={() => handleLinePress('horizontal', r, c)}
                   style={[
                     styles.tapZone,
                     {
                       left: startDot.x,
                       top: startDot.y - TAP_ZONE / 2,
-                      width: cellSize,
+                      width: Math.max(TAP_ZONE, cellSize),
                       height: TAP_ZONE,
                     },
                   ]}
@@ -513,7 +511,7 @@ export default function DotsAndBoxesScreen() {
                         width: cellSize - DOT_SIZE,
                         height: 2,
                         backgroundColor: theme.colors.border,
-                        opacity: 0.3,
+                        opacity: 1,
                         borderRadius: 1,
                       },
                     ]}
@@ -532,6 +530,9 @@ export default function DotsAndBoxesScreen() {
               return (
                 <Pressable
                   key={`vtap-${r}-${c}`}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Vertical line, row ${r + 1}, column ${c + 1}`}
+                  disabled={aiThinking || gameState.isGameOver || (mode === 'single' && gameState.currentPlayer === 'player2')}
                   onPress={() => handleLinePress('vertical', r, c)}
                   style={[
                     styles.tapZone,
@@ -539,7 +540,7 @@ export default function DotsAndBoxesScreen() {
                       left: startDot.x - TAP_ZONE / 2,
                       top: startDot.y,
                       width: TAP_ZONE,
-                      height: cellSize,
+                      height: Math.max(TAP_ZONE, cellSize),
                     },
                   ]}
                 >
@@ -550,7 +551,7 @@ export default function DotsAndBoxesScreen() {
                         width: 2,
                         height: cellSize - DOT_SIZE,
                         backgroundColor: theme.colors.border,
-                        opacity: 0.3,
+                        opacity: 0.7,
                         borderRadius: 1,
                       },
                     ]}
@@ -586,7 +587,7 @@ export default function DotsAndBoxesScreen() {
       </View>
 
       {/* AI thinking indicator — fixed height to prevent layout shift */}
-      <View style={styles.thinkingContainer}>
+      <View style={[styles.thinkingContainer, shortLandscape && { display: 'none' }]}>
         {aiThinking && (
           <ThemedText
             variant="caption"
@@ -598,6 +599,11 @@ export default function DotsAndBoxesScreen() {
       </View>
 
       {/* Game Over Modal */}
+
+      </View>
+      {shortLandscape ? <View style={{ width: 220, justifyContent: 'center', gap: 12 }}><StatusRail>{gameStatus}<ThemedText variant="label" style={{ textAlign: 'center', marginTop: 8 }}>P1 {gameState.scores.player1} · P2 {gameState.scores.player2}</ThemedText><ThemedText variant="caption" style={{ minHeight: 22, textAlign: 'center' }}>{showExtraTurn ? 'Extra turn!' : aiThinking ? 'AI is thinking…' : ''}</ThemedText></StatusRail><Button title="Rematch" onPress={handleRematch} variant="secondary" /></View> : null}
+      </View>
+
       <GameOverModal
         visible={showGameOver}
         result={{
@@ -608,7 +614,7 @@ export default function DotsAndBoxesScreen() {
         onHome={handleHome}
         gameName="Dots & Boxes"
       />
-    </View>
+    </GameShell>
   );
 }
 
@@ -641,7 +647,8 @@ const styles = StyleSheet.create({
   },
   scoreItem: {
     alignItems: 'center',
-    gap: 2,
+    flexDirection: 'row',
+    gap: 8,
   },
   scoreDot: {
     width: 8,
@@ -653,7 +660,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   scoreValue: {
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: '700',
   },
   extraTurnRow: {
@@ -666,12 +673,12 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   extraTurnText: {
-    color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 14,
   },
   boardWrapper: {
     flex: 1,
+    minHeight: 0,
     alignSelf: 'stretch',
     alignItems: 'center',
     justifyContent: 'center',
@@ -711,7 +718,7 @@ const styles = StyleSheet.create({
   sizeSelector: {
     flex: 1,
     justifyContent: 'center',
-    paddingHorizontal: 32,
+    paddingHorizontal: 12,
   },
   sizeOption: {
     flexDirection: 'row',

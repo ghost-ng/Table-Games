@@ -12,6 +12,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { GameShell } from '../../src/components/ui/GameShell';
+import { StatusRail } from '../../src/components/ui/StatusRail';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { ThemedText } from '../../src/components/ui/ThemedText';
 import { Button } from '../../src/components/ui/Button';
@@ -48,8 +50,6 @@ const GAME_TITLE = 'Pop & Race';
 
 // ─── Player palette (game-specific; themes only define two player colours) ──
 
-const SEAT_COLORS = ['#E53935', '#1E88E5', '#43A047', '#FBC02D'] as const;
-const SEAT_TEXT = ['#FFFFFF', '#FFFFFF', '#FFFFFF', '#3A2E00'] as const;
 const SEAT_NAMES = ['Red', 'Blue', 'Green', 'Yellow'] as const;
 
 // ─── Board geometry (fractions of the board's side) ──────────────────────────
@@ -137,6 +137,7 @@ interface PegProps {
 }
 
 function Peg({ left, top, size, color, ringColor, highlighted, selected, lifted, onPress, label }: PegProps) {
+  const { theme } = useTheme();
   const x = useSharedValue(left);
   const y = useSharedValue(top);
   const pulse = useSharedValue(1);
@@ -193,7 +194,8 @@ function Peg({ left, top, size, color, ringColor, highlighted, selected, lifted,
       <Pressable
         onPress={onPress}
         disabled={!onPress}
-        hitSlop={size * 0.35}
+        hitSlop={Math.max(size * 0.35, (44 - size) / 2)}
+        accessibilityState={{ selected, disabled: !onPress }}
         accessibilityRole={onPress ? 'button' : undefined}
         accessibilityLabel={label}
         style={{
@@ -202,7 +204,7 @@ function Peg({ left, top, size, color, ringColor, highlighted, selected, lifted,
           borderRadius: size / 2,
           backgroundColor: color,
           borderWidth: Math.max(1, size * 0.08),
-          borderColor: 'rgba(0,0,0,0.35)',
+          borderColor: theme.colors.text,
           transform: [{ scale: lifted ? 1.15 : 1 }],
         }}
       >
@@ -215,7 +217,8 @@ function Peg({ left, top, size, color, ringColor, highlighted, selected, lifted,
             width: size * 0.3,
             height: size * 0.3,
             borderRadius: size * 0.15,
-            backgroundColor: 'rgba(255,255,255,0.45)',
+            backgroundColor: theme.colors.surfaceRaised,
+            opacity: 0.45,
           }}
         />
       </Pressable>
@@ -262,11 +265,14 @@ function DieFace({ value, size, bg, pip, border }: { value: number; size: number
 
 export default function TroubleScreen() {
   const { theme } = useTheme();
+  const SEAT_COLORS = [theme.colors.player1, theme.colors.player2, theme.colors.success, theme.colors.warning];
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { contentMaxWidth, isLandscape, height } = useResponsive();
   const sideBySide = isLandscape && height < 560;
-  const { onLayout: onBoardAreaLayout, size: S } = useBoardFit({ inset: 8, minSize: 180 });
+  const { onLayout: onBoardAreaLayout, size: fittedBoardSize } = useBoardFit({ inset: 8, minSize: 180, maxSize: 640 });
+  // Switching between stacked and side layouts can retain the previous fit for one frame.
+  const S = sideBySide ? Math.min(fittedBoardSize, height - 96, contentMaxWidth - 280) : fittedBoardSize;
 
   const { mode: modeParam } = useLocalSearchParams<{ mode: string }>();
   const isSingle = modeParam !== 'multiplayer';
@@ -560,42 +566,14 @@ export default function TroubleScreen() {
     },
   ];
 
-  const header = (
-    <View style={styles.header}>
-      <Pressable onPress={() => router.back()} style={styles.backButton} accessibilityRole="button">
-        <ThemedText variant="body" style={{ color: theme.colors.primary }}>
-          Back
-        </ThemedText>
-      </Pressable>
-      <ThemedText variant="heading" style={styles.title}>
-        {GAME_TITLE}
-      </ThemedText>
-      {phase !== 'setup' ? (
-        <Pressable
-          onPress={() => {
-            clearTimers();
-            goPhase('setup');
-          }}
-          style={[styles.backButton, { alignItems: 'flex-end' }]}
-          accessibilityRole="button"
-        >
-          <ThemedText variant="body" style={{ color: theme.colors.primary }}>
-            Setup
-          </ThemedText>
-        </Pressable>
-      ) : (
-        <View style={styles.backButton} />
-      )}
-    </View>
-  );
+  const setupAction = phase !== 'setup' ? <Button title="Setup" size="sm" variant="secondary" onPress={() => { clearTimers(); goPhase('setup'); }} /> : undefined;
 
   if (phase === 'setup') {
     const options = isSingle ? [1, 2, 3] : [2, 3, 4];
     const chosen = isSingle ? opponents : playerCount;
     const previewSeats = seatsForCount(totalPlayers);
     return (
-      <View style={container}>
-        {header}
+      <GameShell title={GAME_TITLE} onBack={() => router.back()}>
         <ScrollView style={{ alignSelf: 'stretch' }} contentContainerStyle={styles.setupContent}>
           <ThemedText variant="heading" style={styles.setupTitle}>
             {isSingle ? 'How many opponents?' : 'How many players?'}
@@ -613,17 +591,18 @@ export default function TroubleScreen() {
                   }}
                   accessibilityRole="button"
                   accessibilityState={{ selected: active }}
+                  accessibilityLabel={`${n} ${isSingle ? 'opponents' : 'players'}`}
                   style={[
                     styles.segment,
                     {
                       borderRadius: theme.borderRadius.md,
                       borderColor: theme.colors.primary,
-                      backgroundColor: active ? theme.colors.primary : theme.colors.surface,
+                      backgroundColor: active ? theme.colors.primary : theme.colors.surfaceRaised,
                     },
                   ]}
                 >
-                  <ThemedText variant="heading" style={{ color: active ? '#FFFFFF' : theme.colors.text, fontSize: 22 }}>
-                    {n}
+                  <ThemedText variant="heading" style={{ color: active ? theme.colors.onPrimary : theme.colors.text, fontSize: 22 }}>
+                    {n}{active ? ' ✓' : ''}
                   </ThemedText>
                 </Pressable>
               );
@@ -680,7 +659,7 @@ export default function TroubleScreen() {
           onClose={() => setShowDifficulty(false)}
           gameName={GAME_TITLE}
         />
-      </View>
+      </GameShell>
     );
   }
 
@@ -728,7 +707,7 @@ export default function TroubleScreen() {
         style={{
           width: S,
           height: S,
-          backgroundColor: theme.colors.surface,
+          backgroundColor: theme.colors.board,
           borderRadius: theme.borderRadius.lg,
           borderWidth: 1,
           borderColor: theme.colors.border,
@@ -812,7 +791,8 @@ export default function TroubleScreen() {
                 onPress={() => onTargetPress(m)}
                 disabled={!humanTurn}
                 accessibilityRole="button"
-                accessibilityLabel="Move here"
+                  accessibilityLabel={`Move peg ${m.peg + 1} to landing spot`}
+                  hitSlop={Math.max(0, (44 - d) / 2)}
                 style={[
                   at(pegPoint(currentSeat, m.peg, m.to), d),
                   {
@@ -833,7 +813,7 @@ export default function TroubleScreen() {
           onPress={doRoll}
           disabled={!canRoll}
           accessibilityRole="button"
-          accessibilityLabel={`Roll the die${canRoll ? '' : ' (not available)'}`}
+          accessibilityLabel={`Roll the die${canRoll ? '' : ' (not available)'}, showing ${dieValue}`}
           style={[
             at({ x: 0.5, y: 0.5 }, domeD),
             {
@@ -866,7 +846,8 @@ export default function TroubleScreen() {
               width: domeD * 0.34,
               height: domeD * 0.2,
               borderRadius: domeD * 0.2,
-              backgroundColor: 'rgba(255,255,255,0.3)',
+              backgroundColor: theme.colors.surfaceRaised,
+              opacity: 0.3,
               transform: [{ rotate: '-30deg' }],
             }}
           />
@@ -893,7 +874,7 @@ export default function TroubleScreen() {
                 selected={movable && selectedPeg === peg}
                 lifted={isMoving}
                 onPress={movable && humanTurn ? () => onPegPress(peg) : undefined}
-                label={`${SEAT_NAMES[p.seat]} peg ${peg + 1}`}
+                label={`${playerName(pi)}, ${SEAT_NAMES[p.seat]} peg ${peg + 1}${movable ? ', legal move' : ''}`}
               />
             );
           }),
@@ -907,16 +888,18 @@ export default function TroubleScreen() {
       style={[
         styles.banner,
         {
-          backgroundColor: SEAT_COLORS[game.players[game.winner ?? game.current].seat],
+          backgroundColor: theme.colors.surfaceRaised,
+          borderWidth: 2,
+          borderColor: SEAT_COLORS[game.players[game.winner ?? game.current].seat],
           borderRadius: theme.borderRadius.md,
         },
       ]}
     >
-      <ThemedText variant="label" style={{ color: SEAT_TEXT[game.players[game.winner ?? game.current].seat], fontWeight: '700', fontSize: 16 }}>
+      <ThemedText variant="label" style={{ color: theme.colors.text, fontWeight: '700', fontSize: 16 }}>
         {bannerText}
       </ThemedText>
       {isSingle && game.winner === null && (
-        <ThemedText variant="caption" style={{ color: SEAT_TEXT[currentSeat], opacity: 0.85 }}>
+        <ThemedText variant="caption" style={{ color: theme.colors.textMuted }}>
           {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
         </ThemedText>
       )}
@@ -957,7 +940,7 @@ export default function TroubleScreen() {
           >
             <View style={[styles.scoreDot, { backgroundColor: SEAT_COLORS[p.seat] }]} />
             <ThemedText variant="caption" style={{ color: theme.colors.text }} numberOfLines={1}>
-              {playerName(i)} {pegsFinished(p)}/{PEGS_PER_PLAYER}
+              {active ? '▸ ' : ''}{playerName(i)} {pegsFinished(p)}/{PEGS_PER_PLAYER} home
             </ThemedText>
           </View>
         );
@@ -991,30 +974,24 @@ export default function TroubleScreen() {
 
   if (sideBySide) {
     return (
-      <View style={container}>
-        {header}
+      <GameShell title={GAME_TITLE} onBack={() => router.back()} trailingAction={setupAction}>
         <View style={styles.sideRow}>
           {board}
           <View style={styles.sidePanel}>
-            {banner}
-            {status}
+            <StatusRail>{banner}{status}</StatusRail>
             {scoreboard}
             {footer}
           </View>
         </View>
-      </View>
+      </GameShell>
     );
   }
 
   return (
-    <View style={container}>
-      {header}
-      <View style={styles.bannerWrap}>{banner}</View>
-      {status}
+    <GameShell title={GAME_TITLE} onBack={() => router.back()} trailingAction={setupAction} footer={footer} status={<>{banner}{status}</>}>
       {board}
       {scoreboard}
-      {footer}
-    </View>
+    </GameShell>
   );
 }
 
@@ -1105,6 +1082,7 @@ const styles = StyleSheet.create({
   },
   boardArea: {
     flex: 1,
+    minHeight: 0,
     alignSelf: 'stretch',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1157,6 +1135,7 @@ const styles = StyleSheet.create({
   },
   sideRow: {
     flex: 1,
+    minHeight: 0,
     flexDirection: 'row',
   },
   sidePanel: {

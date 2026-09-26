@@ -13,6 +13,9 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
+import { GameShell } from '../../src/components/ui/GameShell';
+import { StatusRail } from '../../src/components/ui/StatusRail';
+import { Button } from '../../src/components/ui/Button';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { TurnIndicator } from '../../src/components/ui/TurnIndicator';
 import { GameOverModal } from '../../src/components/ui/GameOverModal';
@@ -62,8 +65,9 @@ export default function TicTacToeScreen() {
   const { theme, themeName } = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { contentMaxWidth } = useResponsive();
-  const { onLayout: onBoardAreaLayout, size: boardSize } = useBoardFit();
+  const { contentMaxWidth, width, height } = useResponsive();
+  const shortLandscape = width > height && height < 560;
+  const { onLayout: onBoardAreaLayout, size: boardSize } = useBoardFit({ maxSize: 640, minSize: 138, inset: 8 });
   const cellSize = boardSize / 3;
   const params = useLocalSearchParams<{ mode: 'single' | 'multiplayer' }>();
 
@@ -214,35 +218,18 @@ export default function TicTacToeScreen() {
     };
   };
 
+  const gameStatus = (
+      <><TurnIndicator currentPlayer={currentTurnPlayer} playerNames={playerNames} />
+      <ThemedText variant="caption" style={{ textAlign: 'center', color: theme.colors.textMuted }}>
+        {gameState.isGameOver ? 'Game complete' : `Place ${gameState.currentPlayer} · Make a line of three`}{isSinglePlayer ? ` · ${difficulty}` : ''}
+      </ThemedText></>);
+
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background, maxWidth: contentMaxWidth, paddingBottom: insets.bottom }]}>
-      <Stack.Screen
-        options={{
-          headerShown: true,
-          title: 'Tic Tac Toe',
-          headerStyle: { backgroundColor: theme.colors.surface },
-          headerTintColor: theme.colors.text,
-          headerLeft: () => (
-            <Pressable onPress={() => router.back()} style={styles.backButton}>
-              <Animated.Text style={{ color: theme.colors.text, fontSize: 16 }}>← Back</Animated.Text>
-            </Pressable>
-          ),
-        }}
-      />
-
-      <View style={[styles.content, { paddingTop: 16 }]}>
-        {!gameState.isGameOver && (
-          <TurnIndicator
-            currentPlayer={currentTurnPlayer}
-            playerNames={playerNames}
-          />
-        )}
-        {isSinglePlayer && (
-          <ThemedText variant="caption" style={{ color: theme.colors.textMuted, textAlign: 'center', marginTop: 2 }}>
-            Difficulty: {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
-          </ThemedText>
-        )}
-
+    <GameShell title="Tic Tac Toe" onBack={() => router.back()} footer={shortLandscape ? undefined : <Button title="Rematch" onPress={handleRematch} variant="secondary" />} status={shortLandscape ? undefined : gameStatus}>
+      <View style={{ flex: 1, minHeight: 0, flexDirection: 'row', gap: 12 }}>
+      <View style={{ flex: 1, minHeight: 0 }}>
+      <Stack.Screen options={{ headerShown: false }} />
+      <View style={styles.content}>
         <View style={styles.boardWrapper} onLayout={onBoardAreaLayout}>
           <View
             style={[
@@ -250,7 +237,7 @@ export default function TicTacToeScreen() {
               {
                 width: boardSize,
                 height: boardSize,
-                backgroundColor: theme.colors.surface,
+                backgroundColor: theme.colors.board,
                 borderRadius: theme.borderRadius.lg,
                 borderColor: theme.colors.border,
                 borderWidth: 2,
@@ -267,6 +254,9 @@ export default function TicTacToeScreen() {
                 return (
                   <Pressable
                     key={`${rowIndex}-${colIndex}`}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Row ${rowIndex + 1}, column ${colIndex + 1}: ${cell ?? 'empty'}${isWinCell ? ', winning mark' : ''}`}
+                    disabled={cell !== null || gameState.isGameOver || (isSinglePlayer && gameState.currentPlayer !== 'X')}
                     onPress={() => handleCellPress(rowIndex, colIndex)}
                     style={[
                       styles.cell,
@@ -279,16 +269,24 @@ export default function TicTacToeScreen() {
                       },
                       isWinCell && {
                         backgroundColor: theme.colors.success + '25',
+                        borderWidth: 3,
+                        borderColor: theme.colors.success,
                       },
                     ]}
                   >
                     <CellContent value={cell} theme={theme} themeName={themeName} />
+                    {isWinCell ? <ThemedText variant="caption" style={{ position: 'absolute', bottom: 4, color: theme.colors.text, fontWeight: '700' }}>✓</ThemedText> : null}
                   </Pressable>
                 );
               })
             )}
           </View>
         </View>
+      </View>
+
+
+      </View>
+      {shortLandscape ? <View style={{ width: 220, justifyContent: 'center', gap: 12 }}><StatusRail>{gameStatus}</StatusRail><Button title="Rematch" onPress={handleRematch} variant="secondary" /></View> : null}
       </View>
 
       <DifficultySelector
@@ -311,7 +309,7 @@ export default function TicTacToeScreen() {
         gameName="Tic Tac Toe"
         playerNames={playerNames}
       />
-    </View>
+    </GameShell>
   );
 }
 
@@ -331,6 +329,7 @@ const styles = StyleSheet.create({
   },
   boardWrapper: {
     flex: 1,
+    minHeight: 0,
     alignSelf: 'stretch',
     justifyContent: 'center',
     alignItems: 'center',

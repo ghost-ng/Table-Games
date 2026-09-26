@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import {
   View,
   Pressable,
+  ScrollView,
   StyleSheet,
 } from 'react-native';
 import Animated, {
@@ -13,6 +14,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { GameShell } from '../../src/components/ui/GameShell';
+import { StatusRail } from '../../src/components/ui/StatusRail';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { TurnIndicator } from '../../src/components/ui/TurnIndicator';
 import { GameOverModal } from '../../src/components/ui/GameOverModal';
@@ -37,17 +40,20 @@ const COLS = 7;
 // Animated piece component that falls into place
 function AnimatedPiece({
   color,
+  mark,
   size,
   targetRow,
   isWinning,
   boardTop,
 }: {
   color: string;
+  mark: string;
   size: number;
   targetRow: number;
   isWinning: boolean;
   boardTop: number;
 }) {
+  const { theme } = useTheme();
   const translateY = useSharedValue(-boardTop - size);
 
   useEffect(() => {
@@ -70,12 +76,17 @@ function AnimatedPiece({
           height: size * 0.8,
           borderRadius: (size * 0.8) / 2,
           backgroundColor: color,
-          borderWidth: isWinning ? 3 : 0,
-          borderColor: '#FFFFFF',
+          borderWidth: isWinning ? 3 : 2,
+          borderColor: theme.colors.text,
+          alignItems: 'center',
+          justifyContent: 'center',
+          ...theme.shadows.sm,
         },
         animatedStyle,
       ]}
-    />
+    >
+      <ThemedText variant="label" style={{ color: theme.colors.text, fontSize: Math.max(11, size * 0.24) }}>{isWinning ? '✓' : mark}</ThemedText>
+    </Animated.View>
   );
 }
 
@@ -83,11 +94,15 @@ export default function ConnectFourScreen() {
   const { theme } = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { contentMaxWidth } = useResponsive();
+  const { contentMaxWidth, width, height } = useResponsive();
+  const shortLandscape = width > height && height < 560;
   // The board area holds the drop-arrow row (36px + 12px margin) above a 7×6 grid.
   const { onLayout: onBoardAreaLayout, size: boardWidth } = useBoardFit({
     aspectRatio: ROWS / COLS,
-    extraHeight: 48,
+    extraHeight: 56,
+    maxSize: 700,
+    minSize: 154,
+    inset: 8,
   });
 
   const { mode: modeParam } = useLocalSearchParams<{ mode: string }>();
@@ -271,7 +286,7 @@ export default function ConnectFourScreen() {
         style={[
           styles.container,
           {
-            backgroundColor: theme.colors.background,
+            backgroundColor: theme.colors.surfaceSunken,
             paddingTop: insets.top,
             paddingBottom: insets.bottom,
             maxWidth: contentMaxWidth,
@@ -288,33 +303,9 @@ export default function ConnectFourScreen() {
     );
   }
 
-  return (
-    <View
-      style={[
-        styles.container,
-        {
-          backgroundColor: theme.colors.background,
-          paddingTop: insets.top,
-          paddingBottom: insets.bottom,
-          maxWidth: contentMaxWidth,
-        },
-      ]}
-    >
-      {/* Header */}
-      <View style={styles.header}>
-        <Pressable onPress={handleBack} style={styles.backButton}>
-          <ThemedText variant="body" style={{ color: theme.colors.primary }}>
-            Back
-          </ThemedText>
-        </Pressable>
-        <ThemedText variant="heading" style={styles.title}>
-          Four in a Row
-        </ThemedText>
-        <View style={styles.backButton} />
-      </View>
-
+  const gameStatus = (<>
       {/* Turn Indicator */}
-      {!gameState.isGameOver && (
+      {true && (
         <TurnIndicator
           currentPlayer={currentTurnPlayer}
           playerNames={playerNames}
@@ -325,6 +316,17 @@ export default function ConnectFourScreen() {
           Difficulty: {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
         </ThemedText>
       )}
+
+      <ThemedText variant="caption" style={{ color: theme.colors.textMuted, textAlign: 'center' }}>Drop a disc · Connect four in any direction</ThemedText>
+      </>);
+
+  const compactMoves = width < 400 || shortLandscape ? <ScrollView horizontal style={{ height: 52, flexGrow: 0 }} contentContainerStyle={{ gap: 8, alignItems: 'center' }}>{Array.from({ length: COLS }, (_, col) => <Button key={col} title={`Drop ${col + 1}`} size="sm" variant="secondary" disabled={gameState.isGameOver || aiThinking || getLowestEmptyRow(gameState.board, col) === null} onPress={() => handleColumnPress(col)} />)}</ScrollView> : null;
+  const rematch = <View style={{ gap: 4 }}>{compactMoves}<Button title="Rematch" onPress={handleRematch} variant="secondary" /></View>;
+
+  return (
+    <GameShell title="Four in a Row" onBack={handleBack} footer={shortLandscape ? undefined : rematch} status={shortLandscape ? undefined : gameStatus}>
+      <View style={{ flex: 1, minHeight: 0, flexDirection: 'row', gap: 12 }}>
+      <View style={{ flex: 1, minHeight: 0 }}>
 
       <View style={styles.boardArea} onLayout={onBoardAreaLayout}>
       {/* Column tap targets */}
@@ -338,12 +340,15 @@ export default function ConnectFourScreen() {
           return (
             <Pressable
               key={col}
+              accessibilityRole="button"
+              accessibilityLabel={`Drop in column ${col + 1}`}
+              disabled={!isAvailable}
               onPress={() => handleColumnPress(col)}
               style={[
                 styles.columnTarget,
                 {
                   width: cellSize,
-                  height: 36,
+                  height: 44,
                   opacity: isAvailable ? 1 : 0.3,
                 },
               ]}
@@ -372,7 +377,9 @@ export default function ConnectFourScreen() {
           {
             width: boardWidth,
             height: boardHeight,
-            backgroundColor: theme.colors.surface,
+            backgroundColor: theme.colors.board,
+            borderWidth: 2,
+            borderColor: theme.colors.border,
             borderRadius: theme.borderRadius.md,
             ...theme.shadows.md,
           },
@@ -387,6 +394,8 @@ export default function ConnectFourScreen() {
               return (
                 <Pressable
                   key={col}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Row ${row + 1}, column ${col + 1}: ${cell ?? 'empty'}${winning ? ', winning disc' : ''}`}
                   onPress={() => handleColumnPress(col)}
                   style={[
                     styles.cell,
@@ -405,12 +414,15 @@ export default function ConnectFourScreen() {
                         borderRadius: (cellSize * 0.8) / 2,
                         backgroundColor: cell
                           ? 'transparent'
-                          : theme.colors.background,
+                          : theme.colors.surfaceSunken,
+                        borderWidth: 1,
+                        borderColor: theme.colors.border,
                       },
                     ]}
                   >
                     {cell !== null && (
                       <AnimatedPiece
+                        mark={cell === 'red' ? '1' : '2'}
                         color={
                           cell === 'red'
                             ? theme.colors.player1
@@ -446,11 +458,13 @@ export default function ConnectFourScreen() {
       </View>
 
       {/* Bottom buttons */}
-      <View style={styles.bottomButtons}>
-        <Button title="Rematch" onPress={handleRematch} variant="secondary" size="md" />
-      </View>
 
       {/* Game Over Modal */}
+
+      </View>
+      {shortLandscape ? <View style={{ width: 220, justifyContent: 'center', gap: 12 }}><StatusRail>{gameStatus}</StatusRail>{rematch}</View> : null}
+      </View>
+
       <GameOverModal
         visible={showGameOver}
         result={gameOverResult}
@@ -459,7 +473,7 @@ export default function ConnectFourScreen() {
         gameName="Four in a Row"
         playerNames={playerNames}
       />
-    </View>
+    </GameShell>
   );
 }
 
@@ -487,6 +501,7 @@ const styles = StyleSheet.create({
   },
   boardArea: {
     flex: 1,
+    minHeight: 0,
     alignSelf: 'stretch',
     alignItems: 'center',
     justifyContent: 'center',

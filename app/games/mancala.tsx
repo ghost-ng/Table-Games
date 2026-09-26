@@ -1,8 +1,10 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { View, Pressable, StyleSheet, type LayoutChangeEvent } from 'react-native';
+import { View, Pressable, ScrollView, StyleSheet, type LayoutChangeEvent } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { GameShell } from '../../src/components/ui/GameShell';
+import { StatusRail } from '../../src/components/ui/StatusRail';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { ThemedText } from '../../src/components/ui/ThemedText';
 import { TurnIndicator } from '../../src/components/ui/TurnIndicator';
@@ -95,6 +97,11 @@ function SeedDots({
               height: dot,
               borderRadius: dot / 2,
               backgroundColor: colors[k % colors.length],
+              borderWidth: 1,
+              borderColor: colors[(k + 1) % colors.length],
+              shadowColor: colors[0],
+              shadowOffset: { width: 0, height: 1 },
+              shadowOpacity: 0.25,
               opacity: 0.9,
             }}
           />
@@ -116,14 +123,14 @@ export default function MancalaScreen() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { contentMaxWidth, height: windowHeight } = useResponsive();
+  const { contentMaxWidth, width: windowWidth, height: windowHeight } = useResponsive();
 
   // Short screens (phone landscape): fold the Rematch button into the header.
   const compact = windowHeight < 520;
 
   // Two fits for the same area — pick one based on the area's shape.
-  const fitH = useBoardFit({ aspectRatio: SHORT / LONG, maxSize: 700, inset: 8, minSize: 160 });
-  const fitV = useBoardFit({ aspectRatio: LONG / SHORT, maxSize: 260, inset: 8, minSize: 90 });
+  const fitH = useBoardFit({ aspectRatio: SHORT / LONG, maxSize: 1000, inset: 8, minSize: 160 });
+  const fitV = useBoardFit({ aspectRatio: LONG / SHORT, maxSize: 260, inset: 8, minSize: 64 });
   const [area, setArea] = useState<{ width: number; height: number } | null>(null);
   const onBoardAreaLayout = useCallback(
     (e: LayoutChangeEvent) => {
@@ -134,7 +141,9 @@ export default function MancalaScreen() {
     },
     [fitH.onLayout, fitV.onLayout]
   );
-  const vertical = area ? area.height > area.width : windowHeight > contentMaxWidth;
+  const vertical = windowWidth < 600 && windowHeight > windowWidth
+    ? true
+    : area ? area.height > area.width : windowHeight > contentMaxWidth;
   const boardW = vertical ? fitV.size : fitH.size;
   const unit = boardW / (vertical ? SHORT : LONG);
   const boardH = unit * (vertical ? LONG : SHORT);
@@ -389,7 +398,7 @@ export default function MancalaScreen() {
           width: w,
           height: h,
           borderRadius: Math.min(w, h) / 2,
-          backgroundColor: theme.colors.background,
+          backgroundColor: theme.colors.surfaceSunken,
           borderWidth: active ? 3 : 2,
           borderColor: highlight ? theme.colors.text : color,
           overflow: 'hidden',
@@ -432,7 +441,8 @@ export default function MancalaScreen() {
         onPress={() => handlePitPress(index)}
         disabled={!legal}
         accessibilityRole="button"
-        accessibilityLabel={`${playerNames[owner]} pit ${owner === 'player1' ? index + 1 : index - 6}, ${pits[index]} seeds`}
+        accessibilityLabel={`${playerNames[owner]} pit ${owner === 'player1' ? index + 1 : index - 6}, ${pits[index]} seeds${legal ? ', sow seeds' : ''}`}
+        accessibilityState={{ disabled: !legal, selected: isSource }}
         style={{
           position: 'absolute',
           left: r.x * unit,
@@ -448,8 +458,9 @@ export default function MancalaScreen() {
             width: d,
             height: d,
             borderRadius: d / 2,
-            backgroundColor: theme.colors.background,
+            backgroundColor: theme.colors.surfaceSunken,
             borderWidth: legal || isLast || isSource ? 3 : 1.5,
+            borderStyle: legal ? 'dashed' : 'solid',
             borderColor: isLast ? theme.colors.text : legal || isSource ? color : theme.colors.border,
             overflow: 'hidden',
             alignItems: 'center',
@@ -485,46 +496,10 @@ export default function MancalaScreen() {
   const s1 = gameState.pits[STORE.player1];
   const s2 = gameState.pits[STORE.player2];
 
-  return (
-    <View
-      style={[
-        styles.container,
-        {
-          backgroundColor: theme.colors.background,
-          paddingTop: insets.top,
-          paddingBottom: insets.bottom,
-          maxWidth: contentMaxWidth,
-        },
-      ]}
-    >
-      {/* Header */}
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.headerSide}>
-          <ThemedText variant="body" style={{ color: theme.colors.primary }}>
-            Back
-          </ThemedText>
-        </Pressable>
-        <View style={styles.titleWrap}>
-          <ThemedText variant="heading" style={styles.title} numberOfLines={1}>
-            Mancala
-          </ThemedText>
-          {compact && mode === 'single' && (
-            <ThemedText variant="caption" style={{ color: theme.colors.textMuted }}>
-              {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
-            </ThemedText>
-          )}
-        </View>
-        <View style={[styles.headerSide, { alignItems: 'flex-end' }]}>
-          {compact && (
-            <Pressable onPress={resetGame} hitSlop={8}>
-              <ThemedText variant="body" style={{ color: theme.colors.primary }}>
-                Rematch
-              </ThemedText>
-            </Pressable>
-          )}
-        </View>
-      </View>
+  const rematch = <View style={{ gap: 4 }}>{windowWidth < 360 ? <ScrollView horizontal style={{ height: 52, flexGrow: 0 }} contentContainerStyle={{ gap: 8, alignItems: 'center' }}>{gameState.pits.map((count, pit) => !isStore(pit) && ownerOf(pit) === gameState.currentPlayer ? <Button key={pit} title={`Sow ${pit < 6 ? pit + 1 : pit - 6} · ${count}`} size="sm" variant="secondary" disabled={!canInteract || !isLegalMove(gameState, pit)} onPress={() => handlePitPress(pit)} /> : null)}</ScrollView> : null}<Button title="Rematch" onPress={resetGame} variant="secondary" /></View>;
 
+  return (
+    <GameShell title="Mancala" onBack={() => router.back()} footer={compact ? undefined : rematch} trailingAction={compact ? <Button title="Rematch" onPress={resetGame} variant="secondary" size="sm" /> : undefined} status={<>
       {/* Turn indicator (keeps its height at game end so the board doesn't jump) */}
       <View style={styles.turnRow}>
         {!gameState.isGameOver ? (
@@ -545,13 +520,16 @@ export default function MancalaScreen() {
         </ThemedText>
       )}
 
+      <ThemedText variant="caption" style={{ color: theme.colors.textMuted, textAlign: 'center' }}>Choose a dashed pit · Collect seeds in your store</ThemedText>
+      </>}>
+
       {/* Board */}
       <View style={styles.boardArea} onLayout={onBoardAreaLayout}>
         <View
           style={{
             width: boardW,
             height: boardH,
-            backgroundColor: theme.colors.surface,
+            backgroundColor: theme.colors.board,
             borderRadius: theme.borderRadius.lg,
             borderWidth: 1,
             borderColor: theme.colors.border,
@@ -577,11 +555,6 @@ export default function MancalaScreen() {
         )}
       </View>
 
-      {!compact && (
-        <View style={styles.bottomButtons}>
-          <Button title="Rematch" onPress={resetGame} variant="secondary" size="md" />
-        </View>
-      )}
 
       <GameOverModal
         visible={showGameOver}
@@ -594,7 +567,7 @@ export default function MancalaScreen() {
         gameName="Mancala"
         playerNames={playerNames}
       />
-    </View>
+    </GameShell>
   );
 }
 

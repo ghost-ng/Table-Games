@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Pressable, StyleSheet } from 'react-native';
+import { View, Pressable, ScrollView, StyleSheet } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -9,6 +9,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { GameShell } from '../../src/components/ui/GameShell';
+import { StatusRail } from '../../src/components/ui/StatusRail';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { ThemedText } from '../../src/components/ui/ThemedText';
 import { TurnIndicator } from '../../src/components/ui/TurnIndicator';
@@ -100,6 +102,7 @@ function Triangle({
 }
 
 function Peg({ size, color, borderColor }: { size: number; color: string; borderColor: string }) {
+  const { theme } = useTheme();
   return (
     <View
       style={{
@@ -119,7 +122,8 @@ function Peg({ size, color, borderColor }: { size: number; color: string; border
           width: size * 0.3,
           height: size * 0.22,
           borderRadius: size * 0.15,
-          backgroundColor: 'rgba(255,255,255,0.35)',
+          backgroundColor: theme.colors.surfaceRaised,
+          opacity: 0.45,
         }}
       />
     </View>
@@ -386,7 +390,7 @@ export default function ChineseCheckersScreen() {
   const center = { x: (6 + PAD_X) * s, y: (8 * ROW_SPACING + PAD_Y) * s };
   const bigSide = 12 * s + 2 * Math.sqrt(3) * STAR_MARGIN * s;
   const smallSide = 3 * s + 2 * Math.sqrt(3) * STAR_MARGIN * s;
-  const pegBorder = 'rgba(0,0,0,0.25)';
+  const pegBorder = theme.colors.text;
   const trailThickness = Math.max(2, s * 0.1);
 
   let statusText = '';
@@ -415,8 +419,8 @@ export default function ChineseCheckersScreen() {
 
       {/* Star */}
       {/* Border tone keeps the star visible against the page on every theme. */}
-      <Triangle cx={center.x} cy={center.y} side={bigSide} pointsUp color={theme.colors.border} />
-      <Triangle cx={center.x} cy={center.y} side={bigSide} pointsUp={false} color={theme.colors.border} />
+      <Triangle cx={center.x} cy={center.y} side={bigSide} pointsUp color={theme.colors.board} />
+      <Triangle cx={center.x} cy={center.y} side={bigSide} pointsUp={false} color={theme.colors.board} />
       {/* Goal triangles: top is player1's target, bottom is player2's */}
       <Triangle
         cx={center.x}
@@ -447,9 +451,9 @@ export default function ChineseCheckersScreen() {
             width: holeSize,
             height: holeSize,
             borderRadius: holeSize / 2,
-            backgroundColor: theme.colors.surface,
+            backgroundColor: theme.colors.surfaceSunken,
             borderWidth: 1.5,
-            borderColor: theme.colors.textMuted,
+            borderColor: theme.colors.border,
           }}
         />
       ))}
@@ -511,8 +515,10 @@ export default function ChineseCheckersScreen() {
             width: pegSize,
             height: pegSize,
             borderRadius: pegSize / 2,
-            backgroundColor: theme.colors.success,
-            opacity: 0.55,
+            backgroundColor: theme.colors.surfaceRaised,
+            borderWidth: 2,
+            borderColor: theme.colors.focus,
+            opacity: 0.8,
           }}
         />
       ))}
@@ -578,7 +584,10 @@ export default function ChineseCheckersScreen() {
           <Pressable
             key={`hit-${h.index}`}
             onPress={() => handleHolePress(h.index)}
-            accessibilityLabel={label}
+            accessibilityRole="button"
+            accessibilityLabel={`${label}, hole ${h.index + 1}`}
+            accessibilityState={{ selected: selected === h.index }}
+            disabled={inputLocked}
             style={{
               position: 'absolute',
               left: holeX(h.index, s) - s / 2,
@@ -590,24 +599,6 @@ export default function ChineseCheckersScreen() {
           />
         );
       })}
-    </View>
-  );
-
-  const header = (
-    <View style={[styles.header, sideLayout && styles.headerSide]}>
-      <Pressable onPress={() => router.back()} style={styles.backButton} accessibilityRole="button">
-        <ThemedText variant="body" style={{ color: theme.colors.primary }}>
-          Back
-        </ThemedText>
-      </Pressable>
-      <ThemedText
-        variant="heading"
-        numberOfLines={1}
-        style={[styles.title, sideLayout && { fontSize: 18 }]}
-      >
-        Chinese Checkers
-      </ThemedText>
-      <View style={styles.backButton} />
     </View>
   );
 
@@ -639,7 +630,7 @@ export default function ChineseCheckersScreen() {
           <View key={p} style={styles.countItem}>
             <View style={[styles.countDot, { backgroundColor: colorOf(p) }]} />
             <ThemedText variant="label" style={{ color: theme.colors.text }}>
-              {playerNames[p]}: {p === 'player1' ? home1 : home2}/{PEGS_PER_PLAYER} home
+              {mode === 'multiplayer' ? (p === 'player1' ? 'P1' : 'P2') : playerNames[p]}: {p === 'player1' ? home1 : home2}/{PEGS_PER_PLAYER} home
             </ThemedText>
           </View>
         ))}
@@ -661,8 +652,11 @@ export default function ChineseCheckersScreen() {
     </View>
   );
 
+  const moveControls = <ScrollView horizontal style={{ height: 52, flexGrow: 0, alignSelf: 'stretch' }} contentContainerStyle={{ gap: 8, alignItems: 'center' }}>{selected === null ? HOLES.filter((hole) => gameState.board[hole.index] === gameState.currentPlayer).map((hole, index) => <Button key={hole.index} title={`Peg ${index + 1}`} size="sm" variant="secondary" disabled={inputLocked} onPress={() => handleHolePress(hole.index)} />) : <><Button title="Change peg" size="sm" variant="ghost" disabled={inputLocked} onPress={deselect} />{destinations.map((move) => <Button key={move.to} title={`Move to ${move.to + 1}`} size="sm" variant="secondary" disabled={inputLocked} onPress={() => handleHolePress(move.to)} />)}</>}</ScrollView>;
+
   const rematch = (
     <View style={[styles.bottomButtons, sideLayout && { marginBottom: 8 }]}>
+      {moveControls}
       <Button title="Rematch" onPress={resetGame} variant="secondary" size={sideLayout ? 'sm' : 'md'} />
     </View>
   );
@@ -684,46 +678,13 @@ export default function ChineseCheckersScreen() {
     />
   );
 
-  const containerStyle = [
-    styles.container,
-    {
-      backgroundColor: theme.colors.background,
-      paddingTop: insets.top,
-      paddingBottom: insets.bottom,
-      maxWidth: contentMaxWidth,
-    },
-  ];
-
-  if (sideLayout) {
-    return (
-      <View
-        style={[
-          ...containerStyle,
-          { flexDirection: 'row', paddingLeft: insets.left, paddingRight: insets.right, alignItems: 'stretch' },
-        ]}
-      >
-        {boardArea}
-        <View style={styles.sidePanel}>
-          {header}
-          {info}
-          <View style={{ flex: 1 }} />
-          {status}
-          {rematch}
-        </View>
-        {gameOverModal}
-      </View>
-    );
-  }
-
   return (
-    <View style={containerStyle}>
-      {header}
-      {info}
-      {boardArea}
-      {status}
-      {rematch}
+    <GameShell title="Chinese Checkers" onBack={() => router.back()} footer={sideLayout ? undefined : rematch} status={sideLayout ? undefined : info}>
+      {sideLayout ? <View style={{ flex: 1, flexDirection: 'row', minHeight: 0 }}>
+        {boardArea}<View style={styles.sidePanel}><StatusRail>{info}</StatusRail>{status}{rematch}</View>
+      </View> : <>{boardArea}{status}</>}
       {gameOverModal}
-    </View>
+    </GameShell>
   );
 }
 
@@ -757,7 +718,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     width: '100%',
-    paddingHorizontal: 16,
+    paddingHorizontal: 0,
     paddingVertical: 8,
   },
   countsColumn: {
@@ -769,7 +730,7 @@ const styles = StyleSheet.create({
   countItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 4,
   },
   countDot: {
     width: 14,
@@ -778,6 +739,7 @@ const styles = StyleSheet.create({
   },
   boardArea: {
     flex: 1,
+    minHeight: 0,
     alignSelf: 'stretch',
     alignItems: 'center',
     justifyContent: 'center',

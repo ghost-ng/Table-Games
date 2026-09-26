@@ -3,6 +3,7 @@ import {
   View,
   Image,
   Pressable,
+  ScrollView,
   StyleSheet,
 } from 'react-native';
 import Animated, {
@@ -13,6 +14,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { GameShell } from '../../src/components/ui/GameShell';
+import { StatusRail } from '../../src/components/ui/StatusRail';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { ThemedText } from '../../src/components/ui/ThemedText';
 import { TurnIndicator } from '../../src/components/ui/TurnIndicator';
@@ -124,10 +127,10 @@ function AnimatedPiece({
             justifyContent: 'center',
             alignItems: 'center',
             borderWidth: isSelected ? 3 : 0,
-            borderColor: isSelected ? '#FFD700' : 'transparent',
+            borderColor: isSelected ? theme.colors.focus : 'transparent',
           },
           isSelected && {
-            shadowColor: '#FFD700',
+            shadowColor: theme.colors.focus,
             shadowOffset: { width: 0, height: 0 },
             shadowOpacity: 0.6,
             shadowRadius: 8,
@@ -162,8 +165,9 @@ export default function CheckersScreen() {
   const { theme, themeName } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { contentMaxWidth } = useResponsive();
-  const { onLayout: onBoardAreaLayout, size: boardWidth } = useBoardFit();
+  const { contentMaxWidth, width, height } = useResponsive();
+  const shortLandscape = width > height && height < 560;
+  const { onLayout: onBoardAreaLayout, size: boardWidth } = useBoardFit({ maxSize: 640, minSize: 160, inset: 8 });
 
   const { mode: modeParam } = useLocalSearchParams<{ mode: string }>();
   const resolvedMode = (modeParam === 'multiplayer' ? 'multiplayer' : 'single') as 'single' | 'multiplayer';
@@ -178,8 +182,8 @@ export default function CheckersScreen() {
 
   const cellSize = boardWidth / BOARD_SIZE;
 
-  const lightSquareColor = theme.colors.background;
-  const darkSquareColor = theme.colors.surface;
+  const lightSquareColor = theme.colors.boardAlt;
+  const darkSquareColor = theme.colors.board;
 
   // ─── Reset game ─────────────────────────────────────────────────────────
 
@@ -419,33 +423,9 @@ export default function CheckersScreen() {
       ? { player1: 'You', player2: 'AI' }
       : { player1: 'Player 1', player2: 'Player 2' };
 
-  return (
-    <View
-      style={[
-        styles.container,
-        {
-          backgroundColor: theme.colors.background,
-          paddingTop: insets.top,
-          paddingBottom: insets.bottom,
-          maxWidth: contentMaxWidth,
-        },
-      ]}
-    >
-      {/* Header */}
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
-          <ThemedText variant="body" style={{ color: theme.colors.primary }}>
-            Back
-          </ThemedText>
-        </Pressable>
-        <ThemedText variant="heading" style={styles.title}>
-          Checkers
-        </ThemedText>
-        <View style={styles.backButton} />
-      </View>
-
+  const gameStatus = (<>
       {/* Turn Indicator */}
-      {!gameState.isGameOver && (
+      {true && (
         <TurnIndicator
           currentPlayer={gameState.currentPlayer}
           playerNames={playerNames}
@@ -456,6 +436,18 @@ export default function CheckersScreen() {
           Difficulty: {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
         </ThemedText>
       )}
+
+      <ThemedText variant="caption" style={{ color: theme.colors.textMuted, textAlign: 'center' }}>Select a piece · Move to a ringed square</ThemedText>
+      </>);
+
+  const selection = gameState.jumpSequence ?? gameState.selectedPiece;
+  const compactMoves = width < 400 || shortLandscape ? <ScrollView horizontal style={{ height: 52, flexGrow: 0 }} contentContainerStyle={{ gap: 8, alignItems: 'center' }}>{selection ? gameState.validMoves.map((move) => <Button key={`${move.to.row}-${move.to.col}`} title={`Move ${move.to.row + 1},${move.to.col + 1}`} size="sm" variant="secondary" onPress={() => handleCellPress(move.to.row, move.to.col)} />) : gameState.board.flatMap((row, r) => row.map((piece, c) => piece?.player === gameState.currentPlayer && getValidMoves(gameState.board, { row: r, col: c }, gameState.currentPlayer).length > 0 ? <Button key={`${r}-${c}`} title={`Piece ${r + 1},${c + 1}`} size="sm" variant="secondary" disabled={gameState.isGameOver || (mode === 'single' && gameState.currentPlayer === 'player2')} onPress={() => handleCellPress(r, c)} /> : null))}</ScrollView> : null;
+  const rematch = <View style={{ gap: 4 }}>{compactMoves}<Button title="Rematch" onPress={resetGame} variant="secondary" /></View>;
+
+  return (
+    <GameShell title="Checkers" onBack={() => router.back()} footer={shortLandscape ? undefined : rematch} status={shortLandscape ? undefined : gameStatus}>
+      <View style={{ flex: 1, minHeight: 0, flexDirection: 'row', gap: 12 }}>
+      <View style={{ flex: 1, minHeight: 0 }}>
 
       {/* Piece Counts */}
       <View style={styles.countsRow}>
@@ -492,6 +484,8 @@ export default function CheckersScreen() {
             width: boardWidth,
             height: boardWidth,
             borderRadius: theme.borderRadius.md,
+            borderWidth: 2,
+            borderColor: theme.colors.border,
             overflow: 'hidden',
             ...theme.shadows.md,
           },
@@ -506,6 +500,7 @@ export default function CheckersScreen() {
             return (
               <Pressable
                 key={`${row}-${col}`}
+                accessible={false}
                 onPress={() => handleCellPress(row, col)}
                 style={[
                   {
@@ -529,7 +524,9 @@ export default function CheckersScreen() {
                       width: cellSize * 0.3,
                       height: cellSize * 0.3,
                       borderRadius: cellSize * 0.15,
-                      backgroundColor: 'rgba(255, 215, 0, 0.6)',
+                      backgroundColor: theme.colors.surfaceRaised,
+                      borderWidth: 3,
+                      borderColor: theme.colors.focus,
                     }}
                   />
                 )}
@@ -570,6 +567,9 @@ export default function CheckersScreen() {
             return (
               <Pressable
                 key={`touch-${row}-${col}`}
+                accessibilityRole="button"
+                accessibilityState={{ selected: isSelectedPiece(row, col) }}
+                accessibilityLabel={`Row ${row + 1}, column ${col + 1}: ${gameState.board[row][col] ? playerNames[gameState.board[row][col]!.player] + ' piece' : 'empty'}${isValidMoveTarget(row, col) ? ', legal destination' : ''}`}
                 onPress={() => handleCellPress(row, col)}
                 style={{
                   position: 'absolute',
@@ -599,11 +599,13 @@ export default function CheckersScreen() {
       </View>
 
       {/* Bottom buttons */}
-      <View style={styles.bottomButtons}>
-        <Button title="Rematch" onPress={resetGame} variant="secondary" size="md" />
-      </View>
 
       {/* Game Over Modal */}
+
+      </View>
+      {shortLandscape ? <View style={{ width: 220, justifyContent: 'center', gap: 12 }}><StatusRail>{gameStatus}</StatusRail>{rematch}</View> : null}
+      </View>
+
       <GameOverModal
         visible={showGameOver}
         result={{
@@ -618,7 +620,7 @@ export default function CheckersScreen() {
         gameName="Checkers"
         playerNames={playerNames}
       />
-    </View>
+    </GameShell>
   );
 }
 
@@ -649,7 +651,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     width: '100%',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 6,
   },
   countItem: {
     flexDirection: 'row',
@@ -663,6 +665,7 @@ const styles = StyleSheet.create({
   },
   boardArea: {
     flex: 1,
+    minHeight: 0,
     alignSelf: 'stretch',
     alignItems: 'center',
     justifyContent: 'center',

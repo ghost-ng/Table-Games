@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Pressable,
+  ScrollView,
   StyleSheet,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -73,6 +74,11 @@ export default function DotsAndBoxesScreen() {
   // Keep every outer 44px line target inside the board surface.
   const gridInset = TAP_ZONE / 2;
   const cellSize = (boardSize - TAP_ZONE - DOT_SIZE) / (gridSize - 1);
+  // Leave a gap around each dot so perpendicular targets never intersect.
+  const lineHitThickness = Math.min(TAP_ZONE, cellSize * 0.4);
+  const lineHitInset = lineHitThickness / 2 + 1;
+  const lineHitLength = cellSize - lineHitInset * 2;
+  const needsLineControls = lineHitThickness < TAP_ZONE || lineHitLength < TAP_ZONE;
 
   const handleBoardSizeSelect = useCallback((size: number) => {
     setGridSize(size);
@@ -306,8 +312,33 @@ export default function DotsAndBoxesScreen() {
       <ThemedText variant="caption" style={{ color: theme.colors.textMuted, textAlign: 'center' }}>{gridSize}×{gridSize} dots · Complete a box to play again</ThemedText>
       </>);
 
+  const rematch = (
+    <View style={{ gap: 4 }}>
+      {needsLineControls ? (
+        <>
+          <ScrollView horizontal style={{ height: 52, flexGrow: 0 }} contentContainerStyle={{ gap: 8, alignItems: 'center' }} accessibilityLabel="Line actions">
+            {getAvailableLines(gameState).map(({ orientation, row, col }) => (
+              <Button
+                key={`${orientation}-${row}-${col}`}
+                title={`${orientation === 'horizontal' ? 'Horizontal' : 'Vertical'} ${row + 1},${col + 1}`}
+                size="sm"
+                variant="secondary"
+                disabled={aiThinking || gameState.isGameOver || (mode === 'single' && gameState.currentPlayer === 'player2')}
+                onPress={() => handleLinePress(orientation, row, col)}
+              />
+            ))}
+          </ScrollView>
+          <ThemedText variant="caption" accessibilityLiveRegion="polite" style={{ minHeight: 20, textAlign: 'center' }}>
+            {showExtraTurn ? 'Extra turn!' : aiThinking ? 'AI is thinking…' : 'Tap a line or choose its action above'}
+          </ThemedText>
+        </>
+      ) : null}
+      <Button title="Rematch" onPress={handleRematch} variant="secondary" />
+    </View>
+  );
+
   return (
-    <GameShell title="Dots & Boxes" onBack={handleHome} footer={shortLandscape ? undefined : <Button title="Rematch" onPress={handleRematch} variant="secondary" />} status={shortLandscape ? undefined : gameStatus}>
+    <GameShell title="Dots & Boxes" onBack={handleHome} footer={shortLandscape ? undefined : rematch} status={shortLandscape ? undefined : gameStatus}>
       <View style={{ flex: 1, minHeight: 0, flexDirection: 'row', gap: 12 }}>
       <View style={{ flex: 1, minHeight: 0 }}>
 
@@ -497,10 +528,10 @@ export default function DotsAndBoxesScreen() {
                   style={[
                     styles.tapZone,
                     {
-                      left: startDot.x,
-                      top: startDot.y - TAP_ZONE / 2,
-                      width: Math.max(TAP_ZONE, cellSize),
-                      height: TAP_ZONE,
+                      left: startDot.x + lineHitInset,
+                      top: startDot.y - lineHitThickness / 2,
+                      width: lineHitLength,
+                      height: lineHitThickness,
                     },
                   ]}
                 >
@@ -508,7 +539,7 @@ export default function DotsAndBoxesScreen() {
                     style={[
                       styles.lineHint,
                       {
-                        width: cellSize - DOT_SIZE,
+                        width: lineHitLength,
                         height: 2,
                         backgroundColor: theme.colors.border,
                         opacity: 1,
@@ -537,10 +568,10 @@ export default function DotsAndBoxesScreen() {
                   style={[
                     styles.tapZone,
                     {
-                      left: startDot.x - TAP_ZONE / 2,
-                      top: startDot.y,
-                      width: TAP_ZONE,
-                      height: Math.max(TAP_ZONE, cellSize),
+                      left: startDot.x - lineHitThickness / 2,
+                      top: startDot.y + lineHitInset,
+                      width: lineHitThickness,
+                      height: lineHitLength,
                     },
                   ]}
                 >
@@ -549,7 +580,7 @@ export default function DotsAndBoxesScreen() {
                       styles.lineHint,
                       {
                         width: 2,
-                        height: cellSize - DOT_SIZE,
+                        height: lineHitLength,
                         backgroundColor: theme.colors.border,
                         opacity: 0.7,
                         borderRadius: 1,
@@ -587,7 +618,7 @@ export default function DotsAndBoxesScreen() {
       </View>
 
       {/* AI thinking indicator — fixed height to prevent layout shift */}
-      <View style={[styles.thinkingContainer, shortLandscape && { display: 'none' }]}>
+      <View style={[styles.thinkingContainer, (shortLandscape || needsLineControls) && { display: 'none' }]}>
         {aiThinking && (
           <ThemedText
             variant="caption"
@@ -601,7 +632,7 @@ export default function DotsAndBoxesScreen() {
       {/* Game Over Modal */}
 
       </View>
-      {shortLandscape ? <View style={{ width: 220, justifyContent: 'center', gap: 12 }}><StatusRail>{gameStatus}<ThemedText variant="label" style={{ textAlign: 'center', marginTop: 8 }}>P1 {gameState.scores.player1} · P2 {gameState.scores.player2}</ThemedText><ThemedText variant="caption" style={{ minHeight: 22, textAlign: 'center' }}>{showExtraTurn ? 'Extra turn!' : aiThinking ? 'AI is thinking…' : ''}</ThemedText></StatusRail><Button title="Rematch" onPress={handleRematch} variant="secondary" /></View> : null}
+      {shortLandscape ? <View style={{ width: 220, justifyContent: 'center', gap: 12 }}><StatusRail>{gameStatus}<ThemedText variant="label" style={{ textAlign: 'center', marginTop: 8 }}>P1 {gameState.scores.player1} · P2 {gameState.scores.player2}</ThemedText><ThemedText variant="caption" style={{ minHeight: 22, textAlign: 'center' }}>{showExtraTurn ? 'Extra turn!' : aiThinking ? 'AI is thinking…' : ''}</ThemedText></StatusRail>{rematch}</View> : null}
       </View>
 
       <GameOverModal

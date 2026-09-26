@@ -50,7 +50,7 @@ const GAME_TITLE = 'Pop & Race';
 
 // ─── Player palette (game-specific; themes only define two player colours) ──
 
-const SEAT_NAMES = ['Red', 'Blue', 'Green', 'Yellow'] as const;
+const SEAT_LABELS = ['Seat 1', 'Seat 2', 'Seat 3', 'Seat 4'] as const;
 
 // ─── Board geometry (fractions of the board's side) ──────────────────────────
 
@@ -134,9 +134,10 @@ interface PegProps {
   lifted: boolean;
   onPress?: () => void;
   label: string;
+  marker: string;
 }
 
-function Peg({ left, top, size, color, ringColor, highlighted, selected, lifted, onPress, label }: PegProps) {
+function Peg({ left, top, size, color, ringColor, highlighted, selected, lifted, onPress, label, marker }: PegProps) {
   const { theme } = useTheme();
   const x = useSharedValue(left);
   const y = useSharedValue(top);
@@ -206,6 +207,8 @@ function Peg({ left, top, size, color, ringColor, highlighted, selected, lifted,
           borderWidth: Math.max(1, size * 0.08),
           borderColor: theme.colors.text,
           transform: [{ scale: lifted ? 1.15 : 1 }],
+          alignItems: 'center',
+          justifyContent: 'center',
         }}
       >
         <View
@@ -221,6 +224,7 @@ function Peg({ left, top, size, color, ringColor, highlighted, selected, lifted,
             opacity: 0.45,
           }}
         />
+        <ThemedText variant="caption" style={{ color: theme.colors.text, backgroundColor: theme.colors.surfaceRaised, borderRadius: size / 2, paddingHorizontal: 2, fontSize: Math.max(7, size * 0.45), fontWeight: '700' }}>{marker}</ThemedText>
       </Pressable>
     </Animated.View>
   );
@@ -348,7 +352,7 @@ export default function TroubleScreen() {
   const playerName = useCallback(
     (idx: number, g: TroubleState = gameRef.current) => {
       const seat = g.players[idx]?.seat ?? 0;
-      if (isSingle) return idx === 0 ? 'You' : `${SEAT_NAMES[seat]} AI`;
+      if (isSingle) return idx === 0 ? 'You' : `${SEAT_LABELS[seat]} AI`;
       return `Player ${idx + 1}`;
     },
     [isSingle],
@@ -612,9 +616,9 @@ export default function TroubleScreen() {
           <View style={styles.previewRow}>
             {previewSeats.map((seat, i) => (
               <View key={seat} style={styles.previewItem}>
-                <View style={[styles.previewDot, { backgroundColor: SEAT_COLORS[seat] }]} />
+                <View style={[styles.previewDot, { backgroundColor: theme.colors.surfaceRaised, borderWidth: 2, borderColor: SEAT_COLORS[seat], width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' }]}><ThemedText variant="caption" style={{ fontWeight: '700' }}>{seat + 1}</ThemedText></View>
                 <ThemedText variant="caption" style={{ color: theme.colors.textMuted }}>
-                  {isSingle ? (i === 0 ? 'You' : `${SEAT_NAMES[seat]} AI`) : `P${i + 1} ${SEAT_NAMES[seat]}`}
+                  {isSingle ? (i === 0 ? 'You' : `${SEAT_LABELS[seat]} AI`) : `P${i + 1} ${SEAT_LABELS[seat]}`}
                 </ThemedText>
               </View>
             ))}
@@ -675,7 +679,7 @@ export default function TroubleScreen() {
   let bannerText: string;
   if (game.winner !== null) bannerText = `${playerName(game.winner)} ${isSingle && game.winner === 0 ? 'win' : 'wins'}!`;
   else if (isSingle) bannerText = game.current === 0 ? 'Your turn' : `${playerName(game.current)}’s turn`;
-  else bannerText = `Player ${game.current + 1}’s turn · ${SEAT_NAMES[currentSeat]}`;
+  else bannerText = `Player ${game.current + 1}’s turn · ${SEAT_LABELS[currentSeat]}`;
 
   let hint = '';
   if (game.winner === null) {
@@ -874,7 +878,8 @@ export default function TroubleScreen() {
                 selected={movable && selectedPeg === peg}
                 lifted={isMoving}
                 onPress={movable && humanTurn ? () => onPegPress(peg) : undefined}
-                label={`${playerName(pi)}, ${SEAT_NAMES[p.seat]} peg ${peg + 1}${movable ? ', legal move' : ''}`}
+                marker={String(p.seat + 1)}
+                label={`${playerName(pi)}, ${SEAT_LABELS[p.seat]} peg ${peg + 1}${movable ? ', legal move' : ''}`}
               />
             );
           }),
@@ -938,7 +943,7 @@ export default function TroubleScreen() {
               },
             ]}
           >
-            <View style={[styles.scoreDot, { backgroundColor: SEAT_COLORS[p.seat] }]} />
+            <View style={[styles.scoreDot, { width: 18, height: 18, borderRadius: 9, backgroundColor: theme.colors.surfaceRaised, borderWidth: 1.5, borderColor: SEAT_COLORS[p.seat], alignItems: 'center', justifyContent: 'center' }]}><ThemedText variant="caption" style={{ fontSize: 10, fontWeight: '700' }}>{p.seat + 1}</ThemedText></View>
             <ThemedText variant="caption" style={{ color: theme.colors.text }} numberOfLines={1}>
               {active ? '▸ ' : ''}{playerName(i)} {pegsFinished(p)}/{PEGS_PER_PLAYER} home
             </ThemedText>

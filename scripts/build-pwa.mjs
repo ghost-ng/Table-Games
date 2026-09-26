@@ -8,10 +8,24 @@ import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync, readdirSync, statSync, copyFileSync } from 'node:fs';
 import { join, relative, sep, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { assertFontLicenses, FONT_LICENSE_FILES } from './font-licenses.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const dist = join(root, 'dist');
 const base = (process.env.EXPO_BASE_URL ?? '').replace(/\/+$/, '') + '/';
+
+// Expo copies public/ into dist/. Refuse an artifact that drops/changes font terms.
+const fonts = readdirSync(join(root, 'assets/fonts')).filter(file => file.endsWith('.ttf')).map(file => `assets/fonts/${file}`);
+assertFontLicenses(path => readFileSync(join(root, path)), fonts);
+for (const path of FONT_LICENSE_FILES) {
+  try {
+    if (!readFileSync(join(dist, path.slice('public/'.length))).equals(readFileSync(join(root, path)))) {
+      throw new Error('Different bytes');
+    }
+  } catch {
+    throw new Error(`Built font license file is missing or differs from source: ${path}`);
+  }
+}
 
 const SKIP = new Set(['sw.js', '404.html', 'metadata.json']);
 

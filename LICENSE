@@ -1,13 +1,18 @@
 Copyright (c) 2026 ghost-ng. All Rights Reserved.
 
-This repository, its source code, artwork, assets, and documentation are
-proprietary. Public availability permits inspection only; it does not grant
-an open-source license or any right to reuse the material.
+Project-owned source code, artwork, assets, and documentation in this
+repository are proprietary. Public availability permits inspection only;
+it does not grant an open-source license or any right to reuse that material.
 
 Copying, modification, distribution, sublicensing, and commercial use of
-any part of this repository require prior written permission from ghost-ng.
+project-owned material require prior written permission from ghost-ng.
 No license or permission is granted by publication, access, download, or
 the absence of a technical restriction.
+
+Bundled third-party fonts retain their SIL Open Font License 1.1 terms.
+Their copyright notices and full license are in public/licenses/FONT-NOTICES.json
+and public/licenses/OFL-1.1.txt; these proprietary restrictions do not apply
+to that font software or override its license.
 
 Any third-party material remains subject to its respective owners' rights
 and applicable terms. This notice does not grant rights to third-party

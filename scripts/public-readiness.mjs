@@ -2,6 +2,7 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { assertFontLicenses, FONT_LICENSE_FILES } from './font-licenses.mjs';
 
 const failures = [];
 const args = process.argv.slice(2);
@@ -64,6 +65,14 @@ if (root) {
     /\bsk-(?:proj-|svcacct-)?[A-Za-z0-9_-]{32,}\b/,
     /(?:api[_-]?key|api[_-]?secret|access[_-]?token|auth[_-]?token|client[_-]?secret|password|_authToken)["']?\s*[:=]\s*["'][A-Za-z0-9_+/.=-]{16,}["']/i,
   ];
+  function scan(bytes, path, scope, allowPlaceholderMention) {
+    // Latin-1 is byte-preserving: ASCII signatures survive NUL/non-UTF8 bytes.
+    const lines = bytes.toString('latin1').split(/\r?\n/);
+    lines.forEach((line, index) => {
+      if (!allowPlaceholderMention && /YOUR_(?:APPLE_ID|ASC_APP_ID|TEAM_ID)/.test(line)) failures.push(`Account placeholder: ${path}:${index + 1} (${scope})`);
+      if (credentialPatterns.some((pattern) => pattern.test(line))) failures.push(`Likely credential: ${path}:${index + 1} (${scope}; value withheld)`);
+    });
+  }
   for (const path of tracked) {
     const parts = path.split('/');
     if (parts.some((part) => ['dist', 'web-build', 'node_modules', '.expo'].includes(part) || part.startsWith('.playwright-') || part.startsWith('.env'))) failures.push(`Forbidden tracked artifact: ${path}`);
@@ -74,19 +83,33 @@ if (root) {
     }
     const planPath = /^(?:docs\/superpowers\/(?:plans|specs)\/|\.superpowers\/sdd\/)/.test(path);
     const allowPlaceholderMention = allowInternal && planPath;
+    try {
+      scan(execFileSync('git', ['cat-file', 'blob', `:${path}`], { cwd: root, maxBuffer: 64 * 1024 * 1024 }), path, 'index', allowPlaceholderMention);
+    } catch {
+      failures.push(`Unable to scan indexed file: ${path}; resolve the index before checking.`);
+    }
     // An unstaged deletion leaves the indexed blob eligible for publication.
     if (!existsSync(join(root, path))) {
       failures.push(`Missing tracked file: ${path}; restore it or stage its deletion before checking.`);
       continue;
     }
-    // Binary assets are not text credentials.
-    const bytes = readFileSync(join(root, path));
-    if (bytes.includes(0)) continue;
-    const lines = bytes.toString('utf8').split(/\r?\n/);
-    lines.forEach((line, index) => {
-      if (!allowPlaceholderMention && /YOUR_(?:APPLE_ID|ASC_APP_ID|TEAM_ID)/.test(line)) failures.push(`Account placeholder: ${path}:${index + 1}`);
-      if (credentialPatterns.some((pattern) => pattern.test(line))) failures.push(`Likely credential: ${path}:${index + 1} (value withheld)`);
-    });
+    scan(readFileSync(join(root, path)), path, 'worktree', allowPlaceholderMention);
+  }
+  const fonts = tracked.filter(path => /^assets\/fonts\/[^/]+\.ttf$/.test(path));
+  if (fonts.length) {
+    for (const path of FONT_LICENSE_FILES) {
+      if (!tracked.includes(path)) failures.push(`Font license/notice must be tracked: ${path}`);
+    }
+    for (const [scope, readBytes] of [
+      ['index', path => execFileSync('git', ['cat-file', 'blob', `:${path}`], { cwd: root, maxBuffer: 64 * 1024 * 1024, stdio: ['pipe', 'pipe', 'ignore'] })],
+      ['worktree', path => readFileSync(join(root, path))],
+    ]) {
+      try {
+        assertFontLicenses(readBytes, fonts);
+      } catch (error) {
+        failures.push(`Font license/notice policy (${scope}): ${error.message}`);
+      }
+    }
   }
   if (allowInternal) console.log(`Temporary exception: ${deferred} internal tracked files deferred; artifact and credential checks remain enforced.`);
 }

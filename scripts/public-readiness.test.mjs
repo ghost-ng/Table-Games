@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -152,6 +152,141 @@ test('accepts a staged deletion because the file is no longer tracked for releas
   const result = run('--allow-internal-plans');
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /PASS/);
+});
+
+test('rejects a staged credential after its worktree file is overwritten with clean bytes', (t) => {
+  const { put, track, run } = fixture(t);
+  const token = ['ghp', 'A'.repeat(36)].join('_');
+  put('config.json', JSON.stringify({ accessToken: token }));
+  track();
+  put('config.json', '{}');
+  const result = run();
+  assert.equal(result.status, 1, result.stdout);
+  assert.match(result.stderr, /Likely credential: config.json.*index/);
+  assert.ok(!result.stderr.includes(token));
+});
+
+test('rejects a worktree credential when the index is clean', (t) => {
+  const { put, track, run } = fixture(t);
+  put('config.json', '{}');
+  track();
+  put('config.json', JSON.stringify({ accessToken: ['ghp', 'A'.repeat(36)].join('_') }));
+  const result = run();
+  assert.equal(result.status, 1, result.stdout);
+  assert.match(result.stderr, /Likely credential: config.json.*worktree/);
+});
+
+const signatures = [
+  ['private key', '-----BEGIN ' + 'RSA PRIVATE KEY-----'],
+  ['AWS key', 'AK' + 'IA' + 'A'.repeat(16)],
+  ['GitHub token', ['ghp', 'A'.repeat(36)].join('_')],
+  ['GitHub fine-grained token', ['github', 'pat', 'A'.repeat(40)].join('_')],
+  ['OpenAI key', 'sk-' + 'A'.repeat(40)],
+  ['assigned secret', 'API_SECRET = "' + 'A'.repeat(32) + '"'],
+];
+for (const [kind, signature] of signatures) {
+  for (const nulPosition of ['before', 'after']) {
+    for (const scope of ['index', 'worktree']) {
+      test(`rejects ${scope} ${kind} with NUL ${nulPosition} the signature`, (t) => {
+        const { put, track, run } = fixture(t);
+        const bytes = Buffer.concat(nulPosition === 'before'
+          ? [Buffer.from([0, 255]), Buffer.from(signature)]
+          : [Buffer.from(signature), Buffer.from([0, 255])]);
+        put('payload.bin', scope === 'index' ? bytes : Buffer.from([0, 255]));
+        track();
+        put('payload.bin', scope === 'index' ? Buffer.from([0, 255]) : bytes);
+        const result = run();
+        assert.equal(result.status, 1, result.stdout);
+        assert.match(result.stderr, new RegExp(`Likely credential: payload.bin.*${scope}`));
+        assert.ok(!result.stderr.includes(signature));
+      });
+    }
+  }
+}
+
+test('accepts benign NUL and non-UTF8 binary bytes in the index and worktree', (t) => {
+  const { put, track, run } = fixture(t);
+  put('image.bin', Buffer.from([0, 255, 128, 10, 13, 65, 0]));
+  track();
+  put('image.bin', Buffer.concat([Buffer.from([255, 0, 254]), Buffer.from('ghp_short-example')]));
+  const result = run();
+  assert.equal(result.status, 0, result.stderr);
+});
+
+test('rejects bundled fonts without third-party copyright notices and the full OFL', (t) => {
+  const { put, track, run } = fixture(t);
+  put('assets/fonts/Fredoka-Regular.ttf', readFileSync(new URL('../assets/fonts/Fredoka-Regular.ttf', import.meta.url)));
+  track();
+  const result = run();
+  assert.equal(result.status, 1, result.stdout);
+  assert.match(result.stderr, /font.*(?:notice|license)|(?:notice|license).*font/i);
+});
+
+function fontFixture(t) {
+  const context = fixture(t);
+  const font = 'assets/fonts/Fredoka-Regular.ttf';
+  const notices = JSON.parse(readFileSync(new URL('../public/licenses/FONT-NOTICES.json', import.meta.url), 'utf8'));
+  notices.fonts = notices.fonts.filter(entry => entry.path === font);
+  context.put(font, readFileSync(new URL('../assets/fonts/Fredoka-Regular.ttf', import.meta.url)));
+  context.put('public/licenses/FONT-NOTICES.json', JSON.stringify(notices));
+  context.put('public/licenses/OFL-1.1.txt', readFileSync(new URL('../public/licenses/OFL-1.1.txt', import.meta.url)));
+  context.track();
+  return { ...context, notices };
+}
+
+test('accepts exact embedded font notices with the complete official OFL', (t) => {
+  const { run } = fontFixture(t);
+  const result = run();
+  assert.equal(result.status, 0, result.stderr);
+});
+
+for (const field of ['family', 'style', 'copyright', 'license_url']) {
+  test(`rejects a font notice whose ${field} differs from bundled metadata`, (t) => {
+    const { put, run, notices } = fontFixture(t);
+    notices.fonts[0][field] = 'incorrect';
+    put('public/licenses/FONT-NOTICES.json', JSON.stringify(notices));
+    const result = run();
+    assert.equal(result.status, 1, result.stdout);
+    assert.match(result.stderr, /font.*(?:notice|license)|(?:notice|license).*font/i);
+  });
+}
+
+test('rejects an incomplete OFL despite a valid heading', (t) => {
+  const { put, run } = fontFixture(t);
+  put('public/licenses/OFL-1.1.txt', 'SIL OPEN FONT LICENSE Version 1.1 - 26 February 2007\n');
+  const result = run();
+  assert.equal(result.status, 1, result.stdout);
+  assert.match(result.stderr, /OFL/);
+});
+
+test('rejects a staged wrong notice even if the worktree notice has been corrected', (t) => {
+  const { put, track, run, notices } = fontFixture(t);
+  const clean = JSON.stringify(notices);
+  notices.fonts[0].copyright = 'incorrect';
+  put('public/licenses/FONT-NOTICES.json', JSON.stringify(notices));
+  track();
+  put('public/licenses/FONT-NOTICES.json', clean);
+  const result = run();
+  assert.equal(result.status, 1, result.stdout);
+  assert.match(result.stderr, /font.*index|index.*font/i);
+});
+
+test('rejects malformed font bytes without decoding out of bounds', (t) => {
+  const { put, run } = fontFixture(t);
+  put('assets/fonts/Fredoka-Regular.ttf', Buffer.from([0, 1]));
+  const result = run();
+  assert.equal(result.status, 1, result.stdout);
+  assert.match(result.stderr, /font.*metadata/i);
+});
+
+test('a malformed font notice containing a signature never exposes its value', (t) => {
+  const { put, run } = fontFixture(t);
+  const token = ['ghp', 'A'.repeat(36)].join('_');
+  put('public/licenses/FONT-NOTICES.json', token);
+  const result = run();
+  assert.equal(result.status, 1);
+  assert.ok(!result.stderr.includes(token));
+  assert.ok(!result.stderr.includes(token.slice(0, 6)));
 });
 
 test('rejects unsupported flags instead of silently weakening the gate', (t) => {

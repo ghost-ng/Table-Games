@@ -103,4 +103,6 @@ Report vulnerabilities privately as described in [SECURITY.md](SECURITY.md). Do 
 
 ## Proprietary terms
 
-Copyright 2026 ghost-ng. All Rights Reserved. Public visibility allows inspection only. Copying, modification, distribution, sublicensing, commercial use, and other reuse require prior written permission from ghost-ng. Publication does not grant contribution or reuse rights. Read the complete [LICENSE](LICENSE); the npm package remains private and `UNLICENSED`.
+Copyright 2026 ghost-ng. All Rights Reserved. Public visibility allows inspection only. Copying, modification, distribution, sublicensing, commercial use, and other reuse of project-owned material require prior written permission from ghost-ng. Publication does not grant contribution or reuse rights. Read the complete [LICENSE](LICENSE); the npm package remains private and `UNLICENSED`.
+
+Bundled third-party fonts retain their own terms: [font copyright notices](public/licenses/FONT-NOTICES.json) and the complete [SIL Open Font License 1.1](public/licenses/OFL-1.1.txt). These files are also included in the production PWA at `licenses/FONT-NOTICES.json` and `licenses/OFL-1.1.txt` under the deployment base path, including `/Table-Games/licenses/` on Pages. The project's proprietary restrictions do not override the fonts' license.

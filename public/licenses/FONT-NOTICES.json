@@ -1,0 +1,100 @@
+{
+  "title": "Third-party bundled font notices",
+  "license": "SIL Open Font License 1.1",
+  "license_file": "OFL-1.1.txt",
+  "official_source": "https://openfontlicense.org/documents/OFL.txt",
+  "methodology": "Transcribed from each bundled font SFNT name table: copyright (name ID 0), typographic family/style (16/17, falling back to 1/2), and license URL (14). Copyright wording and embedded Reserved Font Name statements are preserved verbatim; no additional reserved names are inferred.",
+  "fonts": [
+    {
+      "path": "assets/fonts/Fredoka-Medium.ttf",
+      "family": "Fredoka",
+      "style": "Medium",
+      "copyright": "Copyright 2016 The Fredoka Project Authors (https://github.com/hafontia/Fredoka-One)",
+      "license_url": "http://scripts.sil.org/OFL"
+    },
+    {
+      "path": "assets/fonts/Fredoka-Regular.ttf",
+      "family": "Fredoka",
+      "style": "Regular",
+      "copyright": "Copyright 2016 The Fredoka Project Authors (https://github.com/hafontia/Fredoka-One)",
+      "license_url": "http://scripts.sil.org/OFL"
+    },
+    {
+      "path": "assets/fonts/Fredoka-SemiBold.ttf",
+      "family": "Fredoka",
+      "style": "SemiBold",
+      "copyright": "Copyright 2016 The Fredoka Project Authors (https://github.com/hafontia/Fredoka-One)",
+      "license_url": "http://scripts.sil.org/OFL"
+    },
+    {
+      "path": "assets/fonts/Inter-Bold.ttf",
+      "family": "Inter",
+      "style": "Bold",
+      "copyright": "Copyright 2016 The Inter Project Authors (https://github.com/rsms/inter)",
+      "license_url": "https://openfontlicense.org"
+    },
+    {
+      "path": "assets/fonts/Inter-Medium.ttf",
+      "family": "Inter",
+      "style": "Medium",
+      "copyright": "Copyright 2016 The Inter Project Authors (https://github.com/rsms/inter)",
+      "license_url": "https://openfontlicense.org"
+    },
+    {
+      "path": "assets/fonts/Inter-Regular.ttf",
+      "family": "Inter",
+      "style": "Regular",
+      "copyright": "Copyright 2016 The Inter Project Authors (https://github.com/rsms/inter)",
+      "license_url": "https://openfontlicense.org"
+    },
+    {
+      "path": "assets/fonts/Inter-SemiBold.ttf",
+      "family": "Inter",
+      "style": "SemiBold",
+      "copyright": "Copyright 2016 The Inter Project Authors (https://github.com/rsms/inter)",
+      "license_url": "https://openfontlicense.org"
+    },
+    {
+      "path": "assets/fonts/JetBrainsMono-Regular.ttf",
+      "family": "JetBrains Mono",
+      "style": "Regular",
+      "copyright": "Copyright 2020 The JetBrains Mono Project Authors (https://github.com/JetBrains/JetBrainsMono)",
+      "license_url": "https://scripts.sil.org/OFL"
+    },
+    {
+      "path": "assets/fonts/PatrickHand-Regular.ttf",
+      "family": "Patrick Hand",
+      "style": "Regular",
+      "copyright": "Copyright (c) 2012 Patrick Wagesreiter (mail@patrickwagesreiter.at)",
+      "license_url": "http://scripts.sil.org/OFL"
+    },
+    {
+      "path": "assets/fonts/PressStart2P-Regular.ttf",
+      "family": "Press Start 2P",
+      "style": "Regular",
+      "copyright": "Copyright 2012 The Press Start 2P Project Authors (cody@zone38.net), with Reserved Font Name \"Press Start 2P\"",
+      "license_url": "http://scripts.sil.org/OFL"
+    },
+    {
+      "path": "assets/fonts/SpaceGrotesk-Bold.ttf",
+      "family": "Space Grotesk",
+      "style": "Bold",
+      "copyright": "Copyright 2020 The Space Grotesk Project Authors (https://github.com/floriankarsten/space-grotesk)",
+      "license_url": "https://scripts.sil.org/OFL"
+    },
+    {
+      "path": "assets/fonts/SpaceGrotesk-Medium.ttf",
+      "family": "Space Grotesk",
+      "style": "Medium",
+      "copyright": "Copyright 2020 The Space Grotesk Project Authors (https://github.com/floriankarsten/space-grotesk)",
+      "license_url": "https://scripts.sil.org/OFL"
+    },
+    {
+      "path": "assets/fonts/SpaceGrotesk-Regular.ttf",
+      "family": "Space Grotesk",
+      "style": "Regular",
+      "copyright": "Copyright 2020 The Space Grotesk Project Authors (https://github.com/floriankarsten/space-grotesk)",
+      "license_url": "https://scripts.sil.org/OFL"
+    }
+  ]
+}

@@ -18,6 +18,7 @@ async function preview(t, { base = '/', envBase } = {}) {
   const root = join(temporary, 'Repository With Spaces');
   mkdirSync(join(root, 'scripts'), { recursive: true });
   mkdirSync(join(root, 'dist/assets'), { recursive: true });
+  mkdirSync(join(root, 'dist/licenses'), { recursive: true });
   cpSync(join(sourceRoot, 'scripts/serve.mjs'), join(root, 'scripts/serve.mjs'));
   for (const [path, content] of [
     ['index.html', html], ['manifest.webmanifest', manifest],
@@ -26,6 +27,8 @@ async function preview(t, { base = '/', envBase } = {}) {
     ['assets/theme.css', 'body { color: red; }'],
     ['assets/piece.png', Buffer.from([137, 80, 78, 71])],
     ['assets/with space.js', 'window.encodedAsset = true;'],
+    ['licenses/OFL-1.1.txt', 'Font license fixture\n'],
+    ['licenses/FONT-NOTICES.json', '{"title":"Font notices fixture"}'],
   ]) writeFileSync(join(root, 'dist', path), content);
   writeFileSync(join(root, 'outside.txt'), 'secret outside dist');
   symlinkSync(join(root, 'outside.txt'), join(root, 'dist/leak.txt'));
@@ -131,3 +134,18 @@ test('preview rejects unsafe paths and malformed encoding without leaking files 
   }
   assert.equal((await get('/Table-Games/manifest.webmanifest')).status, 200);
 });
+
+for (const base of ['/', '/Table-Games/']) {
+  test(`preview serves readable third-party license bytes under ${base}`, async (t) => {
+    const get = await preview(t, { base });
+    for (const [file, contentType, body] of [
+      ['OFL-1.1.txt', 'text/plain; charset=utf-8', 'Font license fixture\n'],
+      ['FONT-NOTICES.json', 'application/json', '{"title":"Font notices fixture"}'],
+    ]) {
+      const result = await get(`${base}licenses/${file}`);
+      assert.equal(result.status, 200);
+      assert.equal(result.headers['content-type'], contentType);
+      assert.equal(result.body.toString(), body);
+    }
+  });
+}

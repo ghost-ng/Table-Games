@@ -1,8 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeIn, FlipInXDown, ZoomIn } from 'react-native-reanimated';
+import { GameShell } from '../../src/components/ui/GameShell';
+import { StatusRail } from '../../src/components/ui/StatusRail';
+import { useWebFocusRing } from '../../src/utils/useWebFocusRing';
+import Animated, { FadeIn, FlipInXDown, ZoomIn, useReducedMotion } from 'react-native-reanimated';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { ThemedText } from '../../src/components/ui/ThemedText';
 import { Button } from '../../src/components/ui/Button';
@@ -26,32 +28,30 @@ type PlayerId = 'player1' | 'player2';
 const KEY_ROWS = ['QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM'];
 const TILE_GAP = 6;
 const KEY_GAP = 5;
-// Amber reads as "present" on all three themes; "correct" uses the theme's success colour.
-const PRESENT_COLOR = '#D4A017';
 const PLAYER_LABEL: Record<PlayerId, string> = { player1: 'Player 1', player2: 'Player 2' };
 
 export default function WordleScreen() {
   const { theme } = useTheme();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
-  const { contentWidth, contentMaxWidth, height, isLandscape } = useResponsive();
+  const reducedMotion = useReducedMotion();
+  const { contentWidth, height, isLandscape } = useResponsive();
   // Short landscape screens (phones on their side) can't stack grid + keyboard,
   // so they sit side by side: grid on the left, keyboard on the right.
   const sideBySide = isLandscape && height < 560;
   // 6 rows × 5 columns plus gaps: height ≈ 1.21 × width.
   const { onLayout: onGridAreaLayout, size: gridWidth } = useBoardFit({
     aspectRatio: 1.21,
-    maxSize: 340,
+    maxSize: 420,
     inset: 8,
     minSize: 120,
   });
   const tileSize = (gridWidth - TILE_GAP * (WORD_LENGTH - 1)) / WORD_LENGTH;
-  const keyboardWidth = sideBySide ? contentWidth * 0.58 : contentWidth;
-  const keyWidth = Math.min(44, (keyboardWidth - 16 - KEY_GAP * 9) / 10);
+  const keyboardWidth = sideBySide ? (contentWidth - 24) * 0.62 : contentWidth - 24;
+  const keyWidth = Math.min(48, (keyboardWidth - 16 - KEY_GAP * 9) / 10);
   const keyHeight = sideBySide
-    ? Math.max(32, Math.min(48, (height - insets.top - insets.bottom - 140) / 3))
-    : height < 640
-      ? 42
+    ? 44
+    : height <= 640
+      ? 44
       : 54;
 
   const { mode: modeParam } = useLocalSearchParams<{ mode: string }>();
@@ -208,7 +208,7 @@ export default function WordleScreen() {
     state === 'correct'
       ? theme.colors.success
       : state === 'present'
-        ? PRESENT_COLOR
+        ? theme.colors.warning
         : theme.colors.textMuted;
 
   // ── Render helpers ──────────────────────────────────────────────────────
@@ -240,7 +240,7 @@ export default function WordleScreen() {
         variant="heading"
         style={[
           styles.tileLetter,
-          { fontSize: tileSize * 0.5, color: evaluation ? '#FFFFFF' : theme.colors.text },
+          { fontSize: tileSize * 0.5, color: evaluation ? (theme.name === 'arcade' ? theme.colors.background : theme.colors.onPrimary) : theme.colors.text },
         ]}
       >
         {letter}
@@ -252,16 +252,20 @@ export default function WordleScreen() {
       return (
         <Animated.View
           key={`${row}-${col}-done`}
-          entering={FlipInXDown.delay(col * 140).duration(280)}
+          entering={reducedMotion ? undefined : FlipInXDown.delay(col * 140).duration(280)}
           style={tileStyle}
+          accessibilityLabel={`Guess ${row + 1}, letter ${col + 1}: ${letter}, ${evaluation}`}
         >
           {text}
+          <ThemedText variant="caption" style={{ position: 'absolute', bottom: 1, fontSize: Math.max(9, tileSize * 0.18), color: theme.name === 'arcade' ? theme.colors.background : theme.colors.onPrimary }}>
+            {evaluation === 'correct' ? '✓' : evaluation === 'present' ? '•' : '×'}
+          </ThemedText>
         </Animated.View>
       );
     }
     if (letter) {
       return (
-        <Animated.View key={`${row}-${col}-${letter}`} entering={ZoomIn.duration(110)} style={tileStyle}>
+        <Animated.View key={`${row}-${col}-${letter}`} entering={reducedMotion ? undefined : ZoomIn.duration(110)} style={tileStyle}>
           {text}
         </Animated.View>
       );
@@ -273,11 +277,13 @@ export default function WordleScreen() {
     const wide = key === 'ENTER' || key === 'BACK';
     const state = keyStates[key];
     return (
-      <Pressable
+      <GamePressable
         key={key}
         onPress={() => handleKey(key)}
         accessibilityRole="button"
-        accessibilityLabel={key === 'BACK' ? 'Delete' : key === 'ENTER' ? 'Enter' : key}
+        accessibilityLabel={`${key === 'BACK' ? 'Delete' : key === 'ENTER' ? 'Enter' : key}${state ? `, ${state}` : ''}`}
+        accessibilityState={{ disabled: gameState.isGameOver }}
+        disabled={gameState.isGameOver}
         style={({ pressed }) => [
           styles.key,
           {
@@ -287,6 +293,7 @@ export default function WordleScreen() {
             backgroundColor: state ? stateColor(state) : theme.colors.surface,
             borderColor: state ? stateColor(state) : theme.colors.border,
             opacity: pressed ? 0.7 : 1,
+            borderBottomWidth: state ? 3 : 1,
           },
         ]}
       >
@@ -295,14 +302,16 @@ export default function WordleScreen() {
           style={[
             styles.keyLabel,
             {
-              color: state ? '#FFFFFF' : theme.colors.text,
-              fontSize: wide ? 12 : Math.min(18, keyWidth * 0.45),
+              color: state ? (theme.name === 'arcade' ? theme.colors.background : theme.colors.onPrimary) : theme.colors.text,
+              fontSize: wide ? 10 : 14,
             },
           ]}
         >
-          {key === 'BACK' ? '⌫' : key}
+          {key === 'BACK' ? 'DEL' : key}
+
         </ThemedText>
-      </Pressable>
+        {state ? <ThemedText variant="caption" style={{ position: 'absolute', bottom: 1, right: 2, fontSize: 9, color: theme.name === 'arcade' ? theme.colors.background : theme.colors.onPrimary }}>{state === 'correct' ? '✓' : state === 'present' ? '•' : '×'}</ThemedText> : null}
+      </GamePressable>
     );
   };
 
@@ -312,30 +321,7 @@ export default function WordleScreen() {
 
   // ── Render ──────────────────────────────────────────────────────────────
   return (
-    <View
-      style={[
-        styles.container,
-        {
-          backgroundColor: theme.colors.background,
-          paddingTop: insets.top,
-          paddingBottom: insets.bottom,
-          maxWidth: contentMaxWidth,
-        },
-      ]}
-    >
-      {/* Header */}
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
-          <ThemedText variant="body" style={{ color: theme.colors.primary }}>
-            Back
-          </ThemedText>
-        </Pressable>
-        <ThemedText variant="heading" style={styles.title}>
-          Word Guess
-        </ThemedText>
-        <View style={styles.backButton} />
-      </View>
-
+    <GameShell title="Word Guess" onBack={() => router.back()}>
       {/* ── Pass-and-play: set the secret word ─────────────────────────── */}
       {phase === 'wordEntry' && (
         <View style={styles.centeredPhase}>
@@ -347,6 +333,7 @@ export default function WordleScreen() {
           </ThemedText>
           <TextInput
             value={secretInput}
+            accessibilityLabel="Secret five-letter word"
             onChangeText={(t) => {
               setSecretInput(t.replace(/[^a-zA-Z]/g, '').slice(0, WORD_LENGTH));
               setSecretError('');
@@ -406,15 +393,18 @@ export default function WordleScreen() {
       {/* ── Playing ───────────────────────────────────────────────────── */}
       {phase === 'playing' && (
         <>
+          <StatusRail style={{ minHeight: sideBySide ? 40 : 48, padding: 8 }}>
           <ThemedText variant="caption" style={[styles.status, { color: theme.colors.textMuted }]}>
-            {statusText}
+            {statusText} · {gameState.guesses.length}/{MAX_GUESSES}
           </ThemedText>
 
+          </StatusRail>
+
           {/* Toast (space is always reserved so the grid doesn't resize) */}
-          <View style={styles.messageRow}>
+          <View style={styles.messageRow} accessibilityLiveRegion="polite">
             {message && (
               <Animated.View
-                entering={FadeIn.duration(120)}
+                entering={reducedMotion ? undefined : FadeIn.duration(120)}
                 style={[styles.message, { backgroundColor: theme.colors.text, borderRadius: theme.borderRadius.sm }]}
               >
                 <ThemedText variant="label" style={{ color: theme.colors.background, fontWeight: '700' }}>
@@ -437,7 +427,7 @@ export default function WordleScreen() {
 
           {gameState.isGameOver ? (
             <Animated.View
-              entering={FadeIn.duration(250).delay(700)}
+              entering={reducedMotion ? undefined : FadeIn.duration(250).delay(700)}
               style={[styles.resultPanel, sideBySide && { width: keyboardWidth, justifyContent: 'center' }]}
             >
               <ThemedText
@@ -481,30 +471,11 @@ export default function WordleScreen() {
           </View>
         </>
       )}
-    </View>
+    </GameShell>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignSelf: 'center' as const,
-    width: '100%' as const,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    height: 48,
-  },
-  backButton: {
-    width: 60,
-  },
-  title: {
-    textAlign: 'center',
-    flex: 1,
-  },
   status: {
     textAlign: 'center',
   },
@@ -570,18 +541,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
     marginTop: 10,
+    width: '100%',
   },
   resultButton: {
-    width: 140,
+    flex: 1,
+    minWidth: 0,
   },
   centeredPhase: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: 16,
   },
   phaseTitle: {
-    fontSize: 24,
+    fontSize: 22,
     marginBottom: 8,
     textAlign: 'center',
   },
@@ -605,3 +578,17 @@ const styles = StyleSheet.create({
     maxWidth: 260,
   },
 });
+
+function GamePressable({ style, ...props }: React.ComponentProps<typeof Pressable>) {
+  const { theme } = useTheme();
+  const focus = useWebFocusRing(theme.colors.focus);
+  return (
+    <Pressable
+      accessibilityRole="button"
+      {...props}
+      onFocus={focus.onFocus}
+      onBlur={focus.onBlur}
+      style={(state) => [typeof style === 'function' ? style(state) : style, focus.style]}
+    />
+  );
+}

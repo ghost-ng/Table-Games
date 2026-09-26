@@ -5,11 +5,11 @@ import {
   ScrollView,
   StyleSheet,
 } from 'react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import Animated, { FadeIn, useReducedMotion } from 'react-native-reanimated';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { GameShell } from '../../src/components/ui/GameShell';
+import { useWebFocusRing } from '../../src/utils/useWebFocusRing';
 import { useTheme } from '../../src/theme/ThemeProvider';
-import { TurnIndicator } from '../../src/components/ui/TurnIndicator';
 import { GameOverModal } from '../../src/components/ui/GameOverModal';
 import { Button } from '../../src/components/ui/Button';
 import { ThemedText } from '../../src/components/ui/ThemedText';
@@ -208,8 +208,9 @@ function formatTime(seconds: number): string {
 export default function WordSearchScreen() {
   const { theme } = useTheme();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
-  const { contentWidth, contentMaxWidth, height, isTablet } = useResponsive();
+  const reducedMotion = useReducedMotion();
+  const { contentWidth, height, isTablet, isLandscape } = useResponsive();
+  const shortLandscape = isLandscape && height < 560;
 
   // Mode & game state
   const { mode: modeParam } = useLocalSearchParams<{ mode: string }>();
@@ -440,12 +441,11 @@ export default function WordSearchScreen() {
     : { player1: 'Player 1', player2: 'Player 2' };
 
   // ── Grid sizing ───────────────────────────────────────────────────────────
-  const gridPadding = 16;
   // Width-bound on phones; on short/landscape screens keep the grid within ~60% of the height.
   const boardWidth = Math.min(
-    contentWidth - gridPadding * 2,
-    isTablet ? 520 : 400,
-    Math.max(260, height * 0.6)
+    contentWidth - 48,
+    isTablet ? 560 : 400,
+    shortLandscape ? 220 : Math.max(260, height * 0.6)
   );
   const cellSize = Math.floor(boardWidth / GRID_SIZE);
   const actualBoardWidth = cellSize * GRID_SIZE;
@@ -458,100 +458,25 @@ export default function WordSearchScreen() {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <View
-      style={[
-        styles.container,
-        {
-          backgroundColor: theme.colors.background,
-          paddingTop: insets.top,
-          paddingBottom: insets.bottom,
-          maxWidth: contentMaxWidth,
-        },
-      ]}
+    <GameShell
+      title="Word Search"
+      onBack={handleBack}
+      trailingAction={shortLandscape ? <ThemedText variant="caption">{formatTime(elapsed)} · {foundWords.length}/{puzzle?.words.length ?? WORD_COUNT}</ThemedText> : undefined}
+      status={!shortLandscape ? <View style={{ gap: 4, alignItems: 'center' }}>
+        <ThemedText variant="label">{formatTime(elapsed)} · Found {foundWords.length} / {puzzle?.words.length ?? WORD_COUNT}</ThemedText>
+        {!isSinglePlayer ? <ThemedText variant="caption">{playerNames[currentPlayer]}'s Turn · P1: {foundWords.filter(w => w.player === 'player1').length} · P2: {foundWords.filter(w => w.player === 'player2').length}</ThemedText> : null}
+      </View> : undefined}
+      footer={<Button title="New Puzzle" onPress={handleRematch} variant="secondary" />}
     >
-      {/* Header */}
-      <View style={styles.header}>
-        <Pressable onPress={handleBack} style={styles.backButton}>
-          <ThemedText variant="body" style={{ color: theme.colors.primary }}>
-            Back
-          </ThemedText>
-        </Pressable>
-        <ThemedText variant="heading" style={styles.title}>
-          Word Search
-        </ThemedText>
-        <View style={styles.timerContainer}>
-          <ThemedText
-            variant="label"
-            style={{ color: theme.colors.textMuted, fontSize: 14 }}
-          >
-            {formatTime(elapsed)}
-          </ThemedText>
-        </View>
-      </View>
-
-      {/* Turn Indicator (2P mode) */}
-      {!isSinglePlayer && !isGameOver && (
-        <TurnIndicator
-          currentPlayer={currentPlayer}
-          playerNames={playerNames}
-        />
-      )}
-
-      {/* Score display for 2P */}
-      {!isSinglePlayer && (
-        <View style={styles.scoreRow}>
-          <View style={styles.scoreItem}>
-            <View
-              style={[
-                styles.scoreBadge,
-                { backgroundColor: theme.colors.player1 + '20' },
-              ]}
-            >
-              <ThemedText
-                variant="label"
-                style={{ color: theme.colors.player1, fontSize: 13 }}
-              >
-                P1: {foundWords.filter((fw) => fw.player === 'player1').length}
-              </ThemedText>
-            </View>
-          </View>
-          <View style={styles.scoreItem}>
-            <View
-              style={[
-                styles.scoreBadge,
-                { backgroundColor: theme.colors.player2 + '20' },
-              ]}
-            >
-              <ThemedText
-                variant="label"
-                style={{ color: theme.colors.player2, fontSize: 13 }}
-              >
-                P2: {foundWords.filter((fw) => fw.player === 'player2').length}
-              </ThemedText>
-            </View>
-          </View>
-        </View>
-      )}
-
-      {/* 1P progress */}
-      {isSinglePlayer && puzzle && (
-        <View style={styles.progressRow}>
-          <ThemedText
-            variant="label"
-            style={{ color: theme.colors.textMuted, fontSize: 13 }}
-          >
-            Found {foundWords.length} / {puzzle.words.length}
-          </ThemedText>
-        </View>
-      )}
-
       <ScrollView
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingBottom: insets.bottom + 16 },
+          { flexDirection: shortLandscape ? 'row' : 'column', gap: shortLandscape ? 16 : 0, justifyContent: shortLandscape ? 'center' : 'flex-start' },
+          { paddingBottom: 16 },
         ]}
         bounces={false}
       >
+        <View style={{ alignItems: 'center', flexShrink: 0 }}>
         {/* Selection hint */}
         <View style={styles.hintRow}>
           <ThemedText
@@ -567,12 +492,14 @@ export default function WordSearchScreen() {
         {/* Grid */}
         {puzzle && (
           <Animated.View
-            entering={FadeIn.duration(300)}
+            entering={reducedMotion ? undefined : FadeIn.duration(300)}
             style={[
               styles.board,
               {
-                width: actualBoardWidth,
-                backgroundColor: theme.colors.surface,
+                width: actualBoardWidth + 4,
+                borderWidth: 1,
+                borderColor: theme.colors.border,
+                backgroundColor: theme.colors.surfaceRaised,
                 borderRadius: theme.borderRadius.md,
                 ...theme.shadows.md,
               },
@@ -603,15 +530,22 @@ export default function WordSearchScreen() {
                   }
 
                   return (
-                    <Pressable
+                    <GamePressable
                       key={c}
                       onPress={() => handleCellPress(r, c)}
+                      disabled={isGameOver}
+                      accessibilityLabel={`Row ${r + 1}, column ${c + 1}: ${letter}${foundBy ? `, found by ${playerNames[foundBy]}` : isPreview ? ", start selected" : ""}`}
+                      accessibilityState={{ selected: isPreview, disabled: isGameOver }}
                       style={[
                         styles.cell,
                         {
                           width: cellSize,
                           height: cellSize,
                           backgroundColor: bgColor,
+                          borderWidth: isPreview ? 2 : 0,
+                          borderColor: theme.colors.primary,
+                          borderBottomWidth: foundBy ? 2 : isPreview ? 2 : 0,
+                          borderBottomColor: foundBy ? textColor : theme.colors.primary,
                           borderRadius: theme.borderRadius.sm / 2,
                         },
                       ]}
@@ -620,14 +554,14 @@ export default function WordSearchScreen() {
                         variant="label"
                         style={{
                           color: textColor,
-                          fontSize: cellSize * 0.48,
+                          fontSize: Math.max(13, cellSize * 0.46),
                           fontWeight: foundBy || isPreview ? '800' : '600',
                           textAlign: 'center',
                         }}
                       >
                         {letter}
                       </ThemedText>
-                    </Pressable>
+                    </GamePressable>
                   );
                 })}
               </View>
@@ -635,11 +569,14 @@ export default function WordSearchScreen() {
           </Animated.View>
         )}
 
+        </View>
+
         {/* Word List Panel */}
         {puzzle && (
           <View
             style={[
               styles.wordListPanel,
+              shortLandscape && { width: '48%', marginTop: 0 },
               {
                 backgroundColor: theme.colors.surface,
                 borderRadius: theme.borderRadius.md,
@@ -647,6 +584,7 @@ export default function WordSearchScreen() {
               },
             ]}
           >
+            {shortLandscape && !isSinglePlayer ? <ThemedText variant="caption" style={{ textAlign: 'center', marginBottom: 8 }}>{playerNames[currentPlayer]}'s Turn · P1: {foundWords.filter(w => w.player === 'player1').length} · P2: {foundWords.filter(w => w.player === 'player2').length}</ThemedText> : null}
             <ThemedText
               variant="label"
               style={[styles.wordListTitle, { color: theme.colors.textMuted }]}
@@ -678,7 +616,7 @@ export default function WordSearchScreen() {
                         opacity: isFound ? 0.7 : 1,
                       }}
                     >
-                      {pw.word}
+                      {isFound ? `✓ ${pw.word}` : pw.word}
                     </ThemedText>
                   </View>
                 );
@@ -687,15 +625,6 @@ export default function WordSearchScreen() {
           </View>
         )}
 
-        {/* Bottom actions */}
-        <View style={styles.bottomButtons}>
-          <Button
-            title="New Puzzle"
-            onPress={handleRematch}
-            variant="secondary"
-            size="md"
-          />
-        </View>
       </ScrollView>
 
       {/* Game Over Modal */}
@@ -707,57 +636,15 @@ export default function WordSearchScreen() {
         gameName="Word Search"
         playerNames={playerNames}
       />
-    </View>
+    </GameShell>
   );
 }
 
 // ─── Styles ─────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignSelf: 'center' as const,
-    width: '100%' as const,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
-    paddingHorizontal: 16,
-    height: 48,
-  },
-  backButton: {
-    width: 60,
-  },
-  title: {
-    textAlign: 'center',
-    flex: 1,
-  },
-  timerContainer: {
-    width: 60,
-    alignItems: 'flex-end',
-  },
-  scoreRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 16,
-    paddingVertical: 6,
-  },
-  scoreItem: {
-    alignItems: 'center',
-  },
-  scoreBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  progressRow: {
-    alignItems: 'center',
-    paddingVertical: 6,
-  },
   scrollContent: {
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 8,
   },
   hintRow: {
     paddingVertical: 6,
@@ -775,9 +662,9 @@ const styles = StyleSheet.create({
   },
   wordListPanel: {
     marginTop: 16,
-    padding: 16,
+    padding: 12,
     width: '100%',
-    maxWidth: 400,
+    maxWidth: 560,
   },
   wordListTitle: {
     textAlign: 'center',
@@ -796,9 +683,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 2,
   },
-  bottomButtons: {
-    marginTop: 16,
-    width: '100%',
-    alignItems: 'center',
-  },
 });
+
+function GamePressable({ style, ...props }: React.ComponentProps<typeof Pressable>) {
+  const { theme } = useTheme();
+  const focus = useWebFocusRing(theme.colors.focus);
+  return (
+    <Pressable
+      accessibilityRole="button"
+      {...props}
+      onFocus={focus.onFocus}
+      onBlur={focus.onBlur}
+      style={(state) => [typeof style === 'function' ? style(state) : style, focus.style]}
+    />
+  );
+}

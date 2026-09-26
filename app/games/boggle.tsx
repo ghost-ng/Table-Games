@@ -6,9 +6,10 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { useRouter, Stack, useLocalSearchParams } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { GameShell } from '../../src/components/ui/GameShell';
+import { useWebFocusRing } from '../../src/utils/useWebFocusRing';
+import Animated, { FadeIn, useReducedMotion } from 'react-native-reanimated';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { GameOverModal } from '../../src/components/ui/GameOverModal';
 import { ThemedText } from '../../src/components/ui/ThemedText';
@@ -492,11 +493,12 @@ type Phase = 'modeSelect' | 'playing' | 'passDevice' | 'playingP2';
 export default function BoggleScreen() {
   const { theme } = useTheme();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
-  const { contentWidth, contentMaxWidth, height, isTablet } = useResponsive();
+  const reducedMotion = useReducedMotion();
+  const { contentWidth, height, isTablet, isLandscape } = useResponsive();
+  const shortLandscape = isLandscape && height < 560;
   // Width-bound on phones; on short/landscape screens keep the grid within ~55% of the height.
-  const gridSize = Math.min(contentWidth - 48, isTablet ? 480 : 400, Math.max(240, height * 0.55));
-  const cellSize = (gridSize - 24) / 4; // 4 cells with gaps
+  const gridSize = Math.min(contentWidth - 48, isTablet ? 520 : 400, shortLandscape ? 224 : Math.max(240, height * 0.55));
+  const cellSize = (gridSize - 48) / 4; // 24px padding and three 8px gaps
 
   // Mode & phase
   const { mode: modeParam } = useLocalSearchParams<{ mode: string }>();
@@ -827,30 +829,40 @@ export default function BoggleScreen() {
     timerProgress > 0.5
       ? theme.colors.success
       : timerProgress > 0.2
-      ? '#F59E0B'
+      ? theme.colors.warning
       : theme.colors.error;
 
   const isPlaying = phase === 'playing' || phase === 'playingP2';
 
   // ─── RENDER ──────────────────────────────────────────────────────────────
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background, maxWidth: contentMaxWidth }]}>
-      <Stack.Screen
-        options={{
-          headerShown: true,
-          title: 'Word Grid',
-          headerStyle: { backgroundColor: theme.colors.surface },
-          headerTintColor: theme.colors.text,
-          headerLeft: () => (
-            <Pressable onPress={() => { stopTimer(); router.back(); }} style={styles.backButton}>
-              <Animated.Text style={{ color: theme.colors.text, fontSize: 16 }}>
-                ← Back
-              </Animated.Text>
-            </Pressable>
-          ),
-        }}
-      />
+    <GameShell title="Word Grid" onBack={() => { stopTimer(); router.back(); }}
+      status={isPlaying ? (
+          <View style={[styles.timerContainer, {
+            backgroundColor: theme.colors.surface,
+            borderRadius: theme.borderRadius.sm,
+          }]}>
+            <View style={styles.timerHeader}>
+              <ThemedText variant="label" style={{ color: timerColor, fontWeight: '700' }}>
+                {formatTime(timeRemaining)}{!isSinglePlayer ? ` · ${currentPlayer === 'player1' ? 'Player 1' : 'Player 2'}` : ''}
+              </ThemedText>
+              <ThemedText variant="label" style={{ color: theme.colors.text, fontWeight: '700' }}>
+                Score: {currentScore}
+              </ThemedText>
+            </View>
+            <View style={[styles.timerBarBackground, {
+              backgroundColor: theme.colors.border,
+              borderRadius: theme.borderRadius.sm,
+            }]}>
+              <View style={[styles.timerBarFill, {
+                backgroundColor: timerColor,
+                borderRadius: theme.borderRadius.sm,
+                width: `${timerProgress * 100}%`,
+              }]} />
+            </View>
+          </View>
 
+      ) : undefined}>
       {/* ── Pass Device (2P) ────────────────────────────────────────────── */}
       {phase === 'passDevice' && (
         <View style={styles.centeredPhase}>
@@ -880,60 +892,21 @@ export default function BoggleScreen() {
         <ScrollView
           contentContainerStyle={[
             styles.playContent,
-            { paddingBottom: insets.bottom + 16 },
+            { paddingBottom: 16 },
           ]}
           bounces={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Player indicator (2P) */}
-          {!isSinglePlayer && (
-            <View style={[styles.playerBadge, {
-              backgroundColor: (currentPlayer === 'player1' ? theme.colors.player1 : theme.colors.player2) + '20',
-              borderRadius: theme.borderRadius.sm,
-            }]}>
-              <ThemedText
-                variant="label"
-                style={{
-                  color: currentPlayer === 'player1' ? theme.colors.player1 : theme.colors.player2,
-                  fontWeight: '700',
-                }}
-              >
-                {currentPlayer === 'player1' ? 'Player 1' : 'Player 2'}
-              </ThemedText>
-            </View>
-          )}
-
-          {/* Timer bar */}
-          <View style={[styles.timerContainer, {
-            backgroundColor: theme.colors.surface,
-            borderRadius: theme.borderRadius.sm,
-          }]}>
-            <View style={styles.timerHeader}>
-              <ThemedText variant="label" style={{ color: timerColor, fontWeight: '700' }}>
-                {formatTime(timeRemaining)}
-              </ThemedText>
-              <ThemedText variant="label" style={{ color: theme.colors.text, fontWeight: '700' }}>
-                Score: {currentScore}
-              </ThemedText>
-            </View>
-            <View style={[styles.timerBarBackground, {
-              backgroundColor: theme.colors.border,
-              borderRadius: theme.borderRadius.sm,
-            }]}>
-              <View style={[styles.timerBarFill, {
-                backgroundColor: timerColor,
-                borderRadius: theme.borderRadius.sm,
-                width: `${timerProgress * 100}%`,
-              }]} />
-            </View>
-          </View>
-
+          <View style={{ width: '100%', flexDirection: shortLandscape ? 'row' : 'column', alignItems: 'center', gap: shortLandscape ? 16 : 0 }}>
           {/* Board grid */}
           <Animated.View
-            entering={FadeIn.duration(300)}
+            entering={reducedMotion ? undefined : FadeIn.duration(300)}
             style={[styles.boardContainer, {
-              backgroundColor: theme.colors.surface,
+              backgroundColor: theme.colors.board,
+              borderWidth: 1,
+              borderColor: theme.colors.border,
               borderRadius: theme.borderRadius.lg,
+              flexShrink: 0,
               ...theme.shadows.md,
             }]}
           >
@@ -944,34 +917,40 @@ export default function BoggleScreen() {
                   const selected = pathIndex >= 0;
                   const isLast = selected && pathIndex === highlightedPath.length - 1;
                   return (
-                  <Pressable
+                  <GamePressable
                     key={`${r}-${c}`}
                     onPress={() => handleCellPress(r, c)}
                     disabled={isGameOver}
                     accessibilityRole="button"
-                    accessibilityLabel={`Letter ${letter}${selected ? ', selected' : ''}`}
+                    accessibilityLabel={`Row ${r + 1}, column ${c + 1}: ${letter}${selected ? `, selected ${pathIndex + 1}` : ""}`}
+                    accessibilityState={{ selected, disabled: isGameOver }}
                     style={({ pressed }) => [styles.cell, {
                       backgroundColor: isLast
                         ? theme.colors.primary
                         : selected
                           ? theme.colors.primary + '30'
-                          : theme.colors.background,
+                          : theme.colors.surfaceRaised,
                       borderColor: selected ? theme.colors.primary : theme.colors.border,
                       borderRadius: theme.borderRadius.md,
                       width: cellSize,
                       height: cellSize,
-                      transform: [{ scale: pressed ? 0.94 : 1 }],
+                      opacity: pressed ? 0.8 : 1,
+                      borderBottomWidth: selected ? 4 : 3,
+                      ...theme.shadows.sm,
                     }]}
                   >
                     <ThemedText
                       variant="heading"
                       style={[
                         styles.cellLetter,
-                        { color: isLast ? '#FFFFFF' : theme.colors.text, fontSize: Math.max(20, cellSize * 0.34) },
+                        { color: isLast ? theme.colors.onPrimary : theme.colors.text, fontSize: Math.max(20, cellSize * 0.34) },
                       ]}
                     >
                       {letter}
                     </ThemedText>
+                    {selected && (
+                      <ThemedText variant="caption" style={{ position: 'absolute', top: 3, left: 5, color: isLast ? theme.colors.onPrimary : theme.colors.primary, fontWeight: '700' }}>{pathIndex + 1}</ThemedText>
+                    )}
                     {letter.length > 1 && (
                       <View style={[styles.quBadge, { backgroundColor: theme.colors.primary + '20' }]}>
                         <ThemedText variant="caption" style={{ color: theme.colors.primary, fontSize: 8 }}>
@@ -979,17 +958,19 @@ export default function BoggleScreen() {
                         </ThemedText>
                       </View>
                     )}
-                  </Pressable>
+                  </GamePressable>
                   );
                 })}
               </View>
             ))}
           </Animated.View>
 
+          <View style={{ alignSelf: 'stretch', flex: shortLandscape ? 1 : undefined, minWidth: 0 }}>
           {/* Word input */}
           <View style={styles.inputRow}>
             <TextInput
               ref={inputRef}
+              accessibilityLabel="Word to submit"
               value={currentInput}
               onChangeText={handleChangeText}
               placeholder="Type or tap letters..."
@@ -1008,9 +989,9 @@ export default function BoggleScreen() {
               }]}
             />
             {currentInput.length > 0 && !isGameOver && (
-              <Pressable onPress={clearWord} hitSlop={8} accessibilityLabel="Clear word" style={styles.clearButton}>
+              <GamePressable onPress={clearWord} hitSlop={8} accessibilityLabel="Clear word" style={styles.clearButton}>
                 <ThemedText variant="body" style={{ color: theme.colors.textMuted }}>✕</ThemedText>
-              </Pressable>
+              </GamePressable>
             )}
             <View style={{ width: 80 }}>
               <Button
@@ -1024,9 +1005,10 @@ export default function BoggleScreen() {
           </View>
 
           {/* Feedback */}
+          <View style={{ minHeight: 44, width: '100%' }} accessibilityLiveRegion="polite">
           {feedback && (
             <Animated.View
-              entering={FadeIn.duration(150)}
+              entering={reducedMotion ? undefined : FadeIn.duration(150)}
               style={[styles.feedbackContainer, {
                 backgroundColor: feedback.isError
                   ? theme.colors.error + '18'
@@ -1042,10 +1024,12 @@ export default function BoggleScreen() {
                   textAlign: 'center',
                 }}
               >
-                {feedback.text}
+                {feedback.isError ? `! ${feedback.text}` : `✓ ${feedback.text}`}
               </ThemedText>
             </Animated.View>
           )}
+
+          </View>
 
           {/* Scoring reference */}
           <View style={[styles.scoringRef, {
@@ -1090,10 +1074,13 @@ export default function BoggleScreen() {
             </View>
           )}
 
+          </View>
+          </View>
+
           {/* Time's up overlay */}
           {isGameOver && (
             <Animated.View
-              entering={FadeIn.duration(300)}
+              entering={reducedMotion ? undefined : FadeIn.duration(300)}
               style={[styles.timesUpBanner, {
                 backgroundColor: theme.colors.error + '15',
                 borderRadius: theme.borderRadius.md,
@@ -1129,21 +1116,12 @@ export default function BoggleScreen() {
         onHome={handleHome}
         gameName="Word Grid"
       />
-    </View>
+    </GameShell>
   );
 }
 
 // ─── Styles ────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignSelf: 'center' as const,
-    width: '100%' as const,
-  },
-  backButton: {
-    padding: 8,
-    marginLeft: -4,
-  },
 
   // Phase screens
   centeredPhase: {
@@ -1164,22 +1142,14 @@ const styles = StyleSheet.create({
   // Playing screen
   playContent: {
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 8,
     paddingTop: 8,
-  },
-
-  // Player badge
-  playerBadge: {
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    marginBottom: 8,
   },
 
   // Timer
   timerContainer: {
     width: '100%',
-    padding: 12,
-    marginBottom: 12,
+    padding: 0,
   },
   timerHeader: {
     flexDirection: 'row',
@@ -1199,11 +1169,12 @@ const styles = StyleSheet.create({
   boardContainer: {
     padding: 12,
     marginBottom: 12,
+    gap: 8,
   },
   boardRow: {
     flexDirection: 'row',
     gap: 8,
-    marginBottom: 8,
+    marginBottom: 0,
   },
   cell: {
     borderWidth: 2,
@@ -1212,7 +1183,8 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   clearButton: {
-    paddingHorizontal: 4,
+    width: 44,
+    height: 44,
     justifyContent: 'center',
   },
   cellLetter: {
@@ -1244,8 +1216,8 @@ const styles = StyleSheet.create({
     minWidth: 0,
     height: 48,
     borderWidth: 2,
-    paddingHorizontal: 16,
-    fontSize: 18,
+    paddingHorizontal: 8,
+    fontSize: 16,
     letterSpacing: 2,
     textTransform: 'uppercase',
   },
@@ -1294,3 +1266,17 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
 });
+
+function GamePressable({ style, ...props }: React.ComponentProps<typeof Pressable>) {
+  const { theme } = useTheme();
+  const focus = useWebFocusRing(theme.colors.focus);
+  return (
+    <Pressable
+      accessibilityRole="button"
+      {...props}
+      onFocus={focus.onFocus}
+      onBlur={focus.onBlur}
+      style={(state) => [typeof style === 'function' ? style(state) : style, focus.style]}
+    />
+  );
+}

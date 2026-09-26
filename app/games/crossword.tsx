@@ -5,11 +5,11 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
-import { useRouter, Stack, useLocalSearchParams } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { GameShell } from '../../src/components/ui/GameShell';
+import { useWebFocusRing } from '../../src/utils/useWebFocusRing';
+import Animated, { FadeIn, useReducedMotion } from 'react-native-reanimated';
 import { useTheme } from '../../src/theme/ThemeProvider';
-import { TurnIndicator } from '../../src/components/ui/TurnIndicator';
 import { GameOverModal } from '../../src/components/ui/GameOverModal';
 import { ThemedText } from '../../src/components/ui/ThemedText';
 import { Button } from '../../src/components/ui/Button';
@@ -271,13 +271,15 @@ function formatTime(totalSeconds: number): string {
 type Phase = 'modeSelect' | 'playing';
 
 export default function CrosswordScreen() {
-  const { contentWidth, contentMaxWidth, height, isTablet } = useResponsive();
-  // Width-bound on phones; on short/landscape screens keep the grid within ~60% of the height.
-  const gridWidth = Math.min(contentWidth - 32, isTablet ? 520 : 400, Math.max(260, height * 0.6));
+  const { contentWidth, height, isTablet, isLandscape } = useResponsive();
+  // Keep the board above the fixed keyboard on compact phones.
+  const gridWidth = Math.min(contentWidth - 40, isTablet ? 540 : 400, height <= 640 && !isLandscape ? 200 : Math.max(200, height * 0.44));
+  const keyWidth = Math.min(44, ((isLandscape && height < 560 ? (contentWidth - 24) * 0.58 : contentWidth - 24) - 45) / 10);
   const cellSize = Math.floor((gridWidth - GRID_PADDING * 2) / GRID_SIZE);
   const { theme } = useTheme();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
+  const reducedMotion = useReducedMotion();
+  const shortLandscape = isLandscape && height < 560;
 
   // Mode & phase
   const { mode: modeParam } = useLocalSearchParams<{ mode: string }>();
@@ -558,87 +560,93 @@ export default function CrosswordScreen() {
     };
   };
 
+  const keyboard = (
+          <View style={styles.keyboard}>
+            {KEYBOARD_ROWS.map((row, rowIdx) => (
+              <View key={rowIdx} style={styles.keyboardRow}>
+                {row.map((letter) => (
+                  <GamePressable
+                    key={letter}
+                    onPress={() => handleKeyPress(letter)}
+                    accessibilityLabel={`Enter ${letter}`}
+                    accessibilityState={{ disabled: gameOver }}
+                    disabled={gameOver}
+                    style={[
+                      styles.key,
+                      {
+                        width: keyWidth,
+                        backgroundColor: theme.colors.surface,
+                        borderColor: theme.colors.border,
+                        borderRadius: theme.borderRadius.sm,
+                        opacity: gameOver ? 0.4 : 1,
+                        ...theme.shadows.sm,
+                      },
+                    ]}
+                  >
+                    <ThemedText
+                      variant="label"
+                      style={{
+                        color: theme.colors.text,
+                        fontWeight: '700',
+                        fontSize: 16,
+                      }}
+                    >
+                      {letter}
+                    </ThemedText>
+                  </GamePressable>
+                ))}
+              </View>
+            ))}
+            {/* Backspace row */}
+            <View style={styles.keyboardRow}>
+              <GamePressable
+                onPress={handleBackspace}
+                accessibilityLabel="Delete letter"
+                disabled={gameOver}
+                style={[
+                  styles.key,
+                  {
+                    width: 80,
+                    backgroundColor: theme.colors.surface,
+                    borderColor: theme.colors.border,
+                    borderRadius: theme.borderRadius.sm,
+                    opacity: gameOver ? 0.4 : 1,
+                    ...theme.shadows.sm,
+                  },
+                ]}
+              >
+                <ThemedText
+                  variant="label"
+                  style={{ color: theme.colors.error, fontWeight: '700', fontSize: 14 }}
+                >
+                  DEL
+                </ThemedText>
+              </GamePressable>
+            </View>
+          </View>
+
+  );
+
   // ─── RENDER ────────────────────────────────────────────────────────────────
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background, maxWidth: contentMaxWidth }]}>
-      <Stack.Screen
-        options={{
-          headerShown: true,
-          title: 'Crossword',
-          headerStyle: { backgroundColor: theme.colors.surface },
-          headerTintColor: theme.colors.text,
-          headerLeft: () => (
-            <Pressable onPress={() => router.back()} style={styles.backButton}>
-              <Animated.Text style={{ color: theme.colors.text, fontSize: 16 }}>
-                ← Back
-              </Animated.Text>
-            </Pressable>
-          ),
-        }}
-      />
+    <GameShell title="Crossword" onBack={() => router.back()}
+      status={<ThemedText variant="caption" style={{ textAlign: 'center' }}>
+        {formatTime(elapsed)} · Complete {completionPct}%{!isSinglePlayer ? ` · ${currentPlayer === 'player1' ? 'Player 1' : 'Player 2'}'s Turn · P1: ${scores.player1} · P2: ${scores.player2}` : ''}
+      </ThemedText>}
+      footer={!shortLandscape && phase === 'playing' ? keyboard : undefined}>
+      <View style={{ flex: 1, minHeight: 0, flexDirection: shortLandscape ? 'row' : 'column', gap: shortLandscape ? 16 : 0 }}>
 
       {/* ── Playing ───────────────────────────────────────────────────── */}
       {phase === 'playing' && (
         <ScrollView
+          style={{ flex: 1, minWidth: 0 }}
           contentContainerStyle={[
             styles.playContent,
-            { paddingBottom: insets.bottom + 16 },
+            { paddingBottom: 16 },
           ]}
           bounces={false}
         >
-          {/* Turn indicator (2P) */}
-          {!isSinglePlayer && !gameOver && (
-            <TurnIndicator
-              currentPlayer={currentPlayer}
-              playerNames={{ player1: 'Player 1', player2: 'Player 2' }}
-            />
-          )}
-
-          {/* Stats bar: timer + completion */}
-          <View style={styles.statsBar}>
-            <View style={styles.statItem}>
-              <ThemedText variant="caption" style={{ color: theme.colors.textMuted }}>
-                Time
-              </ThemedText>
-              <ThemedText variant="label" style={{ color: theme.colors.text }}>
-                {formatTime(elapsed)}
-              </ThemedText>
-            </View>
-            <View style={styles.statItem}>
-              <ThemedText variant="caption" style={{ color: theme.colors.textMuted }}>
-                Complete
-              </ThemedText>
-              <ThemedText
-                variant="label"
-                style={{
-                  color: completionPct === 100 ? theme.colors.success : theme.colors.text,
-                }}
-              >
-                {completionPct}%
-              </ThemedText>
-            </View>
-            {!isSinglePlayer && (
-              <>
-                <View style={styles.statItem}>
-                  <ThemedText variant="caption" style={{ color: theme.colors.player1 }}>
-                    P1
-                  </ThemedText>
-                  <ThemedText variant="label" style={{ color: theme.colors.player1 }}>
-                    {scores.player1}
-                  </ThemedText>
-                </View>
-                <View style={styles.statItem}>
-                  <ThemedText variant="caption" style={{ color: theme.colors.player2 }}>
-                    P2
-                  </ThemedText>
-                  <ThemedText variant="label" style={{ color: theme.colors.player2 }}>
-                    {scores.player2}
-                  </ThemedText>
-                </View>
-              </>
-            )}
-          </View>
-
+          {!shortLandscape ? <>
           {/* Active clue display */}
           <View
             style={[
@@ -666,8 +674,10 @@ export default function CrosswordScreen() {
 
           {/* Direction toggle */}
           <View style={styles.directionToggle}>
-            <Pressable
+            <GamePressable
               onPress={handleToggleDirection}
+              accessibilityLabel="Across"
+              accessibilityState={{ selected: direction === 'across' }}
               style={[
                 styles.toggleBtn,
                 {
@@ -680,15 +690,17 @@ export default function CrosswordScreen() {
               <ThemedText
                 variant="label"
                 style={{
-                  color: direction === 'across' ? '#fff' : theme.colors.text,
+                  color: direction === 'across' ? theme.colors.onPrimary : theme.colors.text,
                   fontSize: 13,
                 }}
               >
                 Across
               </ThemedText>
-            </Pressable>
-            <Pressable
+            </GamePressable>
+            <GamePressable
               onPress={handleToggleDirection}
+              accessibilityLabel="Down"
+              accessibilityState={{ selected: direction === 'down' }}
               style={[
                 styles.toggleBtn,
                 {
@@ -701,18 +713,19 @@ export default function CrosswordScreen() {
               <ThemedText
                 variant="label"
                 style={{
-                  color: direction === 'down' ? '#fff' : theme.colors.text,
+                  color: direction === 'down' ? theme.colors.onPrimary : theme.colors.text,
                   fontSize: 13,
                 }}
               >
                 Down
               </ThemedText>
-            </Pressable>
+            </GamePressable>
           </View>
 
+          </> : null}
           {/* Crossword grid */}
           <Animated.View
-            entering={FadeIn.duration(300)}
+            entering={reducedMotion ? undefined : FadeIn.duration(300)}
             style={[
               styles.gridContainer,
               {
@@ -735,9 +748,12 @@ export default function CrosswordScreen() {
                   const isWrong = userLetter !== null && userLetter !== correctLetter;
 
                   return (
-                    <Pressable
+                    <GamePressable
                       key={col}
                       onPress={() => handleCellTap(row, col)}
+                      disabled={isBlack || gameOver}
+                      accessibilityLabel={`Row ${row + 1}, column ${col + 1}: ${isBlack ? "blocked" : userLetter ?? "empty"}${isSelected ? `, selected ${direction}` : ""}`}
+                      accessibilityState={{ selected: isSelected, disabled: isBlack || gameOver }}
                       style={[
                         styles.cell,
                         {
@@ -750,7 +766,9 @@ export default function CrosswordScreen() {
                             : isHighlighted
                             ? theme.colors.primary + '20'
                             : theme.colors.surface,
-                          borderColor: theme.colors.border,
+                          borderColor: isSelected ? theme.colors.primary : theme.colors.border,
+                          borderWidth: isSelected ? 2 : 0.5,
+                          borderBottomWidth: isHighlighted ? 2 : 0.5,
                         },
                       ]}
                     >
@@ -759,7 +777,7 @@ export default function CrosswordScreen() {
                           variant="caption"
                           style={[
                             styles.clueNumber,
-                            { color: theme.colors.textMuted, fontSize: 8 },
+                            { color: theme.colors.textMuted, fontSize: Math.max(8, cellSize * 0.25) },
                           ]}
                         >
                           {clueNumber}
@@ -782,13 +800,90 @@ export default function CrosswordScreen() {
                           {userLetter}
                         </ThemedText>
                       )}
-                    </Pressable>
+                    </GamePressable>
                   );
                 })}
               </View>
             ))}
           </Animated.View>
 
+          {shortLandscape ? <>
+          {/* Active clue display */}
+          <View
+            style={[
+              styles.clueBar,
+              {
+                backgroundColor: theme.colors.surface,
+                borderRadius: theme.borderRadius.md,
+                ...theme.shadows.sm,
+              },
+            ]}
+          >
+            <ThemedText variant="label" style={{ color: theme.colors.primary, marginRight: 6 }}>
+              {activeClue
+                ? `${activeClue.number} ${activeClue.direction.toUpperCase()}`
+                : '--'}
+            </ThemedText>
+            <ThemedText
+              variant="body"
+              style={{ color: theme.colors.text, flex: 1 }}
+              numberOfLines={2}
+            >
+              {activeClue ? activeClue.clue : 'Tap a cell to begin'}
+            </ThemedText>
+          </View>
+
+          {/* Direction toggle */}
+          <View style={styles.directionToggle}>
+            <GamePressable
+              onPress={handleToggleDirection}
+              accessibilityLabel="Across"
+              accessibilityState={{ selected: direction === 'across' }}
+              style={[
+                styles.toggleBtn,
+                {
+                  backgroundColor:
+                    direction === 'across' ? theme.colors.primary : theme.colors.surface,
+                  borderRadius: theme.borderRadius.sm,
+                },
+              ]}
+            >
+              <ThemedText
+                variant="label"
+                style={{
+                  color: direction === 'across' ? theme.colors.onPrimary : theme.colors.text,
+                  fontSize: 13,
+                }}
+              >
+                Across
+              </ThemedText>
+            </GamePressable>
+            <GamePressable
+              onPress={handleToggleDirection}
+              accessibilityLabel="Down"
+              accessibilityState={{ selected: direction === 'down' }}
+              style={[
+                styles.toggleBtn,
+                {
+                  backgroundColor:
+                    direction === 'down' ? theme.colors.primary : theme.colors.surface,
+                  borderRadius: theme.borderRadius.sm,
+                },
+              ]}
+            >
+              <ThemedText
+                variant="label"
+                style={{
+                  color: direction === 'down' ? theme.colors.onPrimary : theme.colors.text,
+                  fontSize: 13,
+                }}
+              >
+                Down
+              </ThemedText>
+            </GamePressable>
+          </View>
+
+          </> : null}
           {/* Clue list */}
           <View style={styles.clueSection}>
             <ThemedText variant="label" style={{ color: theme.colors.primary, marginBottom: 4 }}>
@@ -799,14 +894,16 @@ export default function CrosswordScreen() {
               .map((c) => {
                 const done = isClueComplete(c, userGrid);
                 return (
-                  <Pressable
+                  <GamePressable
                     key={`a-${c.number}`}
                     onPress={() => {
                       setDirection('across');
                       setSelectedRow(c.row);
                       setSelectedCol(c.col);
                     }}
-                    style={styles.clueRow}
+                    accessibilityLabel={`Clue ${c.number} ${c.direction}: ${c.clue}${done ? ', complete' : ''}`}
+                    accessibilityState={{ selected: activeClue === c }}
+                    style={[styles.clueRow, { borderLeftWidth: activeClue === c ? 3 : 0, borderLeftColor: theme.colors.primary, backgroundColor: activeClue === c ? theme.colors.surfaceSunken : 'transparent' }]}
                   >
                     <ThemedText
                       variant="body"
@@ -818,7 +915,7 @@ export default function CrosswordScreen() {
                     >
                       {c.number}. {c.clue}
                     </ThemedText>
-                  </Pressable>
+                  </GamePressable>
                 );
               })}
 
@@ -833,14 +930,16 @@ export default function CrosswordScreen() {
               .map((c) => {
                 const done = isClueComplete(c, userGrid);
                 return (
-                  <Pressable
+                  <GamePressable
                     key={`d-${c.number}`}
                     onPress={() => {
                       setDirection('down');
                       setSelectedRow(c.row);
                       setSelectedCol(c.col);
                     }}
-                    style={styles.clueRow}
+                    accessibilityLabel={`Clue ${c.number} ${c.direction}: ${c.clue}${done ? ', complete' : ''}`}
+                    accessibilityState={{ selected: activeClue === c }}
+                    style={[styles.clueRow, { borderLeftWidth: activeClue === c ? 3 : 0, borderLeftColor: theme.colors.primary, backgroundColor: activeClue === c ? theme.colors.surfaceSunken : 'transparent' }]}
                   >
                     <ThemedText
                       variant="body"
@@ -852,73 +951,16 @@ export default function CrosswordScreen() {
                     >
                       {c.number}. {c.clue}
                     </ThemedText>
-                  </Pressable>
+                  </GamePressable>
                 );
               })}
           </View>
 
-          {/* On-screen QWERTY keyboard */}
-          <View style={styles.keyboard}>
-            {KEYBOARD_ROWS.map((row, rowIdx) => (
-              <View key={rowIdx} style={styles.keyboardRow}>
-                {row.map((letter) => (
-                  <Pressable
-                    key={letter}
-                    onPress={() => handleKeyPress(letter)}
-                    disabled={gameOver}
-                    style={[
-                      styles.key,
-                      {
-                        backgroundColor: theme.colors.surface,
-                        borderColor: theme.colors.border,
-                        borderRadius: theme.borderRadius.sm,
-                        opacity: gameOver ? 0.4 : 1,
-                        ...theme.shadows.sm,
-                      },
-                    ]}
-                  >
-                    <ThemedText
-                      variant="label"
-                      style={{
-                        color: theme.colors.text,
-                        fontWeight: '700',
-                        fontSize: 16,
-                      }}
-                    >
-                      {letter}
-                    </ThemedText>
-                  </Pressable>
-                ))}
-              </View>
-            ))}
-            {/* Backspace row */}
-            <View style={styles.keyboardRow}>
-              <Pressable
-                onPress={handleBackspace}
-                disabled={gameOver}
-                style={[
-                  styles.key,
-                  {
-                    width: 80,
-                    backgroundColor: theme.colors.surface,
-                    borderColor: theme.colors.border,
-                    borderRadius: theme.borderRadius.sm,
-                    opacity: gameOver ? 0.4 : 1,
-                    ...theme.shadows.sm,
-                  },
-                ]}
-              >
-                <ThemedText
-                  variant="label"
-                  style={{ color: theme.colors.error, fontWeight: '700', fontSize: 14 }}
-                >
-                  DEL
-                </ThemedText>
-              </Pressable>
-            </View>
-          </View>
         </ScrollView>
       )}
+
+      {shortLandscape && phase === 'playing' ? <View style={{ width: '58%', justifyContent: 'center' }}>{keyboard}</View> : null}
+      </View>
 
       {/* ── Game Over Modal ───────────────────────────────────────────── */}
       <GameOverModal
@@ -928,35 +970,15 @@ export default function CrosswordScreen() {
         onHome={handleHome}
         gameName="Crossword"
       />
-    </View>
+    </GameShell>
   );
 }
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignSelf: 'center' as const,
-    width: '100%' as const,
-  },
-  backButton: {
-    padding: 8,
-    marginLeft: -4,
-  },
   playContent: {
     alignItems: 'center',
-    paddingHorizontal: 16,
-  },
-  statsBar: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 20,
-    paddingVertical: 10,
-    width: '100%',
-  },
-  statItem: {
-    alignItems: 'center',
+    paddingHorizontal: 8,
   },
   clueBar: {
     flexDirection: 'row',
@@ -973,7 +995,8 @@ const styles = StyleSheet.create({
   },
   toggleBtn: {
     paddingHorizontal: 16,
-    paddingVertical: 6,
+    minHeight: 44,
+    justifyContent: 'center',
   },
   gridContainer: {
     borderWidth: 2,
@@ -1001,11 +1024,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   clueRow: {
-    paddingVertical: 3,
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingVertical: 8,
     paddingHorizontal: 4,
   },
   keyboard: {
-    marginTop: 8,
+    marginTop: 0,
     width: '100%',
     alignItems: 'center',
     gap: 6,
@@ -1017,9 +1042,23 @@ const styles = StyleSheet.create({
   },
   key: {
     width: 34,
-    height: 42,
+    height: 44,
     borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
   },
 });
+
+function GamePressable({ style, ...props }: React.ComponentProps<typeof Pressable>) {
+  const { theme } = useTheme();
+  const focus = useWebFocusRing(theme.colors.focus);
+  return (
+    <Pressable
+      accessibilityRole="button"
+      {...props}
+      onFocus={focus.onFocus}
+      onBlur={focus.onBlur}
+      style={(state) => [typeof style === 'function' ? style(state) : style, focus.style]}
+    />
+  );
+}

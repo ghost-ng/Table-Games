@@ -74,8 +74,12 @@ if (root) {
     }
     const planPath = /^(?:docs\/superpowers\/(?:plans|specs)\/|\.superpowers\/sdd\/)/.test(path);
     const allowPlaceholderMention = allowInternal && planPath;
-    // Deleted worktree files are handled by Git staging; binary assets are not text credentials.
-    if (!existsSync(join(root, path))) continue;
+    // An unstaged deletion leaves the indexed blob eligible for publication.
+    if (!existsSync(join(root, path))) {
+      failures.push(`Missing tracked file: ${path}; restore it or stage its deletion before checking.`);
+      continue;
+    }
+    // Binary assets are not text credentials.
     const bytes = readFileSync(join(root, path));
     if (bytes.includes(0)) continue;
     const lines = bytes.toString('utf8').split(/\r?\n/);

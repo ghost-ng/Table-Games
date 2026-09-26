@@ -26,7 +26,7 @@ function fixture(t) {
   const track = () => assert.equal(spawnSync('git', ['add', '.'], { cwd: root }).status, 0);
   const run = (...args) => spawnSync(process.execPath, [checker, ...args], { cwd: root, encoding: 'utf8' });
   track();
-  return { put, track, run };
+  return { root, put, track, run };
 }
 
 test('accepts a documented proprietary tree and ignores untracked generated output', (t) => {
@@ -128,6 +128,30 @@ test('rejects private keys and secret assignments while allowing package integri
   assert.equal(result.status, 1);
   assert.match(result.stderr, /credentials.txt/);
   assert.match(result.stderr, /config.js/);
+});
+
+test('rejects an unstaged tracked deletion even when its indexed credential is no longer on disk', (t) => {
+  const { root, put, track, run } = fixture(t);
+  const token = ['ghp', 'A'.repeat(36)].join('_');
+  put('config.json', JSON.stringify({ accessToken: token }));
+  track();
+  rmSync(join(root, 'config.json'));
+  const result = run('--allow-internal-plans');
+  assert.equal(result.status, 1, result.stdout);
+  assert.match(result.stderr, /Missing tracked file: config.json/);
+  assert.match(result.stderr, /stage its deletion/i);
+  assert.ok(!result.stderr.includes(token));
+});
+
+test('accepts a staged deletion because the file is no longer tracked for release', (t) => {
+  const { root, put, track, run } = fixture(t);
+  put('config.json', JSON.stringify({ accessToken: ['ghp', 'A'.repeat(36)].join('_') }));
+  track();
+  rmSync(join(root, 'config.json'));
+  track();
+  const result = run('--allow-internal-plans');
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /PASS/);
 });
 
 test('rejects unsupported flags instead of silently weakening the gate', (t) => {

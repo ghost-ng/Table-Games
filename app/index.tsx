@@ -25,8 +25,8 @@ export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { isTablet, contentMaxWidth, contentWidth } = useResponsive();
-  // 3 columns on phones; 4 on tablets/desktop so the 8 games form two tidy rows.
-  const numColumns = isTablet ? 4 : 3;
+  // 9 games → a 3×3 grid at every size; cards simply grow with the content column.
+  const numColumns = 3;
   const cardWidth =
     (contentWidth - GRID_PADDING * 2 - CARD_GAP * (numColumns - 1)) / numColumns;
   const [selectedGame, setSelectedGame] = useState<string | null>(null);

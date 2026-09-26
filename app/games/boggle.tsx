@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Pressable,
   ScrollView,
@@ -17,11 +17,14 @@ import { recordGameResult } from '../../src/storage/scores';
 import {
   type Board,
   type FoundWord,
+  type Position,
   generateBoard,
   canTraceWord,
+  traceWord,
   calculateScore,
 } from '../../src/engines/boggle';
 import { useResponsive } from '../../src/utils/layout';
+import { haptics } from '../../src/utils/haptics';
 
 const ROUND_DURATION_MS = 120_000; // 2 minutes
 
@@ -511,6 +514,8 @@ export default function BoggleScreen() {
     scoreP2: 0,
   }));
   const [currentInput, setCurrentInput] = useState('');
+  // Cells tapped on the grid, in order. Empty while the player is typing instead.
+  const [tapPath, setTapPath] = useState<Position[]>([]);
   const [feedback, setFeedback] = useState<{ text: string; isError: boolean } | null>(null);
   const [timeRemaining, setTimeRemaining] = useState(ROUND_DURATION_MS);
   const [isGameOver, setIsGameOver] = useState(false);
@@ -523,6 +528,47 @@ export default function BoggleScreen() {
   const feedbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isSinglePlayer = mode === 'single';
+
+  const clearWord = useCallback(() => {
+    setCurrentInput('');
+    setTapPath([]);
+  }, []);
+
+  // Typing replaces any tapped selection; the grid then highlights the typed word's path.
+  const handleChangeText = useCallback((text: string) => {
+    setCurrentInput(text);
+    setTapPath([]);
+  }, []);
+
+  // Tap to build a word: adjacent cells extend it, the last cell undoes, an earlier
+  // cell in the word rewinds to it, and any other cell starts a new word.
+  const handleCellPress = useCallback(
+    (row: number, col: number) => {
+      if (isGameOver) return;
+      const inPathAt = tapPath.findIndex((p) => p.row === row && p.col === col);
+      const last = tapPath[tapPath.length - 1];
+      let next: Position[];
+      if (inPathAt === tapPath.length - 1 && inPathAt >= 0) {
+        next = tapPath.slice(0, -1);
+      } else if (inPathAt >= 0) {
+        next = tapPath.slice(0, inPathAt + 1);
+      } else if (last && Math.abs(last.row - row) <= 1 && Math.abs(last.col - col) <= 1) {
+        next = [...tapPath, { row, col }];
+      } else {
+        next = [{ row, col }];
+      }
+      haptics.selection();
+      setTapPath(next);
+      setCurrentInput(next.map((p) => gameState.board[p.row][p.col]).join(''));
+    },
+    [isGameOver, tapPath, gameState.board],
+  );
+
+  const highlightedPath = useMemo(() => {
+    if (tapPath.length > 0) return tapPath;
+    const typed = currentInput.trim().toUpperCase();
+    return typed ? traceWord(gameState.board, typed) ?? [] : [];
+  }, [tapPath, currentInput, gameState.board]);
   const currentPlayer = phase === 'playingP2' ? 'player2' : 'player1';
 
   // ── Derived data ─────────────────────────────────────────────────────────
@@ -569,7 +615,7 @@ export default function BoggleScreen() {
         // Player 1 done, switch to pass device
         stopTimer();
         setPhase('passDevice');
-        setCurrentInput('');
+        clearWord();
         setFeedback(null);
       } else {
         // Single player done, or Player 2 done
@@ -615,7 +661,7 @@ export default function BoggleScreen() {
   // ── Pass device -> Player 2 starts ──────────────────────────────────────
   const handlePassReady = useCallback(() => {
     setPhase('playingP2');
-    setCurrentInput('');
+    clearWord();
     setFeedback(null);
     startTimer();
   }, [startTimer]);
@@ -625,7 +671,8 @@ export default function BoggleScreen() {
     if (!gameState || isGameOver) return;
 
     const word = currentInput.trim().toUpperCase();
-    setCurrentInput('');
+    const wasTapped = tapPath.length > 0;
+    clearWord();
 
     if (word.length < 3) {
       showFeedback('Word must be at least 3 letters', true);
@@ -670,8 +717,9 @@ export default function BoggleScreen() {
     }
 
     showFeedback(`+${score} point${score > 1 ? 's' : ''}!`, false);
-    inputRef.current?.focus();
-  }, [gameState, isGameOver, currentInput, currentPlayer, showFeedback]);
+    // Keep the keyboard up for typists; don't pop it open for players who tap.
+    if (!wasTapped) inputRef.current?.focus();
+  }, [gameState, isGameOver, currentInput, tapPath, currentPlayer, showFeedback, clearWord]);
 
   // ── Game over handling ───────────────────────────────────────────────────
   useEffect(() => {
@@ -723,7 +771,7 @@ export default function BoggleScreen() {
     setShowModal(false);
     setResultRecorded(false);
     setIsGameOver(false);
-    setCurrentInput('');
+    clearWord();
     setFeedback(null);
     stopTimer();
 
@@ -899,20 +947,36 @@ export default function BoggleScreen() {
           >
             {gameState.board.map((row, r) => (
               <View key={r} style={styles.boardRow}>
-                {row.map((letter, c) => (
-                  <View
+                {row.map((letter, c) => {
+                  const pathIndex = highlightedPath.findIndex((p) => p.row === r && p.col === c);
+                  const selected = pathIndex >= 0;
+                  const isLast = selected && pathIndex === highlightedPath.length - 1;
+                  return (
+                  <Pressable
                     key={`${r}-${c}`}
-                    style={[styles.cell, {
-                      backgroundColor: theme.colors.background,
-                      borderColor: theme.colors.border,
+                    onPress={() => handleCellPress(r, c)}
+                    disabled={isGameOver}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Letter ${letter}${selected ? ', selected' : ''}`}
+                    style={({ pressed }) => [styles.cell, {
+                      backgroundColor: isLast
+                        ? theme.colors.primary
+                        : selected
+                          ? theme.colors.primary + '30'
+                          : theme.colors.background,
+                      borderColor: selected ? theme.colors.primary : theme.colors.border,
                       borderRadius: theme.borderRadius.md,
                       width: cellSize,
                       height: cellSize,
+                      transform: [{ scale: pressed ? 0.94 : 1 }],
                     }]}
                   >
                     <ThemedText
                       variant="heading"
-                      style={[styles.cellLetter, { color: theme.colors.text }]}
+                      style={[
+                        styles.cellLetter,
+                        { color: isLast ? '#FFFFFF' : theme.colors.text, fontSize: Math.max(20, cellSize * 0.34) },
+                      ]}
                     >
                       {letter}
                     </ThemedText>
@@ -923,8 +987,9 @@ export default function BoggleScreen() {
                         </ThemedText>
                       </View>
                     )}
-                  </View>
-                ))}
+                  </Pressable>
+                  );
+                })}
               </View>
             ))}
           </Animated.View>
@@ -934,8 +999,8 @@ export default function BoggleScreen() {
             <TextInput
               ref={inputRef}
               value={currentInput}
-              onChangeText={setCurrentInput}
-              placeholder="Type a word..."
+              onChangeText={handleChangeText}
+              placeholder="Type or tap letters..."
               placeholderTextColor={theme.colors.textMuted}
               autoCapitalize="characters"
               autoCorrect={false}
@@ -950,6 +1015,11 @@ export default function BoggleScreen() {
                 fontFamily: theme.fonts.body,
               }]}
             />
+            {currentInput.length > 0 && !isGameOver && (
+              <Pressable onPress={clearWord} hitSlop={8} accessibilityLabel="Clear word" style={styles.clearButton}>
+                <ThemedText variant="body" style={{ color: theme.colors.textMuted }}>✕</ThemedText>
+              </Pressable>
+            )}
             <View style={{ width: 80 }}>
               <Button
                 title="Submit"
@@ -1149,6 +1219,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     position: 'relative',
   },
+  clearButton: {
+    paddingHorizontal: 4,
+    justifyContent: 'center',
+  },
   cellLetter: {
     fontSize: 24,
     fontWeight: '800',
@@ -1175,6 +1249,7 @@ const styles = StyleSheet.create({
   },
   textInput: {
     flex: 1,
+    minWidth: 0,
     height: 48,
     borderWidth: 2,
     paddingHorizontal: 16,

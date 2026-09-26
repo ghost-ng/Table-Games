@@ -9,6 +9,7 @@ export const GAME_THUMBNAILS: Record<string, ImageSourcePropType> = {
   'word-search': require('../../assets/games/word-search.webp'),
   'crossword': require('../../assets/games/crossword.webp'),
   'boggle': require('../../assets/games/boggle.webp'),
+  'wordle': require('../../assets/games/wordle.webp'),
 };
 
 export const GAMES = [
@@ -20,6 +21,7 @@ export const GAMES = [
   { id: 'word-search', name: 'Word Search', emoji: '🔍' },
   { id: 'crossword', name: 'Crossword', emoji: '📝' },
   { id: 'boggle', name: 'Boggle', emoji: '🔤' },
+  { id: 'wordle', name: 'Wordle', emoji: '🟩' },
 ] as const;
 
 export type GameId = (typeof GAMES)[number]['id'];

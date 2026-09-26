@@ -150,7 +150,7 @@ export function canTraceWord(board: Board, word: string): boolean {
 /**
  * Trace a word on the board and return the path if found, or null.
  */
-function traceWord(board: Board, word: string): Position[] | null {
+export function traceWord(board: Board, word: string): Position[] | null {
   const visited = Array.from({ length: 4 }, () => Array(4).fill(false));
   for (let r = 0; r < 4; r++) {
     for (let c = 0; c < 4; c++) {

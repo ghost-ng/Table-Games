@@ -43,3 +43,6 @@ yarn-error.*
 # Playwright MCP scratch output
 .playwright-mcp/
 .playwright-cli/
+
+# Local Git worktrees
+.worktrees/

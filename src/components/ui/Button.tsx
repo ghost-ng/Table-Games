@@ -12,7 +12,7 @@ export interface ButtonProps {
   disabled?: boolean;
 }
 
-const SIZE_HEIGHT = { sm: 36, md: 44, lg: 56 };
+const SIZE_HEIGHT = { sm: 44, md: 44, lg: 56 };
 const SIZE_FONT = { sm: 14, md: 16, lg: 18 };
 const SIZE_PADDING = { sm: 12, md: 16, lg: 24 };
 
@@ -38,7 +38,6 @@ export function Button({
       onFocus={focus.onFocus}
       onBlur={focus.onBlur}
       disabled={disabled}
-      hitSlop={size === 'sm' ? 4 : undefined}
       style={({ pressed }) => [
         {
           minHeight: SIZE_HEIGHT[size],

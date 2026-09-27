@@ -8,10 +8,7 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-  withSequence,
+  useReducedMotion,
   FadeIn,
   FadeOut,
 } from 'react-native-reanimated';
@@ -36,6 +33,9 @@ import {
 import { getAIMove } from '../../src/ai/dots-and-boxes-ai';
 import { DifficultySelector, type Difficulty } from '../../src/components/ui/DifficultySelector';
 import { useBoardFit, useResponsive } from '../../src/utils/layout';
+import { getMotionPreset } from '../../src/game-visuals/presentation';
+import { ThemedBoardSurface } from '../../src/components/game-visuals/ThemedBoardSurface';
+import { VictoryAccent } from '../../src/components/game-visuals/VictoryAccent';
 
 const BOARD_SIZE_OPTIONS = [
   { label: '3×3', value: 3, description: 'Quick' },
@@ -50,6 +50,8 @@ const TAP_ZONE = 44;
 
 export default function DotsAndBoxesScreen() {
   const { theme } = useTheme();
+  const reducedMotion = useReducedMotion();
+  const placementDuration = getMotionPreset('place', reducedMotion).duration;
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { contentMaxWidth, width, height } = useResponsive();
@@ -389,8 +391,8 @@ export default function DotsAndBoxesScreen() {
       <View style={[styles.extraTurnRow, shortLandscape && { display: 'none' }]}>
       {showExtraTurn && (
         <Animated.View
-          entering={FadeIn.duration(200)}
-          exiting={FadeOut.duration(200)}
+          entering={reducedMotion ? undefined : FadeIn.duration(placementDuration)}
+          exiting={reducedMotion ? undefined : FadeOut.duration(placementDuration)}
           style={[
             styles.extraTurnBanner,
             {
@@ -408,16 +410,15 @@ export default function DotsAndBoxesScreen() {
 
       {/* Board */}
       <View style={styles.boardWrapper} onLayout={onBoardAreaLayout}>
-        <View
+        <ThemedBoardSurface
           testID="game-board"
           style={[
             styles.board,
             {
               width: boardSize,
               height: boardSize,
-              backgroundColor: theme.colors.surfaceRaised,
+              borderWidth: 0,
               borderRadius: theme.borderRadius.md,
-              ...theme.shadows.sm,
             },
           ]}
         >
@@ -429,7 +430,9 @@ export default function DotsAndBoxesScreen() {
               return (
                 <Animated.View
                   key={`box-${r}-${c}`}
-                  entering={FadeIn.duration(300)}
+                  entering={reducedMotion ? undefined : FadeIn.duration(placementDuration)}
+                  accessible
+                  accessibilityLabel={`Box row ${r + 1}, column ${c + 1}, claimed by ${owner === 'player1' ? mode === 'single' ? 'You' : 'Player 1' : mode === 'single' ? 'AI' : 'Player 2'}`}
                   style={[
                     styles.boxFill,
                     {
@@ -459,7 +462,9 @@ export default function DotsAndBoxesScreen() {
                       : mode === 'single'
                         ? 'A'
                         : '2'}
+                    {' ✓'}
                   </ThemedText>
+                  <VictoryAccent visible kind="ring" size={cellSize * 0.7} style={{ position: 'absolute' }} />
                 </Animated.View>
               );
             })
@@ -473,6 +478,8 @@ export default function DotsAndBoxesScreen() {
               return (
                 <View
                   key={`hline-${r}-${c}`}
+                  accessible
+                  accessibilityLabel={`Horizontal line, row ${r + 1}, column ${c + 1}, ${player === 'player1' ? 'Player 1' : 'Player 2'}${gameState.lastMove?.orientation === 'horizontal' && gameState.lastMove.row === r && gameState.lastMove.col === c ? ', last edge' : ''}`}
                   style={[
                     styles.drawnLine,
                     {
@@ -484,7 +491,11 @@ export default function DotsAndBoxesScreen() {
                       borderRadius: LINE_THICKNESS / 2,
                     },
                   ]}
-                />
+                >
+                  {gameState.lastMove?.orientation === 'horizontal' && gameState.lastMove.row === r && gameState.lastMove.col === c && (
+                    <View pointerEvents="none" accessible={false} style={{ position: 'absolute', left: cellSize / 2 - 5, top: LINE_THICKNESS / 2 - 5, width: 10, height: 10, borderWidth: 2, borderColor: theme.colors.text, backgroundColor: theme.colors.surfaceRaised, transform: [{ rotate: '45deg' }] }} />
+                  )}
+                </View>
               );
             })
           )}
@@ -497,6 +508,8 @@ export default function DotsAndBoxesScreen() {
               return (
                 <View
                   key={`vline-${r}-${c}`}
+                  accessible
+                  accessibilityLabel={`Vertical line, row ${r + 1}, column ${c + 1}, ${player === 'player1' ? 'Player 1' : 'Player 2'}${gameState.lastMove?.orientation === 'vertical' && gameState.lastMove.row === r && gameState.lastMove.col === c ? ', last edge' : ''}`}
                   style={[
                     styles.drawnLine,
                     {
@@ -508,7 +521,11 @@ export default function DotsAndBoxesScreen() {
                       borderRadius: LINE_THICKNESS / 2,
                     },
                   ]}
-                />
+                >
+                  {gameState.lastMove?.orientation === 'vertical' && gameState.lastMove.row === r && gameState.lastMove.col === c && (
+                    <View pointerEvents="none" accessible={false} style={{ position: 'absolute', left: LINE_THICKNESS / 2 - 5, top: cellSize / 2 - 5, width: 10, height: 10, borderWidth: 2, borderColor: theme.colors.text, backgroundColor: theme.colors.surfaceRaised, transform: [{ rotate: '45deg' }] }} />
+                  )}
+                </View>
               );
             })
           )}
@@ -609,13 +626,19 @@ export default function DotsAndBoxesScreen() {
                       height: DOT_SIZE,
                       borderRadius: DOT_SIZE / 2,
                       backgroundColor: theme.colors.text,
+                      borderWidth: theme.materials.boardBorderWidth,
+                      borderColor: theme.colors.border,
+                      shadowColor: theme.materials.glowColor,
+                      shadowOffset: { width: 0, height: theme.materials.cellDepth },
+                      shadowOpacity: theme.materials.glowOpacity || theme.materials.pieceShadowOpacity,
+                      shadowRadius: 3,
                     },
                   ]}
                 />
               );
             })
           )}
-        </View>
+        </ThemedBoardSurface>
       </View>
 
       {/* AI thinking indicator — fixed height to prevent layout shift */}

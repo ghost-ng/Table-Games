@@ -1,7 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
-  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -10,7 +9,7 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withTiming,
-  Easing,
+  useReducedMotion,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -19,7 +18,11 @@ import { StatusRail } from '../../src/components/ui/StatusRail';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { ThemedText } from '../../src/components/ui/ThemedText';
 import { TurnIndicator } from '../../src/components/ui/TurnIndicator';
-import { THEME_TOKENS } from '../../src/utils/tokens';
+import { GAME_VISUALS } from '../../src/game-visuals/registry';
+import { getMotionPreset } from '../../src/game-visuals/presentation';
+import { ThemedBoardSurface } from '../../src/components/game-visuals/ThemedBoardSurface';
+import { GamePieceImage } from '../../src/components/game-visuals/GamePieceImage';
+import { TactileCell } from '../../src/components/game-visuals/TactileCell';
 import { useBoardFit, useResponsive } from '../../src/utils/layout';
 import { GameOverModal } from '../../src/components/ui/GameOverModal';
 import { Button } from '../../src/components/ui/Button';
@@ -47,8 +50,6 @@ interface AnimatedPieceProps {
   cellSize: number;
   row: number;
   col: number;
-  theme: any;
-  themeName: string;
   captured: boolean;
 }
 
@@ -59,35 +60,35 @@ function AnimatedPiece({
   cellSize,
   row,
   col,
-  theme,
-  themeName,
   captured,
 }: AnimatedPieceProps) {
+  const { theme, themeName } = useTheme();
+  const reducedMotion = useReducedMotion();
+  const placeMotion = getMotionPreset('place', reducedMotion);
+  const pressMotion = getMotionPreset('press', reducedMotion);
   const translateX = useSharedValue(col * cellSize);
   const translateY = useSharedValue(row * cellSize);
   const opacity = useSharedValue(captured ? 0 : 1);
-  const scale = useSharedValue(isSelected ? 1.1 : 1);
+  const scale = useSharedValue(isSelected && !reducedMotion ? 1.1 : 1);
 
   useEffect(() => {
     translateX.value = withTiming(col * cellSize, {
-      duration: 200,
-      easing: Easing.out(Easing.cubic),
+      duration: placeMotion.duration,
     });
     translateY.value = withTiming(row * cellSize, {
-      duration: 200,
-      easing: Easing.out(Easing.cubic),
+      duration: placeMotion.duration,
     });
-  }, [col, row, cellSize]);
+  }, [col, row, cellSize, reducedMotion]);
 
   useEffect(() => {
     if (captured) {
-      opacity.value = withTiming(0, { duration: 200 });
+      opacity.value = withTiming(0, { duration: placeMotion.duration });
     }
-  }, [captured]);
+  }, [captured, reducedMotion]);
 
   useEffect(() => {
-    scale.value = withTiming(isSelected ? 1.1 : 1, { duration: 150 });
-  }, [isSelected]);
+    scale.value = withTiming(isSelected && !reducedMotion ? 1.1 : 1, { duration: pressMotion.duration });
+  }, [isSelected, reducedMotion]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [
@@ -99,8 +100,8 @@ function AnimatedPiece({
   }));
 
   const pieceSize = cellSize * 0.75;
-  const tokens = THEME_TOKENS[themeName as keyof typeof THEME_TOKENS];
-  const pieceImage = player === 'player1' ? tokens.checkerP1 : tokens.checkerP2;
+  const visuals = GAME_VISUALS[themeName].checkers;
+  const pieceImage = player === 'player1' ? visuals.player1 : visuals.player2;
 
   return (
     <Animated.View
@@ -116,6 +117,9 @@ function AnimatedPiece({
         animatedStyle,
       ]}
       pointerEvents="none"
+      accessible={false}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
     >
       <View
         style={[
@@ -138,22 +142,11 @@ function AnimatedPiece({
           },
         ]}
       >
-        <Image
-          source={pieceImage}
-          style={{ width: pieceSize, height: pieceSize }}
-          resizeMode="cover"
-        />
+        <GamePieceImage source={pieceImage} size={pieceSize} state={isSelected ? 'selected' : isKing ? 'king' : 'neutral'} />
         {isKing && (
-          <Image
-            source={require('../../assets/pieces/crown.webp')}
-            style={{
-              position: 'absolute',
-              width: pieceSize * 0.55,
-              height: pieceSize * 0.55,
-            }}
-            resizeMode="contain"
-          />
+          <GamePieceImage source={visuals.crown} size={pieceSize * 0.55} style={{ position: 'absolute' }} />
         )}
+        <ThemedText accessible={false} variant="caption" style={{ position: 'absolute', bottom: 1, color: theme.colors.text, backgroundColor: theme.colors.surfaceRaised, borderRadius: 4, paddingHorizontal: 2, fontSize: Math.max(8, cellSize * 0.18), fontWeight: '700' }}>{player === 'player1' ? '1' : '2'}{isKing ? '♛' : ''}</ThemedText>
       </View>
     </Animated.View>
   );
@@ -162,7 +155,7 @@ function AnimatedPiece({
 // ─── Main Screen ────────────────────────────────────────────────────────────
 
 export default function CheckersScreen() {
-  const { theme, themeName } = useTheme();
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { contentMaxWidth, width, height } = useResponsive();
@@ -477,7 +470,7 @@ export default function CheckersScreen() {
 
       {/* Board */}
       <View style={styles.boardArea} onLayout={onBoardAreaLayout}>
-      <View
+      <ThemedBoardSurface
         testID="game-board"
         style={[
           styles.boardContainer,
@@ -488,7 +481,6 @@ export default function CheckersScreen() {
             borderWidth: 2,
             borderColor: theme.colors.border,
             overflow: 'hidden',
-            ...theme.shadows.md,
           },
         ]}
       >
@@ -518,18 +510,13 @@ export default function CheckersScreen() {
                   },
                 ]}
               >
-                {/* Valid move indicator */}
-                {isTarget && (
-                  <View
-                    style={{
-                      width: cellSize * 0.3,
-                      height: cellSize * 0.3,
-                      borderRadius: cellSize * 0.15,
-                      backgroundColor: theme.colors.surfaceRaised,
-                      borderWidth: 3,
-                      borderColor: theme.colors.focus,
-                    }}
-                  />
+                {({ pressed }) => (
+                  <TactileCell pointerEvents="none" accessible={false} state={isTarget ? 'legal' : 'neutral'} pressed={pressed}
+                    style={{ width: '100%', height: '100%', borderRadius: 0,
+                      backgroundColor: isDark ? darkSquareColor : lightSquareColor,
+                      borderWidth: isTarget ? 2 : 0, shadowOpacity: 0, elevation: 0 }}>
+                    {isTarget && <View style={{ width: cellSize * 0.3, height: cellSize * 0.3, borderRadius: cellSize * 0.15, borderWidth: 3, borderColor: theme.colors.focus }} />}
+                  </TactileCell>
                 )}
               </Pressable>
             );
@@ -551,8 +538,6 @@ export default function CheckersScreen() {
                 cellSize={cellSize}
                 row={row}
                 col={col}
-                theme={theme}
-                themeName={themeName}
                 captured={false}
               />
             );
@@ -570,7 +555,7 @@ export default function CheckersScreen() {
                 key={`touch-${row}-${col}`}
                 accessibilityRole="button"
                 accessibilityState={{ selected: isSelectedPiece(row, col) }}
-                accessibilityLabel={`Row ${row + 1}, column ${col + 1}: ${gameState.board[row][col] ? playerNames[gameState.board[row][col]!.player] + ' piece' : 'empty'}${isValidMoveTarget(row, col) ? ', legal destination' : ''}`}
+                accessibilityLabel={`Row ${row + 1}, column ${col + 1}: ${gameState.board[row][col] ? playerNames[gameState.board[row][col]!.player] + (gameState.board[row][col]!.type === 'king' ? ' king piece' : ' piece') : 'empty'}${isValidMoveTarget(row, col) ? ', legal destination' : ''}`}
                 onPress={() => handleCellPress(row, col)}
                 style={{
                   position: 'absolute',
@@ -584,7 +569,7 @@ export default function CheckersScreen() {
             );
           })
         )}
-      </View>
+      </ThemedBoardSurface>
       </View>
 
       {/* Mandatory jump hint (space is always reserved so the board doesn't resize) */}

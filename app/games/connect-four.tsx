@@ -8,8 +8,8 @@ import {
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
-  withSpring,
-  withDelay,
+  withTiming,
+  useReducedMotion,
   FadeIn,
 } from 'react-native-reanimated';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -33,36 +33,35 @@ import {
 import { getAIMove } from '../../src/ai/connect-four-ai';
 import { DifficultySelector, type Difficulty } from '../../src/components/ui/DifficultySelector';
 import { useBoardFit, useResponsive } from '../../src/utils/layout';
+import { GAME_VISUALS } from '../../src/game-visuals/registry';
+import { getMotionPreset } from '../../src/game-visuals/presentation';
+import { ThemedBoardSurface } from '../../src/components/game-visuals/ThemedBoardSurface';
+import { GamePieceImage } from '../../src/components/game-visuals/GamePieceImage';
+import { VictoryAccent } from '../../src/components/game-visuals/VictoryAccent';
 
 const ROWS = 6;
 const COLS = 7;
 
 // Animated piece component that falls into place
 function AnimatedPiece({
-  color,
+  player,
   mark,
   size,
-  targetRow,
   isWinning,
-  boardTop,
 }: {
-  color: string;
+  player: Player;
   mark: string;
   size: number;
-  targetRow: number;
   isWinning: boolean;
-  boardTop: number;
 }) {
-  const { theme } = useTheme();
-  const translateY = useSharedValue(-boardTop - size);
+  const { theme, themeName } = useTheme();
+  const reducedMotion = useReducedMotion();
+  const motion = getMotionPreset('drop', reducedMotion);
+  const translateY = useSharedValue(motion.translateYFrom);
 
   useEffect(() => {
-    translateY.value = withSpring(0, {
-      damping: 12,
-      stiffness: 180,
-      mass: 0.8,
-    });
-  }, []);
+    translateY.value = withTiming(0, { duration: motion.duration });
+  }, [reducedMotion]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: translateY.value }],
@@ -70,12 +69,16 @@ function AnimatedPiece({
 
   return (
     <Animated.View
+      pointerEvents="none"
+      accessible={false}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
       style={[
         {
           width: size * 0.8,
           height: size * 0.8,
           borderRadius: (size * 0.8) / 2,
-          backgroundColor: color,
+          backgroundColor: 'transparent',
           borderWidth: isWinning ? 3 : 2,
           borderColor: theme.colors.text,
           alignItems: 'center',
@@ -85,13 +88,16 @@ function AnimatedPiece({
         animatedStyle,
       ]}
     >
-      <ThemedText variant="label" style={{ color: theme.colors.text, backgroundColor: theme.colors.surfaceRaised, borderRadius: size / 2, paddingHorizontal: 3, fontSize: Math.max(11, size * 0.24) }}>{isWinning ? '✓' : mark}</ThemedText>
+      <GamePieceImage source={player === 'red' ? GAME_VISUALS[themeName].connectFour.player1 : GAME_VISUALS[themeName].connectFour.player2} size={size * 0.78} />
+      <ThemedText accessible={false} variant="label" style={{ position: 'absolute', color: theme.colors.text, backgroundColor: theme.colors.surfaceRaised, borderRadius: size / 2, paddingHorizontal: 3, fontSize: Math.max(11, size * 0.24) }}>{isWinning ? mark + '✓' : mark}</ThemedText>
+      <VictoryAccent visible={isWinning} kind="ring" size={size * 0.8} style={{ position: 'absolute' }} />
     </Animated.View>
   );
 }
 
 export default function ConnectFourScreen() {
   const { theme } = useTheme();
+  const reducedMotion = useReducedMotion();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { contentMaxWidth, width, height } = useResponsive();
@@ -371,18 +377,15 @@ export default function ConnectFourScreen() {
       </View>
 
       {/* Board */}
-      <View
+      <ThemedBoardSurface
         testID="game-board"
         style={[
           styles.board,
           {
             width: boardWidth,
             height: boardHeight,
-            backgroundColor: theme.colors.board,
             borderWidth: 2,
-            borderColor: theme.colors.border,
             borderRadius: theme.borderRadius.md,
-            ...theme.shadows.md,
           },
         ]}
       >
@@ -416,23 +419,21 @@ export default function ConnectFourScreen() {
                         backgroundColor: cell
                           ? 'transparent'
                           : theme.colors.surfaceSunken,
-                        borderWidth: 1,
+                        borderWidth: 2,
                         borderColor: theme.colors.border,
+                        shadowColor: '#000000',
+                        shadowOffset: { width: 0, height: theme.materials.cellDepth },
+                        shadowOpacity: theme.materials.pieceShadowOpacity,
+                        shadowRadius: 2,
                       },
                     ]}
                   >
                     {cell !== null && (
                       <AnimatedPiece
                         mark={cell === 'red' ? '1' : '2'}
-                        color={
-                          cell === 'red'
-                            ? theme.colors.player1
-                            : theme.colors.player2
-                        }
+                        player={cell}
                         size={cellSize}
-                        targetRow={row}
                         isWinning={winning}
-                        boardTop={boardHeight}
                       />
                     )}
                   </View>
@@ -441,13 +442,13 @@ export default function ConnectFourScreen() {
             })}
           </View>
         ))}
-      </View>
+      </ThemedBoardSurface>
       </View>
 
       {/* AI thinking indicator (space is always reserved so the board doesn't resize) */}
       <View style={styles.thinkingContainer}>
         {aiThinking && (
-          <Animated.View entering={FadeIn.duration(200)}>
+          <Animated.View entering={reducedMotion ? undefined : FadeIn.duration(getMotionPreset('place', false).duration)}>
             <ThemedText
               variant="caption"
               style={{ color: theme.colors.textMuted }}

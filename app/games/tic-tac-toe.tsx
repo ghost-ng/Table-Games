@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  Image,
   Pressable,
   StyleSheet,
   View,
@@ -9,9 +8,7 @@ import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   FadeIn,
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
+  useReducedMotion,
 } from 'react-native-reanimated';
 import { GameShell } from '../../src/components/ui/GameShell';
 import { StatusRail } from '../../src/components/ui/StatusRail';
@@ -29,40 +26,29 @@ import {
 import { getAIMove } from '../../src/ai/tic-tac-toe-ai';
 import { DifficultySelector, type Difficulty } from '../../src/components/ui/DifficultySelector';
 import { ThemedText } from '../../src/components/ui/ThemedText';
-import { THEME_TOKENS } from '../../src/utils/tokens';
+import { GAME_VISUALS } from '../../src/game-visuals/registry';
+import { getMotionPreset } from '../../src/game-visuals/presentation';
+import { ThemedBoardSurface } from '../../src/components/game-visuals/ThemedBoardSurface';
+import { GamePieceImage } from '../../src/components/game-visuals/GamePieceImage';
+import { TactileCell } from '../../src/components/game-visuals/TactileCell';
+import { VictoryAccent } from '../../src/components/game-visuals/VictoryAccent';
 import { useBoardFit, useResponsive } from '../../src/utils/layout';
 
 
-function CellContent({
-  value,
-  theme,
-  themeName,
-}: {
-  value: Player | null;
-  theme: ReturnType<typeof useTheme>['theme'];
-  themeName: string;
-}) {
-  if (!value) return null;
-
-  const tokens = THEME_TOKENS[themeName as keyof typeof THEME_TOKENS];
-  const imageSource = value === 'X' ? tokens.tttX : tokens.tttO;
-
+function CellContent({ value, size }: { value: Player; size: number }) {
+  const { themeName } = useTheme();
+  const reducedMotion = useReducedMotion();
+  const visuals = GAME_VISUALS[themeName].ticTacToe;
   return (
-    <Animated.View
-      entering={FadeIn.duration(theme.animation.duration.medium)}
-      style={styles.cellImageWrapper}
-    >
-      <Image
-        source={imageSource}
-        style={styles.cellImage}
-        resizeMode="contain"
-      />
+    <Animated.View pointerEvents="none" accessible={false}
+      entering={reducedMotion ? undefined : FadeIn.duration(getMotionPreset('place', false).duration)}>
+      <GamePieceImage source={value === 'X' ? visuals.x : visuals.o} size={size} />
     </Animated.View>
   );
 }
 
 export default function TicTacToeScreen() {
-  const { theme, themeName } = useTheme();
+  const { theme } = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { contentMaxWidth, width, height } = useResponsive();
@@ -231,18 +217,14 @@ export default function TicTacToeScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       <View style={styles.content}>
         <View style={styles.boardWrapper} onLayout={onBoardAreaLayout}>
-          <View
+          <ThemedBoardSurface
             testID="game-board"
             style={[
               styles.board,
               {
                 width: boardSize,
                 height: boardSize,
-                backgroundColor: theme.colors.board,
-                borderRadius: theme.borderRadius.lg,
-                borderColor: theme.colors.border,
                 borderWidth: 2,
-                ...theme.shadows.md,
               },
             ]}
           >
@@ -275,13 +257,18 @@ export default function TicTacToeScreen() {
                       },
                     ]}
                   >
-                    <CellContent value={cell} theme={theme} themeName={themeName} />
-                    {isWinCell ? <ThemedText variant="caption" style={{ position: 'absolute', bottom: 4, color: theme.colors.text, fontWeight: '700' }}>✓</ThemedText> : null}
+                    {({ pressed }) => (
+                      <TactileCell pressed={pressed} state={isWinCell ? 'winning' : 'neutral'}
+                        style={{ width: '94%', height: '94%', borderRadius: theme.borderRadius.sm }}>
+                        {cell && <CellContent value={cell} size={cellSize * 0.72} />}
+                        <VictoryAccent visible={isWinCell} kind="ring" size={cellSize * 0.8} style={{ position: 'absolute' }} />
+                      </TactileCell>
+                    )}
                   </Pressable>
                 );
               })
             )}
-          </View>
+          </ThemedBoardSurface>
         </View>
       </View>
 

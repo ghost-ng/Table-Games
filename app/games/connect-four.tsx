@@ -372,6 +372,7 @@ export default function ConnectFourScreen() {
 
       {/* Board */}
       <View
+        testID="game-board"
         style={[
           styles.board,
           {

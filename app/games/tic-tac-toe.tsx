@@ -232,6 +232,7 @@ export default function TicTacToeScreen() {
       <View style={styles.content}>
         <View style={styles.boardWrapper} onLayout={onBoardAreaLayout}>
           <View
+            testID="game-board"
             style={[
               styles.board,
               {

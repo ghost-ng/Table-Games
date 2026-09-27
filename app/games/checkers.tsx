@@ -478,6 +478,7 @@ export default function CheckersScreen() {
       {/* Board */}
       <View style={styles.boardArea} onLayout={onBoardAreaLayout}>
       <View
+        testID="game-board"
         style={[
           styles.boardContainer,
           {

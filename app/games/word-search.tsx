@@ -443,7 +443,7 @@ export default function WordSearchScreen() {
   // ── Grid sizing ───────────────────────────────────────────────────────────
   // Width-bound on phones; on short/landscape screens keep the grid within ~60% of the height.
   const boardWidth = Math.min(
-    contentWidth - 48,
+    contentWidth - 24,
     isTablet ? 560 : 400,
     shortLandscape ? 220 : Math.max(260, height * 0.6)
   );
@@ -492,6 +492,7 @@ export default function WordSearchScreen() {
         {/* Grid */}
         {puzzle && (
           <Animated.View
+            testID="game-board"
             entering={reducedMotion ? undefined : FadeIn.duration(300)}
             style={[
               styles.board,

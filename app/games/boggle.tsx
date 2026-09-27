@@ -497,7 +497,7 @@ export default function BoggleScreen() {
   const { contentWidth, height, isTablet, isLandscape } = useResponsive();
   const shortLandscape = isLandscape && height < 560;
   // Width-bound on phones; on short/landscape screens keep the grid within ~55% of the height.
-  const gridSize = Math.min(contentWidth - 48, isTablet ? 520 : 400, shortLandscape ? 224 : Math.max(240, height * 0.55));
+  const gridSize = Math.min(contentWidth - 24, isTablet ? 520 : 400, shortLandscape ? 224 : Math.max(240, height * 0.55));
   const cellSize = (gridSize - 48) / 4; // 24px padding and three 8px gaps
 
   // Mode & phase
@@ -900,6 +900,7 @@ export default function BoggleScreen() {
           <View style={{ width: '100%', flexDirection: shortLandscape ? 'row' : 'column', alignItems: 'center', gap: shortLandscape ? 16 : 0 }}>
           {/* Board grid */}
           <Animated.View
+            testID="game-board"
             entering={reducedMotion ? undefined : FadeIn.duration(300)}
             style={[styles.boardContainer, {
               backgroundColor: theme.colors.board,

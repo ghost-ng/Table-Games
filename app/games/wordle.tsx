@@ -424,7 +424,7 @@ export default function WordleScreen() {
 
           <View style={[styles.playArea, { flexDirection: sideBySide ? 'row' : 'column' }]}>
           <View style={styles.gridArea} onLayout={onGridAreaLayout}>
-            <View style={{ gap: TILE_GAP }}>
+            <View testID="game-board" style={{ gap: TILE_GAP }}>
               {Array.from({ length: MAX_GUESSES }, (_, row) => (
                 <View key={row} style={[styles.gridRow, { gap: TILE_GAP }]}>
                   {Array.from({ length: WORD_LENGTH }, (_, col) => renderTile(row, col))}

@@ -27,7 +27,7 @@
     "build:pages": "EXPO_BASE_URL=/Table-Games npm run build",
     "preview": "node scripts/serve.mjs",
     "typecheck": "tsc --noEmit",
-    "test:unit": "tsx --test src/utils/responsive.test.ts src/engines/hangman.test.ts src/utils/hangmanStages.test.ts",
+    "test:unit": "tsx --test src/utils/responsive.test.ts src/utils/layout.test.ts src/engines/hangman.test.ts src/utils/hangmanStages.test.ts",
     "test:wsl": "node --test scripts/wsl/wsl-scripts.test.mjs",
     "test:public": "node --test scripts/public-readiness.test.mjs scripts/pwa-font-licenses.test.mjs",
     "check:public": "node scripts/public-readiness.mjs",

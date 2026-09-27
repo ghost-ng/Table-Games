@@ -273,7 +273,7 @@ type Phase = 'modeSelect' | 'playing';
 export default function CrosswordScreen() {
   const { contentWidth, height, isTablet, isLandscape } = useResponsive();
   // Keep the board above the fixed keyboard on compact phones.
-  const gridWidth = Math.min(contentWidth - 40, isTablet ? 540 : 400, height <= 640 && !isLandscape ? 200 : Math.max(200, height * 0.44));
+  const gridWidth = Math.min(contentWidth - 24, isTablet ? 540 : 400, height <= 640 && !isLandscape ? 200 : Math.max(200, height * 0.44));
   const keyWidth = Math.min(44, ((isLandscape && height < 560 ? (contentWidth - 24) * 0.58 : contentWidth - 24) - 45) / 10);
   const cellSize = Math.floor((gridWidth - GRID_PADDING * 2) / GRID_SIZE);
   const { theme } = useTheme();
@@ -725,6 +725,7 @@ export default function CrosswordScreen() {
           </> : null}
           {/* Crossword grid */}
           <Animated.View
+            testID="game-board"
             entering={reducedMotion ? undefined : FadeIn.duration(300)}
             style={[
               styles.gridContainer,

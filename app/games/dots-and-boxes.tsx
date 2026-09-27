@@ -409,6 +409,7 @@ export default function DotsAndBoxesScreen() {
       {/* Board */}
       <View style={styles.boardWrapper} onLayout={onBoardAreaLayout}>
         <View
+          testID="game-board"
           style={[
             styles.board,
             {

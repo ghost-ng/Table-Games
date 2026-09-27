@@ -1,6 +1,10 @@
 import { useCallback, useState } from 'react';
 import { useWindowDimensions, type LayoutChangeEvent } from 'react-native';
 import { getResponsiveLayout, type ResponsiveLayoutFlags } from './responsive';
+import { calculateBoardSize, resolveBoardInset } from './boardSizing';
+
+export { calculateBoardSize } from './boardSizing';
+export type { CalculateBoardSizeOptions } from './boardSizing';
 
 export { BREAKPOINTS, getResponsiveLayout } from './responsive';
 export type { ResponsiveLayoutFlags } from './responsive';
@@ -29,6 +33,8 @@ export interface BoardFitOptions {
   maxSize?: number;
   /** Breathing room kept on every side of the board. */
   inset?: number;
+  /** Portrait-phone inset; defaults to zero so boards fill the measured width. */
+  phoneInset?: number;
   /** Board height ÷ width (1 for square boards; 6/7 for Connect Four). */
   aspectRatio?: number;
   /** Fixed-height content stacked with the board inside the measured area (e.g. drop arrows). */
@@ -48,11 +54,13 @@ export interface BoardFitOptions {
 export function useBoardFit({
   maxSize = MAX_BOARD_SIZE,
   inset = 16,
+  phoneInset,
   aspectRatio = 1,
   extraHeight = 0,
   minSize = MIN_BOARD_SIZE,
 }: BoardFitOptions = {}) {
-  const { contentWidth } = useResponsive();
+  const { contentWidth, isPhone, isLandscape } = useResponsive();
+  const resolvedInset = resolveBoardInset({ inset, phoneInset, isPhone, isLandscape });
   const [area, setArea] = useState<{ width: number; height: number } | null>(null);
 
   const onLayout = useCallback((e: LayoutChangeEvent) => {
@@ -60,10 +68,15 @@ export function useBoardFit({
     setArea((prev) => (prev && prev.width === width && prev.height === height ? prev : { width, height }));
   }, []);
 
-  const available = area
-    ? Math.min(area.width - inset * 2, (area.height - inset * 2 - extraHeight) / aspectRatio)
-    : contentWidth - inset * 2;
-  const size = Math.floor(Math.max(minSize, Math.min(available, maxSize)));
+  const size = calculateBoardSize({
+    areaWidth: area?.width ?? contentWidth,
+    areaHeight: area?.height ?? Number.POSITIVE_INFINITY,
+    maxSize,
+    minSize,
+    inset: resolvedInset,
+    aspectRatio,
+    extraHeight,
+  });
 
   return { onLayout, size };
 }

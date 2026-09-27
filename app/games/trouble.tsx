@@ -708,6 +708,7 @@ export default function TroubleScreen() {
   const board = (
     <View style={styles.boardArea} onLayout={onBoardAreaLayout}>
       <View
+        testID="game-board"
         style={{
           width: S,
           height: S,

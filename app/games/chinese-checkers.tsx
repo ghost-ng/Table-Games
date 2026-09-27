@@ -408,6 +408,7 @@ export default function ChineseCheckersScreen() {
 
   const board = (
     <View
+      testID="game-board"
       style={{
         width: boardWidth,
         height: boardHeight,

@@ -526,6 +526,7 @@ export default function MancalaScreen() {
       {/* Board */}
       <View style={styles.boardArea} onLayout={onBoardAreaLayout}>
         <View
+          testID="game-board"
           style={{
             width: boardW,
             height: boardH,

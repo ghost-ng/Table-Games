@@ -9,14 +9,42 @@ export const MAX_GAME_ART_FILE_BYTES = 64 * 1024;
 export const VISIBLE_BOUNDS = Object.freeze({ minFill: 0.72, maxFill: 0.80, safePadding: 0.10 });
 
 const THEMES = ['modern', 'retro', 'arcade'];
-const STAGES = ['contract-only', 'individual-assets', 'accepted'];
+const STAGES = ['contract-only', 'generation-batches', 'individual-assets', 'accepted'];
 const REQUIRED_FIELDS = ['theme', 'family', 'role', 'prompt', 'sourcePath', 'finalPath', 'targetSize',
   'visibleBounds', 'generatedAt', 'reviewedAt'];
-const RECORD_FIELDS = new Set([...REQUIRED_FIELDS, 'expectedOwner', 'legacy', 'authorityReferencePending']);
+const RECORD_FIELDS = new Set([...REQUIRED_FIELDS, 'expectedOwner', 'expectedColor', 'legacy', 'authorityReferencePending', 'generationPending']);
 
 function assertRelativePath(path) {
   assert.ok(typeof path === 'string' && path.length > 0 && !/^(?:\/|[A-Za-z]:)|\\/.test(path)
     && !path.split('/').some((part) => ['', '.', '..'].includes(part)), `Repository-relative path required: ${path}`);
+}
+
+/** Validate frozen production instructions; semantic/image accuracy still requires human visual QA. */
+export function validateProductionPrompt(record) {
+  const { prompt, theme, family, role, expectedColor, expectedOwner } = record;
+  const material = {
+    modern: ['Modern', 'molded plastic', 'polished resin', 'clear glass'],
+    retro: ['Retro', 'painted wood', 'Bakelite', 'warm glass', 'natural stones'],
+    arcade: ['Arcade', 'dark translucent plastic', 'restrained neon rims'],
+  };
+  assert.ok(material[theme], 'Prompt requires a known theme');
+  for (const phrase of [...material[theme], 'square canvas', 'genuine alpha', 'transparent background',
+    '72–80%', 'complete silhouette', 'no text', 'no watermark', 'no ground plane']) {
+    assert.ok(prompt.toLowerCase().includes(phrase.toLowerCase()), `Prompt requires ${phrase}`);
+  }
+  assert.match(prompt, /camera: (?:top-down|front orthographic|front three-quarter)/i, 'Prompt requires a consistent camera');
+  assert.match(expectedColor ?? '', /^#[\dA-F]{6}$/i, 'Prompt requires an exact semantic color');
+  assert.ok(prompt.includes(expectedColor) && prompt.includes(`Role: ${role};`), 'Prompt must identify exact color and role');
+  if (expectedOwner) assert.ok(prompt.includes(`owner: ${expectedOwner};`), 'Prompt must identify semantic owner');
+  assert.ok(!/sheet|grid|multi-object|row.major|per cell/i.test(prompt), 'Prompt must describe one production sprite');
+  if (family === 'checkers' && role !== 'king-crown') assert.match(prompt, /top-down.*disc/i, 'Prompt requires a top-down checker disc');
+  if (family === 'mancala') assert.match(prompt, /individual (?:stone|seed)/i, 'Prompt requires an individual stone or seed');
+  if (family === 'dice') assert.match(prompt, /blank faces/i, 'Prompt requires blank faces');
+  if (family === 'hangman') {
+    assert.match(prompt, /friendly.*assembly/i, 'Prompt requires friendly assembly');
+    assert.ok(!/rope|noose|gallows|execution|hanging/i.test(prompt), 'Prompt cannot contain execution imagery');
+  }
+  return record;
 }
 
 /** Validate portable metadata; requiredPaths supplies exhaustive runtime catalog coverage. */
@@ -24,7 +52,7 @@ export function validateManifest(manifest, { requiredPaths } = {}) {
   assert.equal(manifest?.schemaVersion, 1, 'Individual manifest schemaVersion must be 1');
   assert.ok(STAGES.includes(manifest.stage), 'Unknown manifest stage');
   assert.ok(Array.isArray(manifest.records) && manifest.records.length > 0, 'Manifest requires individual records');
-  const identities = new Set(); const outputs = new Set(); const familySizes = new Map();
+  const identities = new Set(); const outputs = new Set(); const sources = new Set(); const familySizes = new Map();
   for (const record of manifest.records) {
     assert.ok(record && typeof record === 'object', 'Individual record required');
     for (const key of REQUIRED_FIELDS) assert.ok(Object.hasOwn(record, key), `Missing ${key}`);
@@ -32,7 +60,17 @@ export function validateManifest(manifest, { requiredPaths } = {}) {
     assert.ok(THEMES.includes(record.theme), 'Unknown asset theme');
     for (const key of ['family', 'role']) assert.match(record[key], /^[a-z0-9]+(?:-[a-z0-9]+)*$/, `Invalid ${key}`);
     assert.ok(typeof record.prompt === 'string' && record.prompt.trim().length > 0, 'Recorded prompt required');
+    const statuses = ['legacy', 'generationPending', 'authorityReferencePending'].filter((key) => Object.hasOwn(record, key));
+    assert.ok(statuses.length <= 1, 'Migration statuses are mutually exclusive');
+    if (Object.hasOwn(record, 'generationPending')) {
+      assert.ok(record.generationPending === true && manifest.stage === 'generation-batches' && record.family !== 'coin-flip',
+        'generationPending is allowed only for non-coin sprites during generation-batches');
+    }
     for (const key of ['generatedAt', 'reviewedAt']) {
+      if (record.generationPending === true || record.authorityReferencePending === true) {
+        assert.equal(record[key], null, `Pending ${key} must be null; never fabricate provenance`);
+        continue;
+      }
       assert.ok(typeof record[key] === 'string' && /^\d{4}-\d{2}-\d{2}(?:T.*)?$/.test(record[key])
         && Number.isFinite(Date.parse(record[key])), `Valid ${key} date required`);
     }
@@ -44,6 +82,9 @@ export function validateManifest(manifest, { requiredPaths } = {}) {
     const identity = `${record.theme}/${record.family}/${record.role}`;
     assert.ok(!identities.has(identity) && !outputs.has(record.finalPath), `Duplicate asset: ${identity}`);
     identities.add(identity); outputs.add(record.finalPath);
+    assert.ok(!sources.has(record.sourcePath), `Duplicate individual source: ${record.sourcePath}`);
+    sources.add(record.sourcePath);
+    if (record.expectedColor !== undefined) validateProductionPrompt(record);
     if (familySizes.has(record.family)) assert.equal(record.targetSize, familySizes.get(record.family), 'Family dimensions must match');
     familySizes.set(record.family, record.targetSize);
     if (Object.hasOwn(record, 'legacy')) {
@@ -168,10 +209,13 @@ export async function assertManifestSourcePreservation(manifest, { root = proces
   for (const record of manifest.records) {
     const source = await canonicalPath(resolve(project, record.sourcePath));
     assert.ok(source.startsWith(project + sep), `Registered source escapes outside project: ${record.sourcePath}`);
+    assert.ok(!sourcesByPath.has(source), `Duplicate individual source alias: ${record.sourcePath}`);
     sourcesByPath.set(source, record.sourcePath);
     try {
       const metadata = await stat(source, { bigint: true });
-      sourcesByIdentity.set(`${metadata.dev}:${metadata.ino}`, record.sourcePath);
+      const identity = `${metadata.dev}:${metadata.ino}`;
+      assert.ok(!sourcesByIdentity.has(identity), `Duplicate physical source alias: ${record.sourcePath}`);
+      sourcesByIdentity.set(identity, record.sourcePath);
     } catch (error) {
       // Unselected sources may not have been generated yet; their canonical
       // paths (including dangling links) must still be protected before writes.
@@ -216,6 +260,8 @@ async function canonicalPath(path, seenLinks = new Set()) {
 
 /** Validate one individual source and write exactly its requested final WebP. */
 export async function normalizeGameArtAsset(record, { root = process.cwd(), write = true } = {}) {
+  assert.notEqual(record.family, 'hangman', 'Hangman requires group normalization with all seven stages');
+  assert.ok(!Object.hasOwn(record, 'generationPending'), 'Cannot normalize generationPending; inspect the source and record provenance first');
   assert.ok(!Object.hasOwn(record, 'legacy'), 'Cannot normalize legacy placeholders; replace the source first');
   assert.ok(!Object.hasOwn(record, 'authorityReferencePending'), 'Cannot normalize pending authority references');
   validateManifest({ schemaVersion: 1, stage: 'individual-assets', records: [record] });
@@ -256,6 +302,71 @@ export async function normalizeGameArtAsset(record, { root = process.cwd(), writ
     await mkdir(dirname(finalPath), { recursive: true }); await writeFile(finalPath, data);
   }
   return { data, metrics, finalPath };
+}
+
+/**
+ * Normalize a complete theme using one union crop, one scale, and one base anchor.
+ * Independent stage centering would turn growing assemblies into moving targets.
+ */
+export async function normalizeHangmanGroup(records, { root = process.cwd(), write = true } = {}) {
+  assert.equal(records.length, 7, 'Hangman requires seven stages');
+  assert.deepEqual(records.map((record) => record.role).sort(),
+    ['stage-0', 'stage-1', 'stage-2', 'stage-3', 'stage-4', 'stage-5', 'stage-6'], 'Hangman requires stages 0–6 exactly once');
+  assert.ok(records.every((record) => record.family === 'hangman' && record.theme === records[0].theme),
+    'Hangman group must contain one theme only');
+  validateManifest({ schemaVersion: 1, stage: 'individual-assets', records });
+  assert.ok(records.every((record) => !record.legacy && !record.authorityReferencePending && !record.generationPending),
+    'Hangman group requires inspected individual sources');
+  const sources = [];
+  for (const record of records) {
+    const input = await readFile(await containedPath(root, record.sourcePath));
+    const metrics = assertImageMetrics(await readImageMetrics(input), { visibleBounds: record.visibleBounds });
+    sources.push({ input, metrics });
+  }
+  const canvas = sources[0].metrics.width;
+  assert.ok(sources.every(({ metrics }) => metrics.width === canvas), 'Hangman source canvas sizes must match');
+  const bases = sources.map(({ metrics }) => metrics.bounds.top + metrics.bounds.height);
+  assert.ok(Math.max(...bases) - Math.min(...bases) <= 1, 'Hangman sources must share a common base position within one source pixel');
+  const left = Math.min(...sources.map(({ metrics }) => metrics.bounds.left));
+  const top = Math.min(...sources.map(({ metrics }) => metrics.bounds.top));
+  const right = Math.max(...sources.map(({ metrics }) => metrics.bounds.left + metrics.bounds.width));
+  const bottom = Math.max(...bases);
+  const sourceBounds = { left, top, width: right - left, height: bottom - top };
+  const size = records[0].targetSize;
+  const scale = Math.min(1, Math.round(size * 0.76) / Math.max(sourceBounds.width, sourceBounds.height));
+  const width = Math.round(sourceBounds.width * scale); const height = Math.round(sourceBounds.height * scale);
+  // Anchor the union at the same lower safe inset, regardless of stage heights.
+  const outputLeft = Math.floor((size - width) / 2);
+  const baseY = size - Math.floor(size * 0.12);
+  const outputTop = baseY - height;
+  assert.ok(Math.max(width, height) / size >= VISIBLE_BOUNDS.minFill, 'Hangman source too small without upscaling');
+  const transform = { sourceBounds, scale, left: outputLeft, top: outputTop, baseY };
+  const results = [];
+  for (let index = 0; index < records.length; index++) {
+    const record = records[index];
+    const finalPath = await containedPath(root, record.finalPath, { output: true });
+    const data = await sharp(sources[index].input).extract(sourceBounds)
+      .resize(width, height, { fit: 'fill', withoutEnlargement: true, kernel: sharp.kernel.lanczos3 })
+      .extend({ left: outputLeft, top: outputTop, right: size - width - outputLeft, bottom: size - height - outputTop,
+        background: { r: 0, g: 0, b: 0, alpha: 0 } })
+      .webp({ quality: 86, alphaQuality: 100, effort: 6 }).toBuffer();
+    const metrics = assertImageMetrics(await readImageMetrics(data), record);
+    assert.ok(data.length <= MAX_GAME_ART_FILE_BYTES, 'Normalized WebP exceeds 64 KiB per-file budget');
+    results.push({ data, metrics, finalPath });
+  }
+  if (write) {
+    let manifest;
+    try { manifest = JSON.parse(await readFile(resolve(root, 'docs/design/game-art-sources.json'), 'utf8')); }
+    catch (error) {
+      if (error.code !== 'ENOENT') throw error;
+      manifest = { schemaVersion: 1, stage: 'individual-assets', records };
+    }
+    await assertManifestSourcePreservation(manifest, { root, selectedRecords: records });
+    for (const { finalPath, data } of results) {
+      await mkdir(dirname(finalPath), { recursive: true }); await writeFile(finalPath, data);
+    }
+  }
+  return { results, transform };
 }
 
 /** Arrange buffers, relative paths, or manifest records in input order for visual QA. */

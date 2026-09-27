@@ -33,24 +33,28 @@ interface GameArtSourceRecord {
   targetSize: number;
   visibleBounds: { minFill: number; maxFill: number; safePadding: number };
   expectedOwner?: string;
-  generatedAt: string;
-  reviewedAt: string;
+  expectedColor?: string; // Exact hexadecimal color named in the production prompt.
+  generatedAt: string | null; // Null while generation/reference acquisition is pending.
+  reviewedAt: string | null;
+  generationPending?: true;
+  authorityReferencePending?: true;
 }
 ```
 
 Paths are portable, repository-relative paths with forward slashes. Absolute machine paths, parent traversal, grid dimensions, crops, and sheet-extraction fields are rejected. Individual accepted source paths differ from their final WebP paths. Store new source PNGs under `docs/design/source-art/{theme}/{family}/{role}.png`. Record the exact final generation prompt and real generation/inspection dates; visual inspection establishes semantic accuracy that decoded alpha alone cannot prove.
 
-The manifest currently has `stage: "contract-only"` and 117 `legacy: true` records whose source/final paths point to the existing committed sprites. Their prompts and dates describe historical generation and inspection on 2026-09-26. They are explicit migration placeholders, not newly generated or newly accepted artwork. This task generates no art and changes no production bitmap.
+Task 2A sets `stage: "generation-batches"` with 108 `generationPending: true` custom sprites and nine `authorityReferencePending: true` quarter slots. All source paths now point to distinct planned PNGs under `docs/design/source-art/`. All generation and inspection dates are `null`: the prompts are frozen instructions, not claims that generation or visual review has occurred. Existing final WebPs remain unchanged until each production batch supplies and inspects its replacement. There are no `legacy` records.
 
 Migration stages are enforced structurally by `validateManifest()`:
 
 | Stage | Allowed temporary records | Acceptance |
 | --- | --- | --- |
 | `contract-only` | `legacy: true`; pending coin authority references | Task 1 contract migration only |
-| `individual-assets` | `authorityReferencePending: true` only for Coin Flip | Task 2 must remove the `legacy` property from every record and advance to this stage; its nine coin slots await Task 3 |
+| `generation-batches` | `generationPending: true` for custom sprites; `authorityReferencePending: true` for quarters | Task 2 batches only; completed records coexist with pending roles |
+| `individual-assets` | `authorityReferencePending: true` only for Coin Flip | All 108 custom sources generated, inspected, and normalized; nine coin slots await Task 3 |
 | `accepted` | None | Final acceptance must advance to this stage; any legacy property or pending reference fails |
 
-Do not replace `legacy: true` with `legacy: false`; remove the property and provide an actual individual source. Pending and legacy flags cannot coexist. Strict composition checks apply to every migrated record. Temporary placeholders still undergo square-dimension, genuine-alpha, transparent-corner, unclipped-edge, path, distinctness, registry, and byte-budget checks.
+Do not replace status flags with `false`; remove the property when the real source has been generated and inspected, then record its actual generation and review dates. Migration flags cannot coexist. Pending records require both dates to be `null`; completed records require real dates. `generationPending` cannot survive `individual-assets` or `accepted`. Strict composition checks apply to completed replacements. Pending placeholders still undergo square-dimension, genuine-alpha, transparent-corner, unclipped-edge, path, distinctness, registry, and byte-budget checks. Duplicate source paths and physical source aliases are rejected, so one image cannot stand in for multiple roles.
 
 ## Individual generation and normalization
 
@@ -64,13 +68,19 @@ node scripts/normalize-game-art.mjs --family checkers
 node scripts/normalize-game-art.mjs --asset modern/checkers/player-1
 ```
 
-Every selected record reads exactly one `sourcePath` and writes exactly its `finalPath`. Missing files, absent alpha, non-square images, edge-touching silhouettes (including faint alpha), opaque corners, unsafe padding, wrong fill, and extra meaningful objects fail before any output is replaced. Legacy and pending records cannot be normalized. The CLI validates every selected source before writing output files.
+Each output is derived from its own individual `sourcePath` and writes exactly its `finalPath`; Hangman also reads its six sibling sources to establish the shared framing. Missing files, absent alpha, non-square images, edge-touching silhouettes (including faint alpha), opaque corners, unsafe padding, wrong fill, and extra meaningful objects fail before any output is replaced. Legacy, generation-pending, and authority-pending records cannot be normalized. The CLI validates every selected source before writing output files.
 
 `readImageMetrics(input)` accepts a file path or encoded buffer and returns decoded dimensions, original `hasAlpha`, format, visible bounds, fill, per-side padding, corner/edge checks, visible-pixel count, and connected-component metrics. Geometry includes every nonzero alpha pixel. Connectivity uses alpha at least 13/255 (approximately 5%), eight-neighbor connectivity, and a meaningful component threshold of the greater of four pixels or 1% of connected foreground. Valid art requires one meaningful component containing at least 95% of the connected foreground.
 
 `assertImageMetrics(metrics, record)` enforces the record's square target dimension, alpha requirements, at least 10% transparent padding on every side, and 72–80% longest-bound fill. Fill is the maximum of visible width/canvas width and visible height/canvas height, not opaque pixel area; thin quarter edges and wide Hangman platforms therefore retain sensible framing. The manifest's bounds are fixed at `{ minFill: 0.72, maxFill: 0.80, safePadding: 0.10 }` and cannot be weakened to make an image pass.
 
-`normalizeGameArtAsset(record, { root, write = true })` validates the source, crops only its empty border, scales visible pixels down toward 76% of the target canvas, and centers them. It never upscales, removes objects, fabricates alpha, or repairs clipped art. The final WebP uses quality 86, alpha quality 100, and effort 6, then is decoded and revalidated before writing. Too-small sources fail if they cannot meet minimum fill without upscaling. It returns `{ data, metrics, finalPath }`; `write: false` allows a no-write preflight. Repeat runs with the same sources and locked image-tool versions produce identical bytes.
+`normalizeGameArtAsset(record, { root, write = true })` handles non-Hangman families, validates the source, crops only its empty border, scales visible pixels down toward 76% of the target canvas, and centers them. It never upscales, removes objects, fabricates alpha, or repairs clipped art. The final WebP uses quality 86, alpha quality 100, and effort 6, then is decoded and revalidated before writing. Too-small sources fail if they cannot meet minimum fill without upscaling. It returns `{ data, metrics, finalPath }`; `write: false` allows a no-write preflight. Repeat runs with the same sources and locked image-tool versions produce identical bytes.
+
+Hangman must use `normalizeHangmanGroup(records, { root, write = true })`, which requires all seven inspected sources for one theme. It derives one union crop from every alpha bound, one shared scale, and one shared lower base anchor at `targetSize - floor(targetSize * 0.12)`. All seven images receive that same transform; independent centering is rejected. Source canvases must match and their base bottoms must agree within one source pixel. The frozen stage prompts keep a 778px-wide platform centered at x=512 with bottom y=901 on a 1024px canvas. Sources with inconsistent framing must be regenerated rather than independently repositioned. The helper returns `{ results, transform }` and preflights the complete group before writing any result.
+
+During incomplete theme work, use exact-asset selection. For Hangman, `--asset modern/hangman/stage-0` reads all seven Modern stages to derive the shared transform but writes only stage 0. It rejects missing or still-pending sibling sources. Repeat exact selections for the remaining stages after all seven are inspected. Run `--family hangman` only when all three themes are ready; use other family-wide selectors only once every selected source exists and its pending flag has been removed.
+
+The production prompt inventory is the manifest itself: each custom role names its theme materials, exact semantic owner and hexadecimal color, fixed camera and light, square genuine-alpha canvas, 72–80% longest-bound fill, complete silhouette, and the no-text/no-watermark/no-ground-plane constraints. `validateProductionPrompt` checks these invariants, rejects sheet or multi-object instructions, requires blank dice and individual Mancala stones, and keeps Hangman instructions to friendly assembly. It is a text-contract check; original-detail visual inspection remains mandatory after each actual generation. No images are generated in Task 2A.
 
 `createContactSheet(inputs, { root, columns = 6, cellSize = 160, background = '#f5f5f5', outputPath })` accepts manifest records, relative image paths, or image buffers in display order. It returns a lossless WebP buffer and optionally writes a repository-relative QA path. Produce both `#f5f5f5` and `#101020` backgrounds, inspect at original size, and retain QA outputs under `docs/design/qa/`. Contact sheets are inspection artifacts, not generation sources.
 

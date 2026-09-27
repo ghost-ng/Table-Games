@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { assertManifestSourcePreservation, normalizeGameArtAsset, validateManifest } from './game-art-lib.mjs';
+import { assertManifestSourcePreservation, normalizeGameArtAsset, normalizeHangmanGroup, validateManifest } from './game-art-lib.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const usage = 'Usage: node scripts/normalize-game-art.mjs --all | --family <name> | --asset <theme/family/role>';
@@ -26,11 +26,24 @@ async function main() {
   // Preflight every selected record before writing; temporary migration records
   // must never be re-encoded or presented as accepted individual sources.
   for (const record of selected) {
+    assert.ok(!Object.hasOwn(record, 'generationPending'), `Generation pending: ${record.theme}/${record.family}/${record.role}`);
     assert.ok(!Object.hasOwn(record, 'legacy'), `Replace legacy source before normalization: ${record.theme}/${record.family}/${record.role}`);
     assert.ok(!Object.hasOwn(record, 'authorityReferencePending'), `Authority reference pending: ${record.theme}/${record.family}/${record.role}`);
   }
   const normalized = [];
-  for (const record of selected) normalized.push(await normalizeGameArtAsset(record, { root, write: false }));
+  const hangmanGroups = new Map();
+  for (const record of selected) {
+    if (record.family !== 'hangman') {
+      normalized.push(await normalizeGameArtAsset(record, { root, write: false }));
+      continue;
+    }
+    if (!hangmanGroups.has(record.theme)) {
+      const group = manifest.records.filter((item) => item.theme === record.theme && item.family === 'hangman');
+      const { results } = await normalizeHangmanGroup(group, { root, write: false });
+      hangmanGroups.set(record.theme, new Map(group.map((item, index) => [item.role, results[index]])));
+    }
+    normalized.push(hangmanGroups.get(record.theme).get(record.role));
+  }
   await assertManifestSourcePreservation(manifest, { root, selectedRecords: selected });
   for (let index = 0; index < selected.length; index++) {
     const record = selected[index]; const { finalPath, data } = normalized[index];

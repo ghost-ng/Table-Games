@@ -78,3 +78,23 @@ Final verification after the last source correction passed **18 WSL tests, 87 un
 Final review evidence is retained outside tracked source at /tmp/final-fix-evidence/: matrix.json, focus.json, drops.json, home-ownership.json, extra.json, offline.json, ai.json, red.json, post-fix.json, pure-red.log, focused-green.log, and final-verification.log. Screenshots are under output/playwright. phone-boundaries.jpg and final-visual-contact.jpg were inspected for phone fit, ownership/track agreement, visible king and found markers, focus, and a disc crossing the rack. The original Task 9 evidence above remains historical evidence for that earlier build.
 
 This follow-up still covers Chromium web output, not physical native devices or a full screen-reader audit. The inherited coin-reset, hidden held-die, and timed word-grid issues remain outside this visual integration correction.
+
+## Task 2A preparation — 2026-09-27
+
+The evidence above is historical evidence for the previous artwork and build. Task 2A freezes replacement instructions; it does not accept or visually inspect new sprites. All 108 custom roles are `generationPending`, and all nine quarter slots are `authorityReferencePending`. Their generation and review dates are null. Production bitmaps, registry keys, code-rendered state, and hit targets remain unchanged.
+
+| Family | Modern | Retro | Arcade | Batch acceptance requirement |
+| --- | --- | --- | --- | --- |
+| Tic-Tac-Toe | 2 pending | 2 pending | 2 pending | Complete X/O silhouettes and clear ring opening |
+| Connect Four | 2 pending | 2 pending | 2 pending | Circular discs matching current semantic ownership |
+| Checkers | 3 pending | 3 pending | 3 pending | Top-down ridged discs; separate centered king marker |
+| Chinese Checkers | 6 pending | 6 pending | 6 pending | Equal round marbles with six distinct colors |
+| Mancala | 6 pending | 6 pending | 6 pending | Individual recognizable stones/seeds with six shapes |
+| Pop & Race | 4 pending | 4 pending | 4 pending | Classic rounded pawns matching seat colors |
+| Dice | 6 pending | 6 pending | 6 pending | Correct d4/d6/d8/d10/d12/d20 geometry; blank faces |
+| Hangman | 7 pending | 7 pending | 7 pending | Friendly platform/posts/crossbar/head/torso/arms/feet assembly; one shared transform |
+| Coin Flip | 3 reference-pending | 3 reference-pending | 3 reference-pending | Authoritative quarter reference acquisition in Task 3 |
+
+Each later generation batch must inspect every built-in generation result at original detail, copy the accepted source into its manifest path, record the actual prompt and dates, remove its pending flag, normalize, then inspect deterministic final-WebP contact sheets on both `#f5f5f5` and `#101020`. Replace the relevant pending cells with explicit accept/reject evidence only after those checks. There are no new visual QA contact sheets in this preparation task.
+
+Synthetic decoded-image tests establish stable Hangman base placement, shared scale, deterministic output independent of record order, source preservation, and rejection of incomplete or inconsistently framed groups. These are pipeline checks, not visual approval of the future generated characters.

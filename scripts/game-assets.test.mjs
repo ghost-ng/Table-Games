@@ -126,7 +126,7 @@ test('static registry resolves the pure catalog and selects each theme', () => {
 test('manifest supplies 117 portable individual records matching the runtime catalog', () => {
   const manifest = JSON.parse(readFileSync(resolve(root, 'docs/design/game-art-sources.json'), 'utf8'));
   assert.equal(manifest.schemaVersion, 1, 'individual manifest schema is required');
-  assert.ok(['contract-only', 'individual-assets', 'accepted'].includes(manifest.stage));
+  assert.ok(['contract-only', 'generation-batches', 'individual-assets', 'accepted'].includes(manifest.stage));
   assert.equal(manifest.records.length, 117);
   const { GAME_VISUAL_PATHS, REQUIRED_FILES, THEME_NAMES } = loadTs('src/game-visuals/catalog.ts');
   const paths = THEME_NAMES.flatMap((theme) => Object.values(GAME_VISUAL_PATHS[theme])
@@ -138,7 +138,11 @@ test('manifest supplies 117 portable individual records matching the runtime cat
     assert.ok(THEME_NAMES.includes(record.theme));
     assert.ok(REQUIRED_FILES[record.family].includes(`${record.role}.webp`));
     assert.equal(record.finalPath, `assets/pieces/${record.theme}/${record.family}/${record.role}.webp`);
-    for (const key of ['prompt', 'generatedAt', 'reviewedAt']) assert.ok(record[key]?.trim(), key);
+    assert.ok(record.prompt?.trim());
+    for (const key of ['generatedAt', 'reviewedAt']) {
+      if (record.generationPending || record.authorityReferencePending) assert.equal(record[key], null);
+      else assert.ok(record[key]?.trim(), key);
+    }
     for (const key of ['sourcePath', 'finalPath']) {
       assert.ok(!/^(?:\/|[A-Za-z]:)|\\/.test(record[key]), `${key} is repository-relative`);
       assert.ok(!record[key].split('/').some((part) => ['..', '.', ''].includes(part)));
@@ -160,11 +164,11 @@ test('manifest stages reject legacy after migration and pending coins at final a
     assert.throws(() => validate(manifestFixture(legacy, stage)), /legacy/);
   }
   assert.throws(() => validate(manifestFixture(individualRecord({ legacy: false }))), /legacy/);
-  const coin = individualRecord({ family: 'coin-flip', role: 'heads', authorityReferencePending: true,
+  const coin = individualRecord({ family: 'coin-flip', role: 'heads', authorityReferencePending: true, generatedAt: null, reviewedAt: null,
     sourcePath: 'assets/pieces/modern/coin-flip/heads.webp', finalPath: 'assets/pieces/modern/coin-flip/heads.webp' });
   assert.doesNotThrow(() => validate(manifestFixture(coin)));
   assert.throws(() => validate(manifestFixture(coin, 'accepted')), /pending/i);
-  assert.throws(() => validate(manifestFixture(individualRecord({ authorityReferencePending: true }))), /coin-flip/);
+  assert.throws(() => validate(manifestFixture(individualRecord({ authorityReferencePending: true, generatedAt: null, reviewedAt: null }))), /coin-flip/);
 });
 
 test('manifest rejects malformed records, duplicate identities, missing catalog paths, and weakened bounds', () => {
@@ -471,7 +475,140 @@ test('all final sprites decode as square RGBA with consistent family dimensions;
     const key = record.family;
     if (familySizes.has(key)) assert.equal(record.targetSize, familySizes.get(key), key);
     familySizes.set(key, record.targetSize);
-    // Task 1 preserves old art explicitly; only those migration placeholders are exempt.
-    if (record.legacy !== true && record.authorityReferencePending !== true) validate(metrics, record);
+    // During generation batches, old finals stay in place until the individual source is inspected.
+    if (record.legacy !== true && record.authorityReferencePending !== true && record.generationPending !== true) validate(metrics, record);
   }
+});
+
+test('generation batches retain 108 individual prompts and nine quarter slots through honest batch progress', () => {
+  const m = JSON.parse(readFileSync(resolve(root, 'docs/design/game-art-sources.json'), 'utf8'));
+  assert.ok(['generation-batches', 'individual-assets', 'accepted'].includes(m.stage));
+  assert.equal(m.records.filter((r) => r.family !== 'coin-flip').length, 108);
+  assert.equal(m.records.filter((r) => r.family === 'coin-flip').length, 9);
+  art.validateManifest(m);
+  const counts = { 'tic-tac-toe': 2, 'connect-four': 2, checkers: 3, 'chinese-checkers': 6, mancala: 6, trouble: 4, dice: 6, hangman: 7, 'coin-flip': 3 };
+  for (const theme of ['modern', 'retro', 'arcade']) for (const [family, count] of Object.entries(counts)) {
+    assert.equal(m.records.filter((r) => r.theme === theme && r.family === family).length, count);
+  }
+  assert.equal(new Set(m.records.map((r) => r.sourcePath)).size, 117);
+  assert.equal(new Set(m.records.filter((r) => r.family !== 'coin-flip').map((r) => r.prompt)).size, 108);
+  for (const r of m.records) {
+    assert.equal(r.legacy, undefined);
+    if (r.generationPending || r.authorityReferencePending) {
+      assert.equal(r.generatedAt, null);
+      assert.equal(r.reviewedAt, null);
+    } else {
+      assert.ok(r.generatedAt && r.reviewedAt, 'Completed batches need real provenance');
+    }
+    assert.equal(r.sourcePath, `docs/design/source-art/${r.theme}/${r.family}/${r.role}.png`);
+    if (r.family !== 'coin-flip') requireHelper('validateProductionPrompt')(r);
+  }
+});
+
+test('generationPending is restricted to generation batches and rejects fabricated dates or overlapping status', () => {
+  const pending = individualRecord({ generationPending: true, generatedAt: null, reviewedAt: null });
+  assert.doesNotThrow(() => art.validateManifest(manifestFixture(pending, 'generation-batches')));
+  for (const stage of ['contract-only', 'individual-assets', 'accepted']) {
+    assert.throws(() => art.validateManifest(manifestFixture(pending, stage)), /generationPending/);
+  }
+  for (const overrides of [{ generationPending: false }, { generatedAt: '2026-09-27' }, { reviewedAt: '2026-09-27' }, { legacy: true }, { authorityReferencePending: true }]) {
+    assert.throws(() => art.validateManifest(manifestFixture({ ...pending, ...overrides }, 'generation-batches')));
+  }
+  assert.throws(() => art.validateManifest(manifestFixture(individualRecord({ generatedAt: null }))), /generatedAt/);
+  assert.throws(() => art.validateManifest(manifestFixture(individualRecord({ reviewedAt: null }))), /reviewedAt/);
+});
+
+test('individual source reuse across different outputs is rejected', () => {
+  const x = individualRecord();
+  const o = individualRecord({ role: 'o', finalPath: 'assets/pieces/modern/tic-tac-toe/o.webp' });
+  assert.throws(() => art.validateManifest({ schemaVersion: 1, stage: 'individual-assets', records: [x, o] }), /duplicate.*source/i);
+});
+
+test('production prompt validation rejects missing composition, color, multi-object art, marked dice, and unsafe Hangman imagery', () => {
+  const validate = requireHelper('validateProductionPrompt');
+  const r = individualRecord({ expectedColor: '#DC2626', expectedOwner: 'player1',
+    prompt: 'Use case: product-mockup. Theme: Modern molded plastic, polished resin, clear glass. Role: x; owner: player1; color: #DC2626. One tactile X token. Camera: top-down. Square canvas; genuine alpha transparent background; 72–80% target fill; complete silhouette; no text; no watermark; no ground plane.' });
+  assert.doesNotThrow(() => validate(r));
+  for (const phrase of ['molded plastic', '#DC2626', 'top-down', 'Square', 'genuine alpha', '72–80%', 'complete silhouette', 'no text', 'no watermark', 'no ground plane']) {
+    assert.throws(() => validate({ ...r, prompt: r.prompt.replace(phrase, '') }), /prompt/i);
+  }
+  assert.throws(() => validate({ ...r, prompt: r.prompt + ' sprite sheet' }), /prompt/i);
+  assert.throws(() => validate({ ...r, family: 'dice', prompt: r.prompt + ' d20 numbered faces' }), /blank|prompt/i);
+  assert.throws(() => validate({ ...r, family: 'hangman', prompt: r.prompt + ' friendly assembly with a noose' }), /prompt/i);
+});
+
+async function hangmanFixtures(temporaryRoot) {
+  const records = [];
+  for (let stage = 0; stage < 7; stage++) {
+    const r = individualRecord({ family: 'hangman', role: `stage-${stage}`,
+      sourcePath: `docs/design/source-art/modern/hangman/stage-${stage}.png`,
+      finalPath: `assets/pieces/modern/hangman/stage-${stage}.webp` });
+    const path = resolve(temporaryRoot, r.sourcePath);
+    mkdirSync(dirname(path), { recursive: true });
+    const height = 8 + stage * 10;
+    writeFileSync(path, await fixture({ rectangles: [{ left: 12, top: 88 - height, width: 76, height }] }));
+    records.push(r);
+  }
+  return records;
+}
+
+test('Hangman group normalization preserves the common base and scale across all seven source bounds', async (t) => {
+  const normalize = requireHelper('normalizeHangmanGroup');
+  const dir = mkdtempSync(resolve(tmpdir(), 'game-art-hangman-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const records = await hangmanFixtures(dir);
+  const sources = records.map((r) => readFileSync(resolve(dir, r.sourcePath)));
+  const first = await normalize(records, { root: dir });
+  const second = await normalize([...records].reverse(), { root: dir, write: false });
+  assert.equal(first.results.length, 7);
+  assert.deepEqual(first.transform.sourceBounds, { left: 12, top: 20, width: 76, height: 68 });
+  assert.equal(first.transform.scale, 73 / 76);
+  assert.deepEqual([...new Set(first.results.map(({ metrics: m }) => m.bounds.top + m.bounds.height))], [85]);
+  assert.equal(new Set(first.results.map(({ metrics: m }) => m.bounds.width)).size, 1);
+  assert.equal(new Set(first.results.map(({ data }) => createHash('sha256').update(data).digest('hex'))).size, 7);
+  for (let stage = 0; stage < 7; stage++) {
+    assert.deepEqual(first.results[stage].data, second.results[6 - stage].data);
+    assert.deepEqual(readFileSync(resolve(dir, records[stage].sourcePath)), sources[stage]);
+    assert.deepEqual(readFileSync(resolve(dir, records[stage].finalPath)), first.results[stage].data);
+    art.assertImageMetrics(first.results[stage].metrics, records[stage]);
+    if (stage) assert.ok(first.results[stage].metrics.visiblePixels > first.results[stage - 1].metrics.visiblePixels);
+  }
+  await assert.rejects(art.normalizeGameArtAsset(records[0], { root: dir }), /Hangman.*group/i);
+  for (const invalid of [records.slice(1), [...records.slice(0, 6), records[0]], records.map((r, i) => i === 6 ? { ...r, theme: 'retro' } : r)]) {
+    await assert.rejects(normalize(invalid, { root: dir }), /seven|stage|theme/i);
+  }
+  writeFileSync(resolve(dir, records[6].sourcePath), await fixture({ rectangles: [{ left: 12, top: 10, width: 76, height: 76 }] }));
+  await assert.rejects(normalize(records, { root: dir }), /base/i);
+  assert.deepEqual(readFileSync(resolve(dir, records[0].finalPath)), first.results[0].data);
+});
+
+test('exact Hangman CLI selection reads the complete theme but writes only the selected stage', async (t) => {
+  const dir = mkdtempSync(resolve(tmpdir(), 'game-art-hangman-cli-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  mkdirSync(resolve(dir, 'scripts'));
+  for (const name of ['normalize-game-art.mjs', 'game-art-lib.mjs']) copyFileSync(resolve(root, 'scripts', name), resolve(dir, 'scripts', name));
+  symlinkSync(resolve(root, 'node_modules'), resolve(dir, 'node_modules'));
+  const records = await hangmanFixtures(dir);
+  writeFileSync(resolve(dir, 'docs/design/game-art-sources.json'), JSON.stringify({ schemaVersion: 1, stage: 'individual-assets', records }));
+  const invoke = () => spawnSync(process.execPath, ['scripts/normalize-game-art.mjs', '--asset', 'modern/hangman/stage-0'], { cwd: dir, encoding: 'utf8' });
+  const result = invoke();
+  assert.equal(result.status, 0, result.stderr);
+  const m = await art.readImageMetrics(resolve(dir, records[0].finalPath));
+  assert.equal(m.bounds.top + m.bounds.height, 85);
+  assert.deepEqual(readdirSync(dirname(resolve(dir, records[0].finalPath))), ['stage-0.webp']);
+  rmSync(resolve(dir, records[6].sourcePath));
+  assert.equal(invoke().status, 1, 'A missing stage cannot produce a different group transform');
+});
+
+test('source-preservation preflight rejects two source paths that alias one physical image', async (t) => {
+  const dir = mkdtempSync(resolve(tmpdir(), 'game-art-source-reuse-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const x = individualRecord();
+  const o = individualRecord({ role: 'o', sourcePath: 'docs/design/source-art/modern/tic-tac-toe/o.png',
+    finalPath: 'assets/pieces/modern/tic-tac-toe/o.webp' });
+  const path = resolve(dir, x.sourcePath);
+  mkdirSync(dirname(path), { recursive: true }); writeFileSync(path, await fixture());
+  linkSync(path, resolve(dir, o.sourcePath));
+  await assert.rejects(art.assertManifestSourcePreservation({ schemaVersion: 1, stage: 'individual-assets', records: [x, o] },
+    { root: dir }), /duplicate.*source|source.*alias/i);
 });

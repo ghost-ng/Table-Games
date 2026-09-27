@@ -60,7 +60,7 @@ export function GameShell({
           <View style={styles.content}>{children}</View>
         )}
         {footer != null ? (
-          <View style={[styles.footer, { borderTopColor: theme.colors.border }]}>{footer}</View>
+          <View style={[styles.footer, { borderTopColor: theme.colors.border, borderTopWidth: theme.materials.boardBorderWidth }]}>{footer}</View>
         ) : null}
       </View>
     </ImageBackground>

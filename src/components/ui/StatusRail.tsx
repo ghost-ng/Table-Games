@@ -15,7 +15,7 @@ export function StatusRail({ children, style, accessibilityLabel }: StatusRailPr
       accessibilityRole="summary"
       accessibilityLiveRegion="polite"
       accessibilityLabel={accessibilityLabel}
-      style={[{ minHeight: 56, justifyContent: 'center', padding: 12, marginVertical: 8, backgroundColor: theme.colors.surfaceSunken, borderRadius: theme.borderRadius.md }, style]}
+      style={[{ minHeight: 56, justifyContent: 'center', padding: 12, marginVertical: 8, backgroundColor: theme.colors.surfaceSunken, borderRadius: theme.borderRadius.md, borderWidth: theme.materials.boardBorderWidth, borderColor: theme.colors.border }, style]}
     >
       {children}
     </View>

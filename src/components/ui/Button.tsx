@@ -26,7 +26,7 @@ export function Button({
   const { theme } = useTheme();
   const focus = useWebFocusRing(theme.colors.focus);
   const containerStyles: Record<NonNullable<ButtonProps['variant']>, ViewStyle> = {
-    primary: { backgroundColor: theme.colors.primary, borderWidth: 0 },
+    primary: { backgroundColor: theme.colors.primary, borderWidth: theme.materials.boardBorderWidth, borderColor: theme.colors.primary },
     secondary: { backgroundColor: theme.colors.surfaceRaised, borderWidth: 2, borderColor: theme.colors.primary },
     ghost: { backgroundColor: 'transparent', borderWidth: 0 },
   };
@@ -49,6 +49,13 @@ export function Button({
           opacity: disabled ? 0.5 : pressed ? 0.75 : 1,
         },
         containerStyles[variant],
+        variant !== 'ghost' ? {
+          shadowColor: theme.materials.glowOpacity > 0 ? theme.materials.glowColor : theme.shadows.sm.shadowColor,
+          shadowOffset: { width: 0, height: theme.materials.glowOpacity > 0 ? 0 : theme.materials.cellDepth / 2 },
+          shadowOpacity: disabled ? 0 : theme.materials.glowOpacity > 0 ? theme.materials.glowOpacity / 2 : theme.materials.pieceShadowOpacity / 2,
+          shadowRadius: theme.materials.cellDepth,
+          elevation: disabled ? 0 : 1,
+        } : null,
         focus.style,
       ]}
     >

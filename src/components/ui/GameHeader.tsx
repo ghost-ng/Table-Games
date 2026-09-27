@@ -14,7 +14,7 @@ export function GameHeader({ title, onBack, trailingAction }: GameHeaderProps) {
   const { theme } = useTheme();
   const focus = useWebFocusRing(theme.colors.focus);
   return (
-    <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
+    <View style={[styles.header, { borderBottomColor: theme.colors.border, borderBottomWidth: theme.materials.boardBorderWidth }]}>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Back"
@@ -22,7 +22,7 @@ export function GameHeader({ title, onBack, trailingAction }: GameHeaderProps) {
         onFocus={focus.onFocus}
         onBlur={focus.onBlur}
         hitSlop={4}
-        style={({ pressed }) => [styles.back, { borderRadius: theme.borderRadius.md, backgroundColor: theme.colors.surfaceRaised, opacity: pressed ? 0.75 : 1 }, focus.style]}
+        style={({ pressed }) => [styles.back, { borderRadius: theme.borderRadius.md, backgroundColor: theme.colors.surfaceRaised, borderWidth: theme.materials.boardBorderWidth, borderColor: theme.colors.border, shadowColor: theme.shadows.sm.shadowColor, shadowOffset: { width: 0, height: theme.materials.cellDepth / 2 }, shadowOpacity: theme.materials.pieceShadowOpacity / 2, shadowRadius: theme.materials.cellDepth, opacity: pressed ? 0.75 : 1 }, focus.style]}
       >
         <View accessible={false} style={styles.arrow}>
           <View style={[styles.arrowStem, { backgroundColor: theme.colors.text }]} />

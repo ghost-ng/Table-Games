@@ -15,11 +15,15 @@ export function Card({ children, onPress, style, disabled = false }: CardProps) 
   const focus = useWebFocusRing(theme.colors.focus);
   const cardStyle: ViewStyle = {
     backgroundColor: theme.colors.surfaceRaised,
-    borderWidth: 1,
+    borderWidth: theme.materials.boardBorderWidth,
     borderColor: theme.colors.border,
     borderRadius: theme.borderRadius.lg,
     padding: 16,
-    ...theme.shadows.md,
+    shadowColor: theme.materials.glowOpacity > 0 ? theme.materials.glowColor : theme.shadows.md.shadowColor,
+    shadowOffset: { width: 0, height: theme.materials.glowOpacity > 0 ? 0 : theme.materials.cellDepth },
+    shadowOpacity: theme.materials.glowOpacity > 0 ? theme.materials.glowOpacity / 2 : theme.materials.pieceShadowOpacity,
+    shadowRadius: theme.materials.cellDepth * 2,
+    elevation: theme.materials.cellDepth,
   };
   if (onPress) {
     return (

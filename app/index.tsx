@@ -21,7 +21,6 @@ export default function HomeScreen() {
   const { isTablet, isDesktop, contentMaxWidth, contentWidth } = useResponsive();
   const numColumns = isDesktop ? 4 : isTablet ? 3 : 2;
   const cardWidth = (contentWidth - GRID_PADDING * 2 - CARD_GAP * (numColumns - 1)) / numColumns;
-  const toolWidth = cardWidth;
   const [selectedGame, setSelectedGame] = useState<string | null>(null);
   const [themePickerVisible, setThemePickerVisible] = useState(false);
   const selectedGameData = GAMES.find((g) => g.id === selectedGame);
@@ -36,7 +35,7 @@ export default function HomeScreen() {
   return (
     <ImageBackground imageStyle={styles.backgroundImage} source={theme.backgroundImage} style={[styles.container, { backgroundColor: theme.colors.background }]} resizeMode="cover">
       <View style={[styles.content, { maxWidth: contentMaxWidth, paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-        <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
+        <View style={[styles.header, { borderBottomColor: theme.colors.border, borderBottomWidth: theme.materials.boardBorderWidth }]}>
           <Text accessibilityRole="header" style={[styles.title, { color: theme.colors.text, fontFamily: theme.fonts.heading }]}>Table Games</Text>
           <View style={styles.headerActions}>
             <Button title="Stats" onPress={() => router.push('/settings')} variant="ghost" size="sm" />
@@ -54,10 +53,10 @@ export default function HomeScreen() {
           showsVerticalScrollIndicator={false}
           ListHeaderComponent={<Text accessibilityRole="header" style={[styles.sectionTitle, { color: theme.colors.text, fontFamily: theme.fonts.heading }]}>Games</Text>}
           ListFooterComponent={
-            <View style={[styles.toolsSection, { borderTopColor: theme.colors.border }]}>
+            <View style={[styles.toolsSection, { borderTopColor: theme.colors.border, borderTopWidth: theme.materials.boardBorderWidth }]}>
               <Text accessibilityRole="header" style={[styles.toolsTitle, { color: theme.colors.textMuted, fontFamily: theme.fonts.heading }]}>Tools</Text>
               <View style={[styles.row, styles.toolsRow]}>
-                {TOOLS.map((tool) => <GameCard key={tool.id} game={tool} image={GAME_THUMBNAILS[tool.id]} variant="tool" width={toolWidth} onPress={() => router.push('/games/' + tool.id)} />)}
+                {TOOLS.map((tool) => <GameCard key={tool.id} game={tool} image={GAME_THUMBNAILS[tool.id]} variant="tool" width={cardWidth} onPress={() => router.push('/games/' + tool.id)} />)}
               </View>
             </View>
           }
@@ -80,7 +79,7 @@ const styles = StyleSheet.create({
   grid: { padding: GRID_PADDING, paddingTop: 24, paddingBottom: 24 },
   row: { gap: CARD_GAP, marginBottom: CARD_GAP },
   sectionTitle: { fontSize: 22, fontWeight: '700', marginBottom: 16 },
-  toolsRow: { flexDirection: 'row' },
+  toolsRow: { flexDirection: 'row', flexWrap: 'wrap' },
   toolsSection: { marginTop: 8, paddingTop: 24, borderTopWidth: 1 },
   toolsTitle: { fontSize: 16, fontWeight: '600', marginBottom: 12 },
 });

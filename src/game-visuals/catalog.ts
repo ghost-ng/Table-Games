@@ -19,11 +19,11 @@ export const REQUIRED_FILES = {
 export const GAME_VISUAL_PATHS = {
   modern: {
     ticTacToe: { x: 'assets/pieces/modern/tic-tac-toe/x.webp', o: 'assets/pieces/modern/tic-tac-toe/o.webp' },
-    connectFour: { player1: 'assets/pieces/modern/connect-four/player-1.webp', player2: 'assets/pieces/modern/connect-four/player-2.webp' },
-    checkers: { player1: 'assets/pieces/modern/checkers/player-1.webp', player2: 'assets/pieces/modern/checkers/player-2.webp', crown: 'assets/pieces/modern/checkers/king-crown.webp' },
+    connectFour: { player1: 'assets/pieces/modern/connect-four/player-2.webp', player2: 'assets/pieces/modern/connect-four/player-1.webp' },
+    checkers: { player1: 'assets/pieces/modern/checkers/player-2.webp', player2: 'assets/pieces/modern/checkers/player-1.webp', crown: 'assets/pieces/modern/checkers/king-crown.webp' },
     chineseCheckers: { marbles: ['assets/pieces/modern/chinese-checkers/marble-1.webp', 'assets/pieces/modern/chinese-checkers/marble-2.webp', 'assets/pieces/modern/chinese-checkers/marble-3.webp', 'assets/pieces/modern/chinese-checkers/marble-4.webp', 'assets/pieces/modern/chinese-checkers/marble-5.webp', 'assets/pieces/modern/chinese-checkers/marble-6.webp'] },
     mancala: { seeds: ['assets/pieces/modern/mancala/seed-1.webp', 'assets/pieces/modern/mancala/seed-2.webp', 'assets/pieces/modern/mancala/seed-3.webp', 'assets/pieces/modern/mancala/seed-4.webp', 'assets/pieces/modern/mancala/seed-5.webp', 'assets/pieces/modern/mancala/seed-6.webp'] },
-    trouble: { pawns: ['assets/pieces/modern/trouble/pawn-1.webp', 'assets/pieces/modern/trouble/pawn-2.webp', 'assets/pieces/modern/trouble/pawn-3.webp', 'assets/pieces/modern/trouble/pawn-4.webp'] },
+    trouble: { pawns: ['assets/pieces/modern/trouble/pawn-2.webp', 'assets/pieces/modern/trouble/pawn-1.webp', 'assets/pieces/modern/trouble/pawn-3.webp', 'assets/pieces/modern/trouble/pawn-4.webp'] },
     coinFlip: { heads: 'assets/pieces/modern/coin-flip/heads.webp', tails: 'assets/pieces/modern/coin-flip/tails.webp', edge: 'assets/pieces/modern/coin-flip/edge.webp' },
     dice: { d4: 'assets/pieces/modern/dice/d4.webp', d6: 'assets/pieces/modern/dice/d6.webp', d8: 'assets/pieces/modern/dice/d8.webp', d10: 'assets/pieces/modern/dice/d10.webp', d12: 'assets/pieces/modern/dice/d12.webp', d20: 'assets/pieces/modern/dice/d20.webp' },
     hangman: { 0: 'assets/pieces/modern/hangman/stage-0.webp', 1: 'assets/pieces/modern/hangman/stage-1.webp', 2: 'assets/pieces/modern/hangman/stage-2.webp', 3: 'assets/pieces/modern/hangman/stage-3.webp', 4: 'assets/pieces/modern/hangman/stage-4.webp', 5: 'assets/pieces/modern/hangman/stage-5.webp', 6: 'assets/pieces/modern/hangman/stage-6.webp' }

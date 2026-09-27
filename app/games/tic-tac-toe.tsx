@@ -40,7 +40,7 @@ function CellContent({ value, size }: { value: Player; size: number }) {
   const reducedMotion = useReducedMotion();
   const visuals = GAME_VISUALS[themeName].ticTacToe;
   return (
-    <Animated.View pointerEvents="none" accessible={false}
+    <Animated.View pointerEvents="none" aria-hidden accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
       entering={reducedMotion ? undefined : FadeIn.duration(getMotionPreset('place', false).duration)}>
       <GamePieceImage source={value === 'X' ? visuals.x : visuals.o} size={size} />
     </Animated.View>

@@ -19,7 +19,7 @@ export function VictoryAccent({ visible, kind, size = 28, style }: VictoryAccent
   return (
     <Animated.View
       pointerEvents="none"
-      accessible={false}
+      aria-hidden accessible={false}
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
       entering={reducedMotion ? undefined : FadeIn.duration(getMotionPreset('victory', false).duration)}
@@ -32,7 +32,7 @@ export function VictoryAccent({ visible, kind, size = 28, style }: VictoryAccent
         style,
       ]}
     >
-      {presentation.glyph && <Text accessible={false} style={{ color: theme.materials.celebration, fontSize: size * 0.8 }}>{presentation.glyph}</Text>}
+      {presentation.glyph && <Text aria-hidden accessible={false} style={{ color: theme.materials.celebration, fontSize: size * 0.8 }}>{presentation.glyph}</Text>}
     </Animated.View>
   );
 }

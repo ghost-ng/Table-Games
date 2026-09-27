@@ -62,6 +62,12 @@ Each of the nine families in every theme was inspected at normalized dimensions 
 
 Inspection caught and corrected a compositing-mode carryover during normalization, uneven coin-sheet spacing, excess Hangman whitespace, and small generation specks. The accepted production outputs were inspected after correction.
 
+## Semantic ownership
+
+The generated Modern Connect Four, Checkers, and Pop & Race sheets placed blue before red. Their numbered filenames retain that source/extraction order. The registry and pure catalog map semantic player 1 / seat 1 to the red `player-2.webp` / `pawn-2.webp` cutout, and player 2 / seat 2 to the blue `player-1.webp` / `pawn-1.webp` cutout. This matches Modern `theme.colors.player1` (red) and `player2` (blue), including legends, track lanes, and owner numerals. The race's green and yellow seats remain in slots 3 and 4. Engine player identities are unchanged.
+
+Catalog assertions pin both sides of this mapping; the asset validator executes the static registry and checks exact catalog parity. Regenerating assets from the original manifest preserves source order and therefore preserves this semantic mapping.
+
 ## Contract and verification
 
 `types.ts` owns `GameVisuals`; material tokens remain outside this task. The pure catalog exports readonly theme/dice/stage/file tuples and structured relative paths without loading bitmap modules. `registry.ts` contains 117 literal local require calls and an exhaustive theme map, with `getGameVisuals(themeName)` returning the selected entry.

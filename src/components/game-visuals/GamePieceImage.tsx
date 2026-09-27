@@ -30,7 +30,7 @@ export function GamePieceImage({ source, size, state = 'neutral', pressed = fals
   return (
     <Animated.View
       pointerEvents="none"
-      accessible={false}
+      aria-hidden accessible={false}
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
       style={[
@@ -48,7 +48,7 @@ export function GamePieceImage({ source, size, state = 'neutral', pressed = fals
         motionStyle,
       ]}
     >
-      <Image source={source} resizeMode="contain" accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={{ width: '100%', height: '100%' }} />
+      <Image source={source} resizeMode="contain" aria-hidden accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={{ width: '100%', height: '100%' }} />
       <StateMarker marker={presentation.marker} color={color} size={Math.max(10, Math.min(18, size * 0.25))} />
     </Animated.View>
   );

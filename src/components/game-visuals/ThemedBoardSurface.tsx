@@ -25,8 +25,8 @@ export function ThemedBoardSurface({ children, style, testID = 'game-board', ...
       style,
     ]}>
       {materials.boardTexture && (
-        <View pointerEvents="none" accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[StyleSheet.absoluteFillObject, { borderRadius: theme.borderRadius.lg, overflow: 'hidden' }]}>
-          <Image source={materials.boardTexture} resizeMode="repeat" accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[StyleSheet.absoluteFillObject, { opacity: 0.08 }]} />
+        <View pointerEvents="none" aria-hidden accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[StyleSheet.absoluteFillObject, { borderRadius: theme.borderRadius.lg, overflow: 'hidden' }]}>
+          <Image source={materials.boardTexture} resizeMode="repeat" aria-hidden accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[StyleSheet.absoluteFillObject, { opacity: 0.08 }]} />
         </View>
       )}
       {children}

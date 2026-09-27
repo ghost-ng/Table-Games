@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import { THEME_MATERIALS } from '../theme/materials';
 import {
   getMotionPreset,
+  getDropMotion,
   getStateMarker,
   getCellPresentation,
   getPiecePresentation,
@@ -123,4 +124,15 @@ test('victory accents expose a static marker for each visible kind', () => {
   assert.deepEqual(getVictoryPresentation(true, 'ring'), { glyph: null, ring: true });
   assert.deepEqual(getVictoryPresentation(true, 'crown'), { glyph: '♛', ring: false });
   assert.deepEqual(getVictoryPresentation(true, 'pulse'), { glyph: null, ring: true });
+});
+
+test('disc drops begin above the rack for top and bottom destinations at every cell size', () => {
+  for (const [row, cellSize, offset] of [[0, 52, -52], [5, 52, -312], [0, 100, -100], [5, 100, -600]]) {
+    const motion = getDropMotion(row, cellSize, false);
+    assert.equal(motion.translateYFrom, offset);
+    assert.equal(motion.duration, 320);
+  }
+  assert.deepEqual(getDropMotion(5, 100, true), {
+    duration: 0, scaleFrom: 1, translateYFrom: 0, rotateFrom: '0deg', opacityFrom: 1,
+  });
 });

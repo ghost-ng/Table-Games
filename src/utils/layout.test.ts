@@ -166,3 +166,23 @@ for (const { name, options, boardWidth, cellSize } of gridCases) {
     assert.equal(actual.cellSize, cellSize);
   });
 }
+
+for (const [areaWidth, expected] of [[456, 456], [526, 526], [575, 575]]) {
+  test('portrait board fills ' + areaWidth + 'px beyond a desktop 420px cap', () => {
+    assert.equal(calculateBoardSize({
+      areaWidth, areaHeight: 1100, maxSize: 420, minSize: 120, inset: 0,
+      aspectRatio: 1.21, extraHeight: 0, isPhone: true, isLandscape: false,
+    }), expected);
+  });
+}
+
+test('portrait boards remain height-bound and non-board tools may retain their cap', () => {
+  const options = {
+    areaWidth: 575, areaHeight: 400, maxSize: 420, minSize: 120, inset: 0,
+    aspectRatio: 1, extraHeight: 24, isPhone: true, isLandscape: false,
+  };
+  assert.equal(calculateBoardSize(options), 376);
+  assert.equal(calculateBoardSize({ ...options, phoneMaxSize: 280 }), 280);
+  assert.equal(calculateBoardSize({ ...options, areaHeight: 1100, isPhone: false }), 420);
+  assert.equal(calculateBoardSize({ ...options, areaHeight: 1100, isLandscape: true }), 420);
+});

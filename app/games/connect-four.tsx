@@ -34,7 +34,7 @@ import { getAIMove } from '../../src/ai/connect-four-ai';
 import { DifficultySelector, type Difficulty } from '../../src/components/ui/DifficultySelector';
 import { useBoardFit, useResponsive } from '../../src/utils/layout';
 import { GAME_VISUALS } from '../../src/game-visuals/registry';
-import { getMotionPreset } from '../../src/game-visuals/presentation';
+import { getDropMotion, getMotionPreset } from '../../src/game-visuals/presentation';
 import { ThemedBoardSurface } from '../../src/components/game-visuals/ThemedBoardSurface';
 import { GamePieceImage } from '../../src/components/game-visuals/GamePieceImage';
 import { VictoryAccent } from '../../src/components/game-visuals/VictoryAccent';
@@ -46,22 +46,24 @@ const COLS = 7;
 function AnimatedPiece({
   player,
   mark,
+  row,
   size,
   isWinning,
 }: {
   player: Player;
   mark: string;
+  row: number;
   size: number;
   isWinning: boolean;
 }) {
   const { theme, themeName } = useTheme();
   const reducedMotion = useReducedMotion();
-  const motion = getMotionPreset('drop', reducedMotion);
+  const motion = getDropMotion(row, size, reducedMotion);
   const translateY = useSharedValue(motion.translateYFrom);
 
   useEffect(() => {
     translateY.value = withTiming(0, { duration: motion.duration });
-  }, [reducedMotion]);
+  }, [motion.duration, translateY]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: translateY.value }],
@@ -70,6 +72,7 @@ function AnimatedPiece({
   return (
     <Animated.View
       pointerEvents="none"
+      aria-hidden
       accessible={false}
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
@@ -89,7 +92,7 @@ function AnimatedPiece({
       ]}
     >
       <GamePieceImage source={player === 'red' ? GAME_VISUALS[themeName].connectFour.player1 : GAME_VISUALS[themeName].connectFour.player2} size={size * 0.78} />
-      <ThemedText accessible={false} variant="label" style={{ position: 'absolute', color: theme.colors.text, backgroundColor: theme.colors.surfaceRaised, borderRadius: size / 2, paddingHorizontal: 3, fontSize: Math.max(11, size * 0.24) }}>{isWinning ? mark + '✓' : mark}</ThemedText>
+      <ThemedText aria-hidden accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" variant="label" style={{ position: 'absolute', color: theme.colors.text, backgroundColor: theme.colors.surfaceRaised, borderRadius: size / 2, paddingHorizontal: 3, fontSize: Math.max(11, size * 0.24) }}>{isWinning ? mark + '✓' : mark}</ThemedText>
       <VictoryAccent visible={isWinning} kind="ring" size={size * 0.8} style={{ position: 'absolute' }} />
     </Animated.View>
   );
@@ -432,6 +435,7 @@ export default function ConnectFourScreen() {
                       <AnimatedPiece
                         mark={cell === 'red' ? '1' : '2'}
                         player={cell}
+                        row={row}
                         size={cellSize}
                         isWinning={winning}
                       />
@@ -539,7 +543,6 @@ const styles = StyleSheet.create({
   cellHole: {
     justifyContent: 'center',
     alignItems: 'center',
-    overflow: 'hidden',
   },
   thinkingContainer: {
     minHeight: 24,

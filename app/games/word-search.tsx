@@ -216,7 +216,7 @@ export default function WordSearchScreen() {
   const { theme } = useTheme();
   const router = useRouter();
   const reducedMotion = useReducedMotion();
-  const { contentWidth, height, isPhone, isTablet, isLandscape } = useResponsive();
+  const { gameContentWidth: contentWidth, height, isPhone, isTablet, isLandscape } = useResponsive();
   const shortLandscape = isLandscape && height < 560;
 
   // Mode & game state
@@ -708,7 +708,7 @@ function GamePressable({ style, ...props }: React.ComponentProps<typeof Pressabl
       accessibilityRole="button"
       {...props}
       {...(Platform.OS === 'web' && props.accessibilityState?.selected !== undefined
-        ? { 'aria-pressed': props.accessibilityState.selected, 'aria-selected': props.accessibilityState.selected }
+        ? { 'aria-pressed': props.accessibilityState.selected }
         : {})}
       onFocus={focus.onFocus}
       onBlur={focus.onBlur}

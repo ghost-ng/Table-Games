@@ -31,3 +31,19 @@ test('every theme supplies all game families and complete variant sets', () => {
     }
   }
 });
+
+// These Modern sheets are blue first, red second; semantic player 1 is red.
+for (const family of ['connectFour', 'checkers'] as const) {
+  test('Modern ' + family + ' maps player 1 to red and player 2 to blue', () => {
+    const directory = family === 'connectFour' ? 'connect-four' : 'checkers';
+    assert.equal(GAME_VISUAL_PATHS.modern[family].player1, 'assets/pieces/modern/' + directory + '/player-2.webp');
+    assert.equal(GAME_VISUAL_PATHS.modern[family].player2, 'assets/pieces/modern/' + directory + '/player-1.webp');
+  });
+}
+
+test('Modern race seats follow red, blue, green, yellow ownership', () => {
+  assert.deepEqual(GAME_VISUAL_PATHS.modern.trouble.pawns, [
+    'assets/pieces/modern/trouble/pawn-2.webp', 'assets/pieces/modern/trouble/pawn-1.webp',
+    'assets/pieces/modern/trouble/pawn-3.webp', 'assets/pieces/modern/trouble/pawn-4.webp',
+  ]);
+});

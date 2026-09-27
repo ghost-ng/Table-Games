@@ -6,13 +6,18 @@ export interface CalculateBoardSizeOptions {
   inset: number;
   aspectRatio: number;
   extraHeight: number;
+  isPhone?: boolean;
+  isLandscape?: boolean;
+  phoneMaxSize?: number;
 }
 
 export function calculateBoardSize({
   areaWidth, areaHeight, maxSize, minSize, inset, aspectRatio, extraHeight,
+  isPhone = false, isLandscape = false, phoneMaxSize,
 }: CalculateBoardSizeOptions): number {
   const available = Math.min(areaWidth - inset * 2, (areaHeight - inset * 2 - extraHeight) / aspectRatio);
-  return Math.floor(Math.max(minSize, Math.min(available, maxSize)));
+  const widthCap = isPhone && !isLandscape ? phoneMaxSize ?? Number.POSITIVE_INFINITY : maxSize;
+  return Math.floor(Math.max(minSize, Math.min(available, widthCap)));
 }
 
 export function resolveBoardInset({ inset, phoneInset, isPhone, isLandscape }: {

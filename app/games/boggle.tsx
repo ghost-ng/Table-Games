@@ -503,7 +503,7 @@ export default function BoggleScreen() {
   const { theme } = useTheme();
   const router = useRouter();
   const reducedMotion = useReducedMotion();
-  const { contentWidth, height, isPhone, isTablet, isLandscape } = useResponsive();
+  const { gameContentWidth: contentWidth, height, isPhone, isTablet, isLandscape } = useResponsive();
   const shortLandscape = isLandscape && height < 560;
   // Width-bound on phones; on short/landscape screens keep the grid within ~55% of the height.
   const { boardWidth: gridSize, cellSize } = calculateGridBoardLayout({
@@ -953,7 +953,7 @@ export default function BoggleScreen() {
                       textStyle={[styles.cellLetter, { color: isLast ? theme.colors.onPrimary : theme.colors.text, fontSize: Math.max(20, cellSize * 0.34) }]}
                     >
                     {selected && (
-                      <ThemedText variant="caption" style={{ position: 'absolute', top: 3, left: 5, color: isLast ? theme.colors.onPrimary : theme.colors.primary, fontWeight: '700' }}>{pathIndex + 1}</ThemedText>
+                      <ThemedText aria-hidden accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" variant="caption" style={{ position: 'absolute', top: 3, left: 5, color: isLast ? theme.colors.onPrimary : theme.colors.primary, fontWeight: '700' }}>{pathIndex + 1}</ThemedText>
                     )}
                     {letter.length > 1 && (
                       <View style={[styles.quBadge, { backgroundColor: theme.colors.primary + '20' }]}>
@@ -1285,7 +1285,7 @@ function GamePressable({ style, ...props }: React.ComponentProps<typeof Pressabl
       accessibilityRole="button"
       {...props}
       {...(Platform.OS === 'web' && props.accessibilityState?.selected !== undefined
-        ? { 'aria-pressed': props.accessibilityState.selected, 'aria-selected': props.accessibilityState.selected }
+        ? { 'aria-pressed': props.accessibilityState.selected }
         : {})}
       onFocus={focus.onFocus}
       onBlur={focus.onBlur}

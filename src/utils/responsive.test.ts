@@ -32,3 +32,13 @@ test('desktop has room beyond the old cap without exceeding 1120px', () => {
   assert.ok(layout.contentWidth > 720);
   assert.ok(layout.contentWidth <= 1120);
 });
+
+for (const width of [480, 550, 599]) {
+  test('portrait game content fills ' + width + 'px without widening Home cards', () => {
+    const layout = getResponsiveLayout(width, 1400);
+    assert.equal(layout.gameContentWidth, width);
+    assert.equal(layout.gameContentMaxWidth, width);
+    assert.equal(layout.contentWidth, 480);
+    assert.equal(getResponsiveLayout(width, 390).gameContentWidth, 480);
+  });
+}

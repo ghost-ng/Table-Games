@@ -34,6 +34,7 @@ export default function CoinFlipScreen() {
   const sideBySide = isLandscape && height < 560;
   const { onLayout: onCoinAreaLayout, size: coinSize } = useBoardFit({
     maxSize: isDesktop ? 360 : 280,
+    phoneMaxSize: 280,
     minSize: 110,
     inset: 24,
   });

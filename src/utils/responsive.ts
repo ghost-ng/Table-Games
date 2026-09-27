@@ -12,6 +12,9 @@ export interface ResponsiveLayoutFlags {
   isLandscape: boolean;
   contentMaxWidth: number;
   contentWidth: number;
+  /** Game shells fill portrait phones; Home keeps its compact card column. */
+  gameContentMaxWidth: number;
+  gameContentWidth: number;
 }
 
 /** Pure screen metrics, usable without importing React Native. */
@@ -20,6 +23,8 @@ export function getResponsiveLayout(width: number, height: number): ResponsiveLa
   const isDesktop = width >= BREAKPOINTS.desktop;
   const contentMaxWidth = isDesktop ? 1120 : isTablet ? 720 : 480;
 
+  const gameContentMaxWidth = !isTablet && width <= height ? width : contentMaxWidth;
+
   return {
     isPhone: !isTablet,
     isTablet,
@@ -27,5 +32,7 @@ export function getResponsiveLayout(width: number, height: number): ResponsiveLa
     isLandscape: width > height,
     contentMaxWidth,
     contentWidth: Math.min(width, contentMaxWidth),
+    gameContentMaxWidth,
+    gameContentWidth: Math.min(width, gameContentMaxWidth),
   };
 }

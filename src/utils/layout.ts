@@ -29,8 +29,10 @@ export function useResponsive(): ResponsiveLayout {
 }
 
 export interface BoardFitOptions {
-  /** Cap on the board's width. */
+  /** Tablet/desktop and landscape cap on the board's width. */
   maxSize?: number;
+  /** Optional portrait cap for non-board surfaces, such as the coin. */
+  phoneMaxSize?: number;
   /** Breathing room kept on every side of the board. */
   inset?: number;
   /** Portrait-phone inset; defaults to zero so boards fill the measured width. */
@@ -53,13 +55,14 @@ export interface BoardFitOptions {
  */
 export function useBoardFit({
   maxSize = MAX_BOARD_SIZE,
+  phoneMaxSize,
   inset = 16,
   phoneInset,
   aspectRatio = 1,
   extraHeight = 0,
   minSize = MIN_BOARD_SIZE,
 }: BoardFitOptions = {}) {
-  const { contentWidth, isPhone, isLandscape } = useResponsive();
+  const { gameContentWidth: contentWidth, isPhone, isLandscape } = useResponsive();
   const resolvedInset = resolveBoardInset({ inset, phoneInset, isPhone, isLandscape });
   const [area, setArea] = useState<{ width: number; height: number } | null>(null);
 
@@ -72,6 +75,9 @@ export function useBoardFit({
     areaWidth: area?.width ?? contentWidth,
     areaHeight: area?.height ?? Number.POSITIVE_INFINITY,
     maxSize,
+    phoneMaxSize,
+    isPhone,
+    isLandscape,
     minSize,
     inset: resolvedInset,
     aspectRatio,

@@ -9,7 +9,7 @@ export function StateMarker({ marker, color, size = 14 }: { marker: Marker; colo
     ? { position: 'absolute', alignSelf: 'center', fontSize: size * 2, color, fontWeight: '700' }
     : { position: 'absolute', right: 2, bottom: 1, fontSize: size, color, fontWeight: '700' };
   return (
-    <Text pointerEvents="none" accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={style}>
+    <Text pointerEvents="none" aria-hidden accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={style}>
       {marker.glyph}
     </Text>
   );

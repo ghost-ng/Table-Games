@@ -16,7 +16,7 @@ export function SelectionTrail({ points, found, style }: SelectionTrailProps) {
   const color = theme.materials.selectionTrail;
   const thickness = 6;
   return (
-    <View pointerEvents="none" accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" onLayout={({ nativeEvent }) => setLayout({ width: nativeEvent.layout.width, height: nativeEvent.layout.height })} style={[StyleSheet.absoluteFillObject, style]}>
+    <View pointerEvents="none" aria-hidden accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" onLayout={({ nativeEvent }) => setLayout({ width: nativeEvent.layout.width, height: nativeEvent.layout.height })} style={[StyleSheet.absoluteFillObject, style]}>
       {trail.segments.map((segment, index) => (
         <View key={index} style={{ position: 'absolute', left: segment.x - segment.length / 2, top: segment.y - thickness / 2, width: segment.length, height: thickness, borderRadius: thickness / 2, backgroundColor: color, opacity: trail.opacity, transform: [{ rotate: `${segment.angle}rad` }] }} />
       ))}

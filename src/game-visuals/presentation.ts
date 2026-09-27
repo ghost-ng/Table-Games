@@ -27,6 +27,12 @@ export function getMotionPreset(kind: PieceMotionKind, reducedMotion: boolean): 
   return { ...(reducedMotion ? still : motionPresets[kind]) };
 }
 
+/** A disc starts one cell above the rack, regardless of its destination row. */
+export function getDropMotion(row: number, cellSize: number, reducedMotion: boolean): MotionPreset {
+  const motion = getMotionPreset('drop', reducedMotion);
+  return { ...motion, translateYFrom: reducedMotion ? 0 : -(row + 1) * cellSize };
+}
+
 export interface StateMarker {
   shape: 'none' | 'outline' | 'dot' | 'star' | 'crown' | 'check';
   glyph: string | null;

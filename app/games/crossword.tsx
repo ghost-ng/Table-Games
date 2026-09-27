@@ -276,7 +276,7 @@ function formatTime(totalSeconds: number): string {
 type Phase = 'modeSelect' | 'playing';
 
 export default function CrosswordScreen() {
-  const { contentWidth, height, isPhone, isTablet, isLandscape } = useResponsive();
+  const { gameContentWidth: contentWidth, height, isPhone, isTablet, isLandscape } = useResponsive();
   // Keep the board above the fixed keyboard on compact phones.
   const { boardWidth: gridWidth, cellSize } = calculateGridBoardLayout({
     areaWidth: contentWidth - 24,
@@ -1060,7 +1060,7 @@ function GamePressable({ style, ...props }: React.ComponentProps<typeof Pressabl
       accessibilityRole="button"
       {...props}
       {...(Platform.OS === 'web' && props.accessibilityState?.selected !== undefined
-        ? { 'aria-pressed': props.accessibilityState.selected, 'aria-selected': props.accessibilityState.selected }
+        ? { 'aria-pressed': props.accessibilityState.selected }
         : {})}
       onFocus={focus.onFocus}
       onBlur={focus.onBlur}

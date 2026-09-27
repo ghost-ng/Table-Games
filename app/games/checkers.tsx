@@ -117,6 +117,7 @@ function AnimatedPiece({
         animatedStyle,
       ]}
       pointerEvents="none"
+      aria-hidden
       accessible={false}
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
@@ -146,7 +147,7 @@ function AnimatedPiece({
         {isKing && (
           <GamePieceImage source={visuals.crown} size={pieceSize * 0.55} style={{ position: 'absolute' }} />
         )}
-        <ThemedText accessible={false} variant="caption" style={{ position: 'absolute', bottom: 1, color: theme.colors.text, backgroundColor: theme.colors.surfaceRaised, borderRadius: 4, paddingHorizontal: 2, fontSize: Math.max(8, cellSize * 0.18), fontWeight: '700' }}>{player === 'player1' ? '1' : '2'}{isKing ? '♛' : ''}</ThemedText>
+        <ThemedText aria-hidden accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" variant="caption" style={{ position: 'absolute', bottom: 1, color: theme.colors.text, backgroundColor: theme.colors.surfaceRaised, borderRadius: 4, paddingHorizontal: 2, fontSize: Math.max(8, cellSize * 0.18), fontWeight: '700' }}>{player === 'player1' ? '1' : '2'}{isKing ? '♛' : ''}</ThemedText>
       </View>
     </Animated.View>
   );

@@ -45,7 +45,7 @@ export function GameShell({
         },
       ]}
     >
-      <View style={[styles.canvas, { maxWidth: contentMaxWidth ?? responsive.contentMaxWidth }]}>
+      <View style={[styles.canvas, { maxWidth: contentMaxWidth ?? responsive.gameContentMaxWidth }]}>
         <GameHeader title={title} onBack={onBack} trailingAction={trailingAction} />
         {status !== undefined ? <StatusRail>{status}</StatusRail> : null}
         {scroll ? (

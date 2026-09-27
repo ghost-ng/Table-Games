@@ -432,6 +432,7 @@ export default function DotsAndBoxesScreen() {
                   key={`box-${r}-${c}`}
                   entering={reducedMotion ? undefined : FadeIn.duration(placementDuration)}
                   accessible
+                  accessibilityRole="image"
                   accessibilityLabel={`Box row ${r + 1}, column ${c + 1}, claimed by ${owner === 'player1' ? mode === 'single' ? 'You' : 'Player 1' : mode === 'single' ? 'AI' : 'Player 2'}`}
                   style={[
                     styles.boxFill,
@@ -448,6 +449,7 @@ export default function DotsAndBoxesScreen() {
                   ]}
                 >
                   <ThemedText
+                    aria-hidden accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
                     variant="caption"
                     style={{
                       color: getPlayerColor(owner),
@@ -493,7 +495,7 @@ export default function DotsAndBoxesScreen() {
                   ]}
                 >
                   {gameState.lastMove?.orientation === 'horizontal' && gameState.lastMove.row === r && gameState.lastMove.col === c && (
-                    <View pointerEvents="none" accessible={false} style={{ position: 'absolute', left: cellSize / 2 - 5, top: LINE_THICKNESS / 2 - 5, width: 10, height: 10, borderWidth: 2, borderColor: theme.colors.text, backgroundColor: theme.colors.surfaceRaised, transform: [{ rotate: '45deg' }] }} />
+                    <View pointerEvents="none" aria-hidden accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={{ position: 'absolute', left: cellSize / 2 - 5, top: LINE_THICKNESS / 2 - 5, width: 10, height: 10, borderWidth: 2, borderColor: theme.colors.text, backgroundColor: theme.colors.surfaceRaised, transform: [{ rotate: '45deg' }] }} />
                   )}
                 </View>
               );
@@ -523,7 +525,7 @@ export default function DotsAndBoxesScreen() {
                   ]}
                 >
                   {gameState.lastMove?.orientation === 'vertical' && gameState.lastMove.row === r && gameState.lastMove.col === c && (
-                    <View pointerEvents="none" accessible={false} style={{ position: 'absolute', left: LINE_THICKNESS / 2 - 5, top: cellSize / 2 - 5, width: 10, height: 10, borderWidth: 2, borderColor: theme.colors.text, backgroundColor: theme.colors.surfaceRaised, transform: [{ rotate: '45deg' }] }} />
+                    <View pointerEvents="none" aria-hidden accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={{ position: 'absolute', left: LINE_THICKNESS / 2 - 5, top: cellSize / 2 - 5, width: 10, height: 10, borderWidth: 2, borderColor: theme.colors.text, backgroundColor: theme.colors.surfaceRaised, transform: [{ rotate: '45deg' }] }} />
                   )}
                 </View>
               );

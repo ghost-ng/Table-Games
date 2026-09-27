@@ -411,7 +411,7 @@ export default function TroubleScreen() {
     if (tumbleRef.current) clearInterval(tumbleRef.current);
     if (!reducedMotion) tumbleRef.current = setInterval(() => setDieValue(randomInt(6)), 80);
 
-    later(() => {
+    const finishRoll = () => {
       if (tumbleRef.current) clearInterval(tumbleRef.current);
       tumbleRef.current = null;
       const roll = rollDie(cryptoRng);
@@ -448,7 +448,9 @@ export default function TroubleScreen() {
         setSelectedPeg(moves[0].peg);
         later(() => executeMove(moves[0]), AUTO_MOVE_DELAY);
       }
-    }, TUMBLE_MS);
+    };
+    if (reducedMotion) finishRoll();
+    else later(finishRoll, TUMBLE_MS);
   }, [commitGame, executeMove, goPhase, isHuman, later, showMessage, tumble, reducedMotion]);
 
   // AI turns roll on their own.

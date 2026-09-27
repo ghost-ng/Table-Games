@@ -36,7 +36,7 @@ export default function WordleScreen() {
   const { theme } = useTheme();
   const router = useRouter();
   const reducedMotion = useReducedMotion();
-  const { contentWidth, height, isLandscape } = useResponsive();
+  const { gameContentWidth: contentWidth, height, isLandscape } = useResponsive();
   // Short landscape screens (phones on their side) can't stack grid + keyboard,
   // so they sit side by side: grid on the left, keyboard on the right.
   const sideBySide = isLandscape && height < 560;

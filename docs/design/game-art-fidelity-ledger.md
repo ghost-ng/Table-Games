@@ -88,8 +88,8 @@ The evidence above is historical evidence for the previous artwork and build. Ta
 | Tic-Tac-Toe | 2 accepted in Task 2B | 2 pending | 2 pending | Complete X/O silhouettes and clear ring opening |
 | Connect Four | 2 accepted in Task 2B | 2 pending | 2 pending | Circular discs matching current semantic ownership |
 | Checkers | 3 accepted in Task 2B | 3 pending | 3 pending | Top-down ridged discs; separate centered king marker |
-| Chinese Checkers | 6 pending | 6 pending | 6 pending | Equal round marbles with six distinct colors |
-| Mancala | 6 pending | 6 pending | 6 pending | Individual recognizable stones/seeds with six shapes |
+| Chinese Checkers | 6 accepted in Task 2C | 6 pending | 6 pending | Equal round marbles with six distinct colors |
+| Mancala | 6 accepted in Task 2C | 6 pending | 6 pending | Individual recognizable stones/seeds with six shapes |
 | Pop & Race | 4 pending | 4 pending | 4 pending | Classic rounded pawns matching seat colors |
 | Dice | 6 pending | 6 pending | 6 pending | Correct d4/d6/d8/d10/d12/d20 geometry; blank faces |
 | Hangman | 7 pending | 7 pending | 7 pending | Friendly platform/posts/crossbar/head/torso/arms/feet assembly; one shared transform |
@@ -111,3 +111,19 @@ Accepted seven distinct built-in image generations after original-resolution sou
 | Geometry and budget | All seven finals have one meaningful component, genuine alpha, transparent corners, no edge contact, 76.04–76.17% longest-bound fill, and at least 11.72% padding. The batch totals 55,462 bytes; its largest final is 10,834 bytes. |
 
 Contact-sheet order is X, O, blue Connect Four, red Connect Four, blue checker, red checker, crown. These QA sheets are inspection artifacts only. Stage remains `generation-batches`: seven completed custom records, 101 `generationPending` custom records, and nine `authorityReferencePending` quarter slots. No records outside this batch changed. This batch inspection does not claim a fresh browser gameplay audit.
+
+## Task 2C Modern marbles and Mancala stones — 2026-09-27
+
+Accepted twelve distinct built-in generations, one per frozen manifest prompt, with no retries. All twelve 1254×1254 PNGs were inspected at original dimensions through the authorized native-resolution preview fallback after `view_image` failed because bubblewrap is unavailable. High-quality WebP previews were forwarded without resizing or cropping; alpha measurements used the untouched PNGs. Original source bytes are preserved in their twelve manifest paths.
+
+| Family | Inspection and acceptance |
+| --- | --- |
+| Chinese Checkers | Six top-down glass marbles retain round 96–97px visible bounds on 128px canvases, consistent upper-left highlights, and distinct red, blue, green, brown, indigo and pale ownership colors. Glass refraction and internal swirls read as spherical physical marbles. Natural internal patterns differ without changing the family silhouette or camera. |
+| Mancala | Six polished resin stones show the specified amber oval, cream slender teardrop, green broad kidney, terracotta irregular pebble, gray plump almond and purple asymmetric river-stone profiles. Each source and final contains exactly one meaningful object. Upper-left lighting, finish and normalized 73px longest bounds on 96px canvases are consistent. |
+| Production-size light/dark | [Light](qa/modern-marbles-seeds-light.webp) and [dark](qa/modern-marbles-seeds-dark.webp) sheets display every final at native 128px or 96px size, centered in 128px cells. No opaque boxes, checkerboards, text, watermark, ground plane, detached meaningful objects, clipping or meaningful edge contact appear. Pale marble and cream stone remain outlined against the light background. |
+| Phone-size readability | [Light](qa/modern-marbles-seeds-phone-light.webp) and [dark](qa/modern-marbles-seeds-phone-dark.webp) 32px-cell sheets retain distinct marble colors and recognizable stone profiles. Small internal glass and stone texture simplifies appropriately while highlights and contours survive. |
+| Alpha, geometry and budget | All finals have genuine alpha, fully transparent corners, no nonzero edge contact, one meaningful component containing 100% of connected foreground, 75.78% marble / 76.04% stone longest-bound fill, and at least 11.46% padding. Batch: 43,630 bytes; largest batch file: 5,532 bytes. All 117 production sprites: 785,338 bytes total; largest: 17,732 bytes. |
+
+Contact-sheet order is marble-1 through marble-6, then seed-1 through seed-6. These sheets are QA artifacts only. The existing normalizer clears detached sub-5% alpha residue in memory (97–1,242 pixels per source); original PNG metrics, including faint residue at some source edges, are retained separately in the task report. Meaningful source pixels never reach a canvas edge. Source preservation and byte-identical repeat normalization passed for all twelve.
+
+Stage remains `generation-batches`: 19 completed custom records, 89 `generationPending` custom records, and nine unchanged `authorityReferencePending` quarters. Only these twelve records changed in the manifest. Asset tests passed 43/43, application unit tests 88/88, and TypeScript passed under Node 22.23.3. No behavior or validator changes were needed. This inspection covers source/final art and does not claim a fresh browser gameplay audit.

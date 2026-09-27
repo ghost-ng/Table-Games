@@ -262,6 +262,57 @@ test('normalization centers visible pixels, avoids upscaling, preserves sources,
   assert.deepEqual(readFileSync(resolve(temporaryRoot, record.finalPath)), first.data, 'invalid art must not overwrite accepted output');
 });
 
+test('source normalization removes detached faint residue and safely scales oversized art', async (t) => {
+  const temporaryRoot = mkdtempSync(resolve(tmpdir(), 'game-art-residue-'));
+  t.after(() => rmSync(temporaryRoot, { recursive: true, force: true }));
+  const record = individualRecord(); const source = resolve(temporaryRoot, record.sourcePath);
+  mkdirSync(dirname(source), { recursive: true });
+  const input = await fixture({ rectangles: [
+    { left: 3, top: 3, width: 94, height: 94, alpha: 6 },
+    { left: 4, top: 4, width: 92, height: 92 },
+    { left: 0, top: 0, width: 1, height: 1, alpha: 12 },
+  ] });
+  writeFileSync(source, input);
+  const first = await art.normalizeGameArtAsset(record, { root: temporaryRoot });
+  const second = await art.normalizeGameArtAsset(record, { root: temporaryRoot });
+  assert.deepEqual(first.data, second.data);
+  assert.deepEqual(readFileSync(source), input, 'the original source must remain byte-identical');
+  art.assertImageMetrics(first.metrics, record);
+  assert.equal(first.metrics.edgeTouching, false);
+  assert.ok(first.metrics.visibleFill >= 0.72 && first.metrics.visibleFill <= 0.80);
+});
+
+test('source preparation preserves connected antialiasing and removes only detached sub-5-percent residue', async () => {
+  const input = await fixture({ rectangles: [
+    { left: 11, top: 11, width: 78, height: 78, alpha: 6 },
+    { left: 12, top: 12, width: 76, height: 76 },
+    { left: 0, top: 0, width: 1, height: 1, alpha: 12 },
+  ] });
+  const prepared = await requireHelper('prepareGameArtSource')(input);
+  const pixels = await sharp(prepared.input).ensureAlpha().raw().toBuffer();
+  assert.equal(pixels[3], 0);
+  assert.equal(pixels[(11 * 100 + 11) * 4 + 3], 6);
+  assert.equal(pixels[(12 * 100 + 12) * 4 + 3], 255);
+  assert.deepEqual(prepared.metrics.bounds, { left: 11, top: 11, width: 78, height: 78 });
+});
+
+test('source normalization rejects meaningful edge content, extra objects, and upscaling', async (t) => {
+  const temporaryRoot = mkdtempSync(resolve(tmpdir(), 'game-art-source-safety-'));
+  t.after(() => rmSync(temporaryRoot, { recursive: true, force: true }));
+  const record = individualRecord(); const source = resolve(temporaryRoot, record.sourcePath);
+  mkdirSync(dirname(source), { recursive: true });
+  const cases = [
+    [[{ left: 0, top: 4, width: 92, height: 92, alpha: 13 }], /edge/i],
+    [[{ left: 4, top: 4, width: 70, height: 90 }, { left: 80, top: 4, width: 15, height: 15 }], /component|object/i],
+    [[{ left: 40, top: 40, width: 20, height: 20 }], /upscal/i],
+  ];
+  for (const [rectangles, error] of cases) {
+    writeFileSync(source, await fixture({ rectangles }));
+    await assert.rejects(art.normalizeGameArtAsset(record, { root: temporaryRoot }), error);
+    assert.equal(existsSync(resolve(temporaryRoot, record.finalPath)), false);
+  }
+});
+
 test('normalization rejects a repository-relative symlink that escapes the project', async (t) => {
   const normalize = requireHelper('normalizeGameArtAsset');
   const temporaryRoot = mkdtempSync(resolve(tmpdir(), 'game-art-symlink-'));

@@ -258,6 +258,55 @@ async function canonicalPath(path, seenLinks = new Set()) {
   }
 }
 
+/**
+ * Keep every visible component and its connected antialiasing; discard only
+ * detached pixels below 5% alpha. Source framing may be oversized because the
+ * final canvas is strictly validated after downscaling. Never edits source files.
+ */
+export async function prepareGameArtSource(input) {
+  const original = await readImageMetrics(input);
+  assert.equal(original.width, original.height, 'Sprite dimensions must be square');
+  assert.ok(original.hasAlpha, 'A genuine alpha channel is required');
+  assert.ok(original.bounds && original.visiblePixels > 0, 'Sprite must contain visible pixels; empty art is invalid');
+  assert.ok(original.components.meaningfulCount === 1 && original.components.largestFraction >= 0.95,
+    'Sprite must have one dominant connected component; extra objects are invalid');
+  const { data, info } = await sharp(input).toColourspace('srgb').ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const { width, height, channels } = info;
+  const retained = new Uint8Array(width * height);
+  const queue = new Int32Array(retained.length);
+  let head = 0; let tail = 0;
+  for (let pixel = 0; pixel < retained.length; pixel++) {
+    if (data[pixel * channels + channels - 1] < 13) continue;
+    const x = pixel % width; const y = Math.floor(pixel / width);
+    assert.ok(x > 0 && y > 0 && x < width - 1 && y < height - 1, 'Edge-touching silhouettes are invalid');
+    retained[pixel] = 1; queue[tail++] = pixel;
+  }
+  // Flood through nonzero alpha to preserve connected low-alpha edge pixels.
+  // A faint bridge is retained, never cut to hide a clipped silhouette.
+  while (head < tail) {
+    const pixel = queue[head++]; const x = pixel % width; const y = Math.floor(pixel / width);
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        if ((!dx && !dy) || x + dx < 0 || x + dx >= width || y + dy < 0 || y + dy >= height) continue;
+        const neighbor = (y + dy) * width + x + dx;
+        if (!retained[neighbor] && data[neighbor * channels + channels - 1] > 0) {
+          retained[neighbor] = 1; queue[tail++] = neighbor;
+        }
+      }
+    }
+  }
+  let removedPixels = 0;
+  for (let pixel = 0; pixel < retained.length; pixel++) {
+    const offset = pixel * channels + channels - 1;
+    if (!retained[pixel] && data[offset] > 0) { data[offset] = 0; removedPixels++; }
+  }
+  const prepared = removedPixels ? await sharp(data, { raw: info }).png().toBuffer() : input;
+  const metrics = removedPixels ? await readImageMetrics(prepared) : original;
+  assert.ok(metrics.transparentCorners, 'All four corners must be transparent');
+  assert.ok(!metrics.edgeTouching, 'Edge-touching silhouettes are invalid');
+  return { input: prepared, metrics, removedPixels };
+}
+
 /** Validate one individual source and write exactly its requested final WebP. */
 export async function normalizeGameArtAsset(record, { root = process.cwd(), write = true } = {}) {
   assert.notEqual(record.family, 'hangman', 'Hangman requires group normalization with all seven stages');
@@ -273,8 +322,8 @@ export async function normalizeGameArtAsset(record, { root = process.cwd(), writ
     assert.ok(sourceStat.dev !== finalStat.dev || sourceStat.ino !== finalStat.ino,
       'Final output cannot alias and overwrite its individual source');
   } catch (error) { if (error.code !== 'ENOENT') throw error; }
-  const input = await readFile(sourcePath);
-  const source = assertImageMetrics(await readImageMetrics(input), { visibleBounds: record.visibleBounds });
+  const original = await readFile(sourcePath);
+  const { input, metrics: source } = await prepareGameArtSource(original);
   const largest = Math.max(source.bounds.width, source.bounds.height);
   const desired = Math.round(record.targetSize * 0.76);
   const scale = Math.min(1, desired / largest);

@@ -85,9 +85,9 @@ The evidence above is historical evidence for the previous artwork and build. Ta
 
 | Family | Modern | Retro | Arcade | Batch acceptance requirement |
 | --- | --- | --- | --- | --- |
-| Tic-Tac-Toe | 2 pending | 2 pending | 2 pending | Complete X/O silhouettes and clear ring opening |
-| Connect Four | 2 pending | 2 pending | 2 pending | Circular discs matching current semantic ownership |
-| Checkers | 3 pending | 3 pending | 3 pending | Top-down ridged discs; separate centered king marker |
+| Tic-Tac-Toe | 2 accepted in Task 2B | 2 pending | 2 pending | Complete X/O silhouettes and clear ring opening |
+| Connect Four | 2 accepted in Task 2B | 2 pending | 2 pending | Circular discs matching current semantic ownership |
+| Checkers | 3 accepted in Task 2B | 3 pending | 3 pending | Top-down ridged discs; separate centered king marker |
 | Chinese Checkers | 6 pending | 6 pending | 6 pending | Equal round marbles with six distinct colors |
 | Mancala | 6 pending | 6 pending | 6 pending | Individual recognizable stones/seeds with six shapes |
 | Pop & Race | 4 pending | 4 pending | 4 pending | Classic rounded pawns matching seat colors |
@@ -98,3 +98,16 @@ The evidence above is historical evidence for the previous artwork and build. Ta
 Each later generation batch must inspect every built-in generation result at original detail, copy the accepted source into its manifest path, record the actual prompt and dates, remove its pending flag, normalize, then inspect deterministic final-WebP contact sheets on both `#f5f5f5` and `#101020`. Replace the relevant pending cells with explicit accept/reject evidence only after those checks. There are no new visual QA contact sheets in this preparation task.
 
 Synthetic decoded-image tests establish stable Hangman base placement, shared scale, deterministic output independent of record order, source preservation, and rejection of incomplete or inconsistently framed groups. These are pipeline checks, not visual approval of the future generated characters.
+
+## Task 2B Modern tokens and discs — 2026-09-27
+
+Accepted seven distinct built-in image generations after original-resolution source inspection and deterministic normalization: red player1 X, blue player2 O, blue player2 / red player1 Connect Four discs and checker discs, and one shared gold crown. The two unselected X retries remain outside the repository. Exact accepted prompts, portable source/final paths, actual generation timestamps and review timestamps are in the seven Modern manifest records. Sources are copied unchanged; the normalizer removes only detached alpha below 5% in memory, preserving connected antialiasing and every meaningful object.
+
+| Inspection | Evidence and result |
+| --- | --- |
+| Original sources | All nine successful generation outputs were inspected at their native 1254×1254 dimensions. The local viewer could not launch because bubblewrap is unavailable; the authorized equivalent forwarded high-quality WebP previews without cropping or resizing at original detail. Alpha measurements used untouched PNGs. |
+| Production-size light/dark | [Light](qa/modern-tokens-discs-light.webp) and [dark](qa/modern-tokens-discs-dark.webp) sheets show all seven final WebPs at their native 256px or 192px size. Complete X, unobstructed O opening, circular recessed Connect Four faces, concentric checker ridges, and separate three-point crown all pass. No background boxes, detached specks, clipping, text, or ground planes appear. |
+| Phone-size readability | [Light](qa/modern-tokens-discs-phone-light.webp) and [dark](qa/modern-tokens-discs-phone-dark.webp) 64px-cell sheets preserve every silhouette, red/blue ownership, ridge distinction, and crown treatment. |
+| Geometry and budget | All seven finals have one meaningful component, genuine alpha, transparent corners, no edge contact, 76.04–76.17% longest-bound fill, and at least 11.72% padding. The batch totals 55,462 bytes; its largest final is 10,834 bytes. |
+
+Contact-sheet order is X, O, blue Connect Four, red Connect Four, blue checker, red checker, crown. These QA sheets are inspection artifacts only. Stage remains `generation-batches`: seven completed custom records, 101 `generationPending` custom records, and nine `authorityReferencePending` quarter slots. No records outside this batch changed. This batch inspection does not claim a fresh browser gameplay audit.

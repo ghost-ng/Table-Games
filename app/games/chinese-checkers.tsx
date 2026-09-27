@@ -3,12 +3,17 @@ import { View, Pressable, ScrollView, StyleSheet } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
+  useReducedMotion,
   withSequence,
   withTiming,
   Easing,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { TactileCell } from '../../src/components/game-visuals/TactileCell';
+import { SelectionTrail } from '../../src/components/game-visuals/SelectionTrail';
+import { GamePieceImage } from '../../src/components/game-visuals/GamePieceImage';
+import { GAME_VISUALS } from '../../src/game-visuals/registry';
 import { GameShell } from '../../src/components/ui/GameShell';
 import { StatusRail } from '../../src/components/ui/StatusRail';
 import { useTheme } from '../../src/theme/ThemeProvider';
@@ -101,31 +106,12 @@ function Triangle({
   );
 }
 
-function Peg({ size, color, borderColor }: { size: number; color: string; borderColor: string }) {
-  const { theme } = useTheme();
+function Peg({ size, player }: { size: number; player: Player }) {
+  const { theme, themeName } = useTheme();
   return (
-    <View
-      style={{
-        width: size,
-        height: size,
-        borderRadius: size / 2,
-        backgroundColor: color,
-        borderWidth: Math.max(1, size * 0.06),
-        borderColor,
-      }}
-    >
-      <View
-        style={{
-          position: 'absolute',
-          left: size * 0.2,
-          top: size * 0.14,
-          width: size * 0.3,
-          height: size * 0.22,
-          borderRadius: size * 0.15,
-          backgroundColor: theme.colors.surfaceRaised,
-          opacity: 0.45,
-        }}
-      />
+    <View pointerEvents="none" aria-hidden accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={{ width: size, height: size }}>
+      <GamePieceImage source={GAME_VISUALS[themeName].chineseCheckers.marbles[player === 'player1' ? 0 : 1]} size={size} />
+      <ThemedText variant="caption" style={{ position: 'absolute', right: -1, bottom: -1, backgroundColor: theme.colors.surfaceRaised, color: theme.colors.text, borderRadius: size / 2, paddingHorizontal: 2, fontWeight: '700', fontSize: Math.max(7, size * 0.35), lineHeight: Math.max(9, size * 0.45) }}>{player === 'player1' ? '1' : '2'}</ThemedText>
     </View>
   );
 }
@@ -135,14 +121,12 @@ function MovingPeg({
   path,
   s,
   size,
-  color,
-  borderColor,
+  player,
 }: {
   path: number[];
   s: number;
   size: number;
-  color: string;
-  borderColor: string;
+  player: Player;
 }) {
   const x = useSharedValue(holeX(path[0], s));
   const y = useSharedValue(holeY(path[0], s));
@@ -175,7 +159,7 @@ function MovingPeg({
 
   return (
     <Animated.View pointerEvents="none" style={[{ position: 'absolute', left: 0, top: 0, zIndex: 30 }, style]}>
-      <Peg size={size} color={color} borderColor={borderColor} />
+      <Peg size={size} player={player} />
     </Animated.View>
   );
 }
@@ -184,6 +168,7 @@ function MovingPeg({
 
 export default function ChineseCheckersScreen() {
   const { theme } = useTheme();
+  const reducedMotion = useReducedMotion();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { contentMaxWidth, height: windowHeight, isLandscape, isTablet } = useResponsive();
@@ -266,6 +251,11 @@ export default function ChineseCheckersScreen() {
     (state: GameState, move: Move) => {
       const hops = move.path.length - 1;
       setSelected(null);
+      if (reducedMotion) {
+        setGameState(applyMove(state, move));
+        haptics.light();
+        return;
+      }
       setAnimating({ move, player: state.currentPlayer, id: ++animId.current });
       haptics.light();
       schedule(() => {
@@ -274,7 +264,7 @@ export default function ChineseCheckersScreen() {
         setAnimating(null);
       }, hops * HOP_MS + 40);
     },
-    [schedule]
+    [schedule, reducedMotion]
   );
 
   // ─── AI turn ──────────────────────────────────────────────────────────────
@@ -390,8 +380,6 @@ export default function ChineseCheckersScreen() {
   const center = { x: (6 + PAD_X) * s, y: (8 * ROW_SPACING + PAD_Y) * s };
   const bigSide = 12 * s + 2 * Math.sqrt(3) * STAR_MARGIN * s;
   const smallSide = 3 * s + 2 * Math.sqrt(3) * STAR_MARGIN * s;
-  const pegBorder = theme.colors.text;
-  const trailThickness = Math.max(2, s * 0.1);
 
   let statusText = '';
   let statusColor = theme.colors.textMuted;
@@ -442,9 +430,12 @@ export default function ChineseCheckersScreen() {
 
       {/* Holes */}
       {HOLES.map((h) => (
-        <View
+        <TactileCell
           key={`hole-${h.index}`}
           pointerEvents="none"
+          accessible={false}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
           style={{
             position: 'absolute',
             left: holeX(h.index, s) - holeSize / 2,
@@ -453,8 +444,11 @@ export default function ChineseCheckersScreen() {
             height: holeSize,
             borderRadius: holeSize / 2,
             backgroundColor: theme.colors.surfaceSunken,
-            borderWidth: 1.5,
+            borderWidth: theme.materials.boardBorderWidth,
+            borderTopWidth: theme.materials.cellDepth,
             borderColor: theme.colors.border,
+            shadowOpacity: 0,
+            elevation: 0,
           }}
         />
       ))}
@@ -462,31 +456,7 @@ export default function ChineseCheckersScreen() {
       {/* Last move trail */}
       {lastMove && (
         <>
-          {lastMove.path.slice(1).map((to, k) => {
-            const from = lastMove.path[k];
-            const x1 = holeX(from, s);
-            const y1 = holeY(from, s);
-            const x2 = holeX(to, s);
-            const y2 = holeY(to, s);
-            const len = Math.hypot(x2 - x1, y2 - y1);
-            return (
-              <View
-                key={`trail-${k}`}
-                pointerEvents="none"
-                style={{
-                  position: 'absolute',
-                  left: (x1 + x2) / 2 - len / 2,
-                  top: (y1 + y2) / 2 - trailThickness / 2,
-                  width: len,
-                  height: trailThickness,
-                  borderRadius: trailThickness / 2,
-                  backgroundColor: colorOf(lastMove.player),
-                  opacity: 0.45,
-                  transform: [{ rotate: `${Math.atan2(y2 - y1, x2 - x1)}rad` }],
-                }}
-              />
-            );
-          })}
+          <SelectionTrail points={lastMove.path.map((index) => ({ x: holeX(index, s) / boardWidth, y: holeY(index, s) / boardHeight }))} found={false} />
           <View
             pointerEvents="none"
             style={{
@@ -506,9 +476,13 @@ export default function ChineseCheckersScreen() {
 
       {/* Destination highlights */}
       {destinations.map((m) => (
-        <View
+        <TactileCell
           key={`dest-${m.to}`}
+          state="legal"
           pointerEvents="none"
+          accessible={false}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
           style={{
             position: 'absolute',
             left: holeX(m.to, s) - pegSize / 2,
@@ -543,7 +517,7 @@ export default function ChineseCheckersScreen() {
               transform: [{ scale: isSelected ? 1.12 : 1 }],
             }}
           >
-            <Peg size={pegSize} color={colorOf(occupant)} borderColor={isSelected ? theme.colors.text : pegBorder} />
+            <Peg size={pegSize} player={occupant} />
             {isSelected && (
               <View
                 style={{
@@ -568,8 +542,7 @@ export default function ChineseCheckersScreen() {
           path={animating.move.path}
           s={s}
           size={pegSize}
-          color={colorOf(animating.player)}
-          borderColor={pegBorder}
+          player={animating.player}
         />
       )}
 
@@ -588,6 +561,7 @@ export default function ChineseCheckersScreen() {
             accessibilityRole="button"
             accessibilityLabel={`${label}, hole ${h.index + 1}`}
             accessibilityState={{ selected: selected === h.index }}
+            aria-pressed={selected === h.index}
             disabled={inputLocked}
             style={{
               position: 'absolute',

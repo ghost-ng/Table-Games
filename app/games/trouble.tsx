@@ -6,12 +6,14 @@ import Animated, {
   cancelAnimation,
   useAnimatedStyle,
   useSharedValue,
-  withRepeat,
-  withSequence,
+  useReducedMotion,
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { ThemedBoardSurface } from '../../src/components/game-visuals/ThemedBoardSurface';
+import { GamePieceImage } from '../../src/components/game-visuals/GamePieceImage';
+import { GAME_VISUALS } from '../../src/game-visuals/registry';
 import { GameShell } from '../../src/components/ui/GameShell';
 import { StatusRail } from '../../src/components/ui/StatusRail';
 import { useTheme } from '../../src/theme/ThemeProvider';
@@ -127,7 +129,7 @@ interface PegProps {
   left: number;
   top: number;
   size: number;
-  color: string;
+  seat: Seat;
   ringColor: string;
   highlighted: boolean;
   selected: boolean;
@@ -137,33 +139,20 @@ interface PegProps {
   marker: string;
 }
 
-function Peg({ left, top, size, color, ringColor, highlighted, selected, lifted, onPress, label, marker }: PegProps) {
-  const { theme } = useTheme();
+function Peg({ left, top, size, seat, ringColor, highlighted, selected, lifted, onPress, label, marker }: PegProps) {
+  const { theme, themeName } = useTheme();
+  const reducedMotion = useReducedMotion();
   const x = useSharedValue(left);
   const y = useSharedValue(top);
-  const pulse = useSharedValue(1);
 
   useEffect(() => {
-    x.value = withTiming(left, { duration: STEP_MS - 20, easing: Easing.out(Easing.quad) });
-    y.value = withTiming(top, { duration: STEP_MS - 20, easing: Easing.out(Easing.quad) });
-  }, [left, top]);
-
-  useEffect(() => {
-    if (highlighted) {
-      pulse.value = withRepeat(
-        withSequence(withTiming(1.18, { duration: 420 }), withTiming(1, { duration: 420 })),
-        -1,
-      );
-    } else {
-      cancelAnimation(pulse);
-      pulse.value = withTiming(1, { duration: 120 });
-    }
-  }, [highlighted]);
+    x.value = withTiming(left, { duration: reducedMotion ? 0 : STEP_MS - 20, easing: Easing.out(Easing.quad) });
+    y.value = withTiming(top, { duration: reducedMotion ? 0 : STEP_MS - 20, easing: Easing.out(Easing.quad) });
+  }, [left, top, reducedMotion, x, y]);
 
   const posStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: x.value }, { translateY: y.value }],
   }));
-  const ringStyle = useAnimatedStyle(() => ({ transform: [{ scale: pulse.value }] }));
 
   const ring = size * 1.45;
   return (
@@ -188,7 +177,6 @@ function Peg({ left, top, size, color, ringColor, highlighted, selected, lifted,
               borderWidth: selected ? 3 : 2,
               borderColor: ringColor,
             },
-            ringStyle,
           ]}
         />
       )}
@@ -197,34 +185,20 @@ function Peg({ left, top, size, color, ringColor, highlighted, selected, lifted,
         disabled={!onPress}
         hitSlop={Math.max(size * 0.35, (44 - size) / 2)}
         accessibilityState={{ selected, disabled: !onPress }}
+        aria-pressed={onPress ? selected : undefined}
         accessibilityRole={onPress ? 'button' : undefined}
         accessibilityLabel={label}
         style={{
           width: size,
           height: size,
           borderRadius: size / 2,
-          backgroundColor: color,
-          borderWidth: Math.max(1, size * 0.08),
-          borderColor: theme.colors.text,
-          transform: [{ scale: lifted ? 1.15 : 1 }],
+          transform: [{ scale: lifted && !reducedMotion ? 1.15 : 1 }],
           alignItems: 'center',
           justifyContent: 'center',
         }}
       >
-        <View
-          pointerEvents="none"
-          style={{
-            position: 'absolute',
-            left: size * 0.18,
-            top: size * 0.14,
-            width: size * 0.3,
-            height: size * 0.3,
-            borderRadius: size * 0.15,
-            backgroundColor: theme.colors.surfaceRaised,
-            opacity: 0.45,
-          }}
-        />
-        <ThemedText variant="caption" style={{ color: theme.colors.text, backgroundColor: theme.colors.surfaceRaised, borderRadius: size / 2, paddingHorizontal: 2, fontSize: Math.max(7, size * 0.45), fontWeight: '700' }}>{marker}</ThemedText>
+        <GamePieceImage source={GAME_VISUALS[themeName].trouble.pawns[seat]} size={size * 1.3} style={{ position: 'absolute', left: -size * 0.15, top: -size * 0.15 }} />
+        <ThemedText variant="caption" aria-hidden accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={{ position: 'absolute', right: -2, bottom: -2, color: theme.colors.text, backgroundColor: theme.colors.surfaceRaised, borderRadius: size / 2, paddingHorizontal: 2, fontSize: Math.max(7, size * 0.4), lineHeight: Math.max(9, size * 0.5), fontWeight: '700' }}>{marker}</ThemedText>
       </Pressable>
     </Animated.View>
   );
@@ -269,6 +243,7 @@ function DieFace({ value, size, bg, pip, border }: { value: number; size: number
 
 export default function TroubleScreen() {
   const { theme } = useTheme();
+  const reducedMotion = useReducedMotion();
   const SEAT_COLORS = [theme.colors.player1, theme.colors.player2, theme.colors.success, theme.colors.warning];
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -391,7 +366,7 @@ export default function TroubleScreen() {
 
       const path = movePath(move);
       path.forEach((progress, i) => {
-        later(() => setMoving({ player: move.player, peg: move.peg, progress }), i * STEP_MS);
+        later(() => setMoving({ player: move.player, peg: move.peg, progress }), reducedMotion ? 0 : i * STEP_MS);
       });
 
       later(() => {
@@ -415,9 +390,9 @@ export default function TroubleScreen() {
         }
         if (roll === 6 && !move.capture) showMessage('Rolled a 6 — roll again!', 'good');
         goPhase('ready');
-      }, path.length * STEP_MS + 60);
+      }, reducedMotion ? 0 : path.length * STEP_MS + 60);
     },
-    [commitGame, goPhase, later, playerName, showMessage],
+    [commitGame, goPhase, later, playerName, showMessage, reducedMotion],
   );
 
   // ─── Rolling ──────────────────────────────────────────────────────────────
@@ -431,9 +406,10 @@ export default function TroubleScreen() {
     haptics.medium();
 
     tumble.value = 0;
-    tumble.value = withTiming(1, { duration: TUMBLE_MS, easing: Easing.out(Easing.cubic) });
+    cancelAnimation(tumble);
+    if (!reducedMotion) tumble.value = withTiming(1, { duration: TUMBLE_MS, easing: Easing.out(Easing.cubic) });
     if (tumbleRef.current) clearInterval(tumbleRef.current);
-    tumbleRef.current = setInterval(() => setDieValue(randomInt(6)), 80);
+    if (!reducedMotion) tumbleRef.current = setInterval(() => setDieValue(randomInt(6)), 80);
 
     later(() => {
       if (tumbleRef.current) clearInterval(tumbleRef.current);
@@ -473,7 +449,7 @@ export default function TroubleScreen() {
         later(() => executeMove(moves[0]), AUTO_MOVE_DELAY);
       }
     }, TUMBLE_MS);
-  }, [commitGame, executeMove, goPhase, isHuman, later, showMessage, tumble]);
+  }, [commitGame, executeMove, goPhase, isHuman, later, showMessage, tumble, reducedMotion]);
 
   // AI turns roll on their own.
   useEffect(() => {
@@ -707,16 +683,12 @@ export default function TroubleScreen() {
 
   const board = (
     <View style={styles.boardArea} onLayout={onBoardAreaLayout}>
-      <View
+      <ThemedBoardSurface
         testID="game-board"
         style={{
           width: S,
           height: S,
-          backgroundColor: theme.colors.board,
-          borderRadius: theme.borderRadius.lg,
-          borderWidth: 1,
-          borderColor: theme.colors.border,
-          ...theme.shadows.md,
+
         }}
       >
         {/* Home pads */}
@@ -873,7 +845,7 @@ export default function TroubleScreen() {
                 left={pt.x * S - pegD / 2}
                 top={pt.y * S - pegD / 2}
                 size={pegD}
-                color={SEAT_COLORS[p.seat]}
+                seat={p.seat}
                 ringColor={ringColor}
                 highlighted={movable && (humanTurn || selectedPeg === peg)}
                 selected={movable && selectedPeg === peg}
@@ -885,7 +857,7 @@ export default function TroubleScreen() {
             );
           }),
         )}
-      </View>
+      </ThemedBoardSurface>
     </View>
   );
 
@@ -915,7 +887,7 @@ export default function TroubleScreen() {
   const status = (
     <View style={styles.statusRow}>
       {statusText !== '' && (
-        <Animated.View key={statusText} entering={FadeIn.duration(150)}>
+        <Animated.View key={statusText} entering={reducedMotion ? undefined : FadeIn.duration(150)}>
           <ThemedText
             variant="label"
             style={{ color: statusColor, textAlign: 'center', fontWeight: message ? '700' : '500' }}
@@ -956,7 +928,7 @@ export default function TroubleScreen() {
 
   const footer =
     phase === 'over' && game.winner !== null ? (
-      <Animated.View entering={FadeIn.duration(250)} style={styles.resultPanel}>
+      <Animated.View entering={reducedMotion ? undefined : FadeIn.duration(250)} style={styles.resultPanel}>
         <ThemedText
           variant="heading"
           style={{ color: isSingle ? (game.winner === 0 ? theme.colors.success : theme.colors.error) : theme.colors.text, textAlign: 'center' }}

@@ -1,8 +1,12 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { View, Pressable, ScrollView, StyleSheet, type LayoutChangeEvent } from 'react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import Animated, { FadeIn, useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { ThemedBoardSurface } from '../../src/components/game-visuals/ThemedBoardSurface';
+import { SelectionTrail } from '../../src/components/game-visuals/SelectionTrail';
+import { GamePieceImage } from '../../src/components/game-visuals/GamePieceImage';
+import { GAME_VISUALS } from '../../src/game-visuals/registry';
 import { GameShell } from '../../src/components/ui/GameShell';
 import { StatusRail } from '../../src/components/ui/StatusRail';
 import { useTheme } from '../../src/theme/ThemeProvider';
@@ -64,45 +68,41 @@ function ringPoint(k: number, n: number) {
   return { x: 0.68 * Math.cos(a), y: 0.68 * Math.sin(a) };
 }
 
-// ─── Seed dots ──────────────────────────────────────────────────────────────
+// ─── Decorative seed art ──────────────────────────────────────────────────────────────
 
-function SeedDots({
+function SeedArt({
   count,
   width,
   height,
   dot,
-  colors,
+  pit,
 }: {
   count: number;
   width: number;
   height: number;
   dot: number;
-  colors: string[];
+  pit: number;
 }) {
+  const { themeName } = useTheme();
+  const seeds = GAME_VISUALS[themeName].mancala.seeds;
+  // Visual samples are capped; the engine count and numeric label remain authoritative.
   const n = Math.min(count, MAX_DOTS);
   const rx = Math.max(0, width / 2 - dot);
   const ry = Math.max(0, height / 2 - dot);
   return (
-    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+    <View pointerEvents="none" aria-hidden accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={StyleSheet.absoluteFill}>
       {Array.from({ length: n }, (_, k) => {
         const p = ringPoint(k, n);
         return (
-          <View
+          <GamePieceImage
             key={k}
+            // Stable pit/index mapping consumes no gameplay randomness.
+            source={seeds[(pit + k) % seeds.length]}
+            size={dot}
             style={{
               position: 'absolute',
               left: width / 2 + p.x * rx - dot / 2,
               top: height / 2 + p.y * ry - dot / 2,
-              width: dot,
-              height: dot,
-              borderRadius: dot / 2,
-              backgroundColor: colors[k % colors.length],
-              borderWidth: 1,
-              borderColor: colors[(k + 1) % colors.length],
-              shadowColor: colors[0],
-              shadowOffset: { width: 0, height: 1 },
-              shadowOpacity: 0.25,
-              opacity: 0.9,
             }}
           />
         );
@@ -121,6 +121,7 @@ interface Feedback {
 
 export default function MancalaScreen() {
   const { theme } = useTheme();
+  const reducedMotion = useReducedMotion();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { contentMaxWidth, width: windowWidth, height: windowHeight } = useResponsive();
@@ -158,6 +159,7 @@ export default function MancalaScreen() {
   const [animating, setAnimating] = useState(false);
   const [sourcePit, setSourcePit] = useState<number | null>(null);
   const [lastSown, setLastSown] = useState<number | null>(null);
+  const [sowTrail, setSowTrail] = useState<[number, number] | null>(null);
   const [aiThinking, setAiThinking] = useState(false);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [showGameOver, setShowGameOver] = useState(false);
@@ -211,6 +213,7 @@ export default function MancalaScreen() {
       setAnimating(true);
       setSourcePit(pit);
       setLastSown(null);
+      setSowTrail(null);
       setDisplayPits(frame.slice());
       haptics.light();
 
@@ -219,7 +222,8 @@ export default function MancalaScreen() {
           frame[idx]++;
           setDisplayPits(frame.slice());
           setLastSown(idx);
-        }, STEP_MS * (k + 1));
+          if (!reducedMotion) setSowTrail([result.path[k - 1] ?? pit, idx]);
+        }, reducedMotion ? 0 : STEP_MS * (k + 1));
       });
 
       const special = result.capture || result.sweep;
@@ -228,6 +232,7 @@ export default function MancalaScreen() {
         setDisplayPits(null);
         setSourcePit(null);
         setAnimating(false);
+        setSowTrail(null);
         setLastSown(result.capture ? null : result.path[result.path.length - 1] ?? null);
 
         const name = playerNames[mover];
@@ -250,9 +255,9 @@ export default function MancalaScreen() {
             showFeedback('Side empty. Remaining seeds go to their owners.', theme.colors.textMuted);
           }
         }
-      }, STEP_MS * result.path.length + (special ? 300 : 120));
+      }, reducedMotion ? 0 : STEP_MS * result.path.length + (special ? 300 : 120));
     },
-    [schedule, showFeedback, playerNames, mode, theme.colors]
+    [schedule, showFeedback, playerNames, mode, theme.colors, reducedMotion]
   );
 
   // ─── Game over: record once ──────────────────────────────────────────────
@@ -322,6 +327,7 @@ export default function MancalaScreen() {
     setAnimating(false);
     setSourcePit(null);
     setLastSown(null);
+    setSowTrail(null);
     setFeedback(null);
     setShowGameOver(false);
     recorded.current = false;
@@ -374,9 +380,8 @@ export default function MancalaScreen() {
   // ─── Board rendering ─────────────────────────────────────────────────────
 
   const pits = displayPits ?? gameState.pits;
-  const seedColors = [theme.colors.secondary, theme.colors.primary, theme.colors.textMuted];
   const countFont = Math.max(11, Math.round(unit * 0.28));
-  const dotSize = Math.max(5, unit * 0.12);
+  const dotSize = Math.max(7, unit * 0.19);
 
   const renderStore = (player: Player) => {
     const index = STORE[player];
@@ -407,7 +412,7 @@ export default function MancalaScreen() {
         }}
       >
         <View style={[StyleSheet.absoluteFill, { backgroundColor: color, opacity: active ? 0.22 : 0.12 }]} />
-        <SeedDots count={pits[index]} width={w} height={h} dot={dotSize} colors={seedColors} />
+        <SeedArt count={pits[index]} width={w} height={h} dot={dotSize} pit={index} />
         <View style={{ alignItems: 'center', flexDirection: vertical ? 'row' : 'column', gap: vertical ? 8 : 2 }}>
           <ThemedText
             variant="label"
@@ -443,6 +448,7 @@ export default function MancalaScreen() {
         accessibilityRole="button"
         accessibilityLabel={`${playerNames[owner]} pit ${owner === 'player1' ? index + 1 : index - 6}, ${pits[index]} seeds${legal ? ', sow seeds' : ''}`}
         accessibilityState={{ disabled: !legal, selected: isSource }}
+        aria-pressed={isSource}
         style={{
           position: 'absolute',
           left: r.x * unit,
@@ -468,12 +474,15 @@ export default function MancalaScreen() {
           }}
         >
           <View style={[StyleSheet.absoluteFill, { backgroundColor: color, opacity: legal ? 0.28 : 0.1 }]} />
-          <SeedDots count={pits[index]} width={d} height={d} dot={dotSize} colors={seedColors} />
+          <SeedArt count={pits[index]} width={d} height={d} dot={dotSize} pit={index} />
           <ThemedText
             variant="label"
             style={{
               fontSize: countFont,
               fontWeight: '700',
+              backgroundColor: theme.colors.surfaceRaised,
+              borderRadius: countFont,
+              paddingHorizontal: 3,
               color: pits[index] === 0 ? theme.colors.textMuted : theme.colors.text,
               textShadowColor: theme.colors.background,
               textShadowRadius: 3,
@@ -525,30 +534,27 @@ export default function MancalaScreen() {
 
       {/* Board */}
       <View style={styles.boardArea} onLayout={onBoardAreaLayout}>
-        <View
+        <ThemedBoardSurface
           testID="game-board"
           style={{
             width: boardW,
             height: boardH,
-            backgroundColor: theme.colors.board,
-            borderRadius: theme.borderRadius.lg,
-            borderWidth: 1,
-            borderColor: theme.colors.border,
-            ...theme.shadows.md,
+
           }}
         >
+          {!reducedMotion && sowTrail && <SelectionTrail points={sowTrail.map((index) => { const r = cellRect(index, vertical); return { x: (r.x + r.w / 2) * unit / boardW, y: (r.y + r.h / 2) * unit / boardH }; })} found={false} />}
           {renderStore('player2')}
           {renderStore('player1')}
           {Array.from({ length: 14 }, (_, i) => i)
             .filter((i) => !isStore(i))
             .map(renderPit)}
-        </View>
+        </ThemedBoardSurface>
       </View>
 
       {/* Status row: Extra turn / Capture / AI thinking (height always reserved) */}
       <View style={styles.statusRow}>
         {status && (
-          <Animated.View key={status.key} entering={FadeIn.duration(150)}>
+          <Animated.View key={status.key} entering={reducedMotion ? undefined : FadeIn.duration(150)}>
             <ThemedText variant="label" style={{ color: status.color, fontWeight: '700', textAlign: 'center' }}>
               {status.text}
             </ThemedText>

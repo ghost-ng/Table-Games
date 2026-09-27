@@ -25,7 +25,12 @@ import {
   calculateScore,
 } from '../../src/engines/boggle';
 import { useResponsive } from '../../src/utils/layout';
+import { calculateGridBoardLayout } from '../../src/utils/boardSizing';
 import { haptics } from '../../src/utils/haptics';
+
+const GRID_PADDING = 12;
+const GRID_BORDER_WIDTH = 1;
+const GRID_GAP = 8;
 
 const ROUND_DURATION_MS = 120_000; // 2 minutes
 
@@ -494,11 +499,20 @@ export default function BoggleScreen() {
   const { theme } = useTheme();
   const router = useRouter();
   const reducedMotion = useReducedMotion();
-  const { contentWidth, height, isTablet, isLandscape } = useResponsive();
+  const { contentWidth, height, isPhone, isTablet, isLandscape } = useResponsive();
   const shortLandscape = isLandscape && height < 560;
   // Width-bound on phones; on short/landscape screens keep the grid within ~55% of the height.
-  const gridSize = Math.min(contentWidth - 24, isTablet ? 520 : 400, shortLandscape ? 224 : Math.max(240, height * 0.55));
-  const cellSize = (gridSize - 48) / 4; // 24px padding and three 8px gaps
+  const { boardWidth: gridSize, cellSize } = calculateGridBoardLayout({
+    areaWidth: contentWidth - 24,
+    heightLimit: shortLandscape ? 224 : Math.max(240, height * 0.55),
+    maxSize: isTablet ? 520 : 400,
+    isPhone,
+    isLandscape,
+    columns: 4,
+    padding: GRID_PADDING,
+    borderWidth: GRID_BORDER_WIDTH,
+    gap: GRID_GAP,
+  });
 
   // Mode & phase
   const { mode: modeParam } = useLocalSearchParams<{ mode: string }>();
@@ -903,8 +917,9 @@ export default function BoggleScreen() {
             testID="game-board"
             entering={reducedMotion ? undefined : FadeIn.duration(300)}
             style={[styles.boardContainer, {
+              width: gridSize,
               backgroundColor: theme.colors.board,
-              borderWidth: 1,
+              borderWidth: GRID_BORDER_WIDTH,
               borderColor: theme.colors.border,
               borderRadius: theme.borderRadius.lg,
               flexShrink: 0,
@@ -1168,13 +1183,13 @@ const styles = StyleSheet.create({
 
   // Board
   boardContainer: {
-    padding: 12,
+    padding: GRID_PADDING,
     marginBottom: 12,
-    gap: 8,
+    gap: GRID_GAP,
   },
   boardRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: GRID_GAP,
     marginBottom: 0,
   },
   cell: {

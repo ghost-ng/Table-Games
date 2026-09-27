@@ -15,9 +15,12 @@ import { Button } from '../../src/components/ui/Button';
 import { ThemedText } from '../../src/components/ui/ThemedText';
 import { recordGameResult } from '../../src/storage/scores';
 import { useResponsive } from '../../src/utils/layout';
+import { calculateGridBoardLayout } from '../../src/utils/boardSizing';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 const GRID_SIZE = 10;
+const GRID_PADDING = 2;
+const GRID_BORDER_WIDTH = 1;
 const WORD_COUNT = 8;
 
 // ─── Embedded Word List (~50 common 4-8 letter words) ───────────────────────
@@ -209,7 +212,7 @@ export default function WordSearchScreen() {
   const { theme } = useTheme();
   const router = useRouter();
   const reducedMotion = useReducedMotion();
-  const { contentWidth, height, isTablet, isLandscape } = useResponsive();
+  const { contentWidth, height, isPhone, isTablet, isLandscape } = useResponsive();
   const shortLandscape = isLandscape && height < 560;
 
   // Mode & game state
@@ -442,13 +445,17 @@ export default function WordSearchScreen() {
 
   // ── Grid sizing ───────────────────────────────────────────────────────────
   // Width-bound on phones; on short/landscape screens keep the grid within ~60% of the height.
-  const boardWidth = Math.min(
-    contentWidth - 24,
-    isTablet ? 560 : 400,
-    shortLandscape ? 220 : Math.max(260, height * 0.6)
-  );
-  const cellSize = Math.floor(boardWidth / GRID_SIZE);
-  const actualBoardWidth = cellSize * GRID_SIZE;
+  const { boardWidth, cellSize } = calculateGridBoardLayout({
+    areaWidth: contentWidth - 24,
+    heightLimit: shortLandscape ? 220 : Math.max(260, height * 0.6),
+    maxSize: isTablet ? 560 : 400,
+    isPhone,
+    isLandscape,
+    columns: GRID_SIZE,
+    padding: GRID_PADDING,
+    borderWidth: GRID_BORDER_WIDTH,
+    gap: 0,
+  });
 
   // ── Preview line cells (while selecting) ──────────────────────────────────
   const previewCells = useMemo(() => {
@@ -497,8 +504,8 @@ export default function WordSearchScreen() {
             style={[
               styles.board,
               {
-                width: actualBoardWidth + 4,
-                borderWidth: 1,
+                width: boardWidth,
+                borderWidth: GRID_BORDER_WIDTH,
                 borderColor: theme.colors.border,
                 backgroundColor: theme.colors.surfaceRaised,
                 borderRadius: theme.borderRadius.md,
@@ -651,7 +658,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   board: {
-    padding: 2,
+    padding: GRID_PADDING,
     alignSelf: 'center',
   },
   gridRow: {

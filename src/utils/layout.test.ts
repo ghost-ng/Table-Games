@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { calculateBoardSize, resolveBoardInset, type CalculateBoardSizeOptions } from './boardSizing';
+import { calculateBoardSize, calculateGridBoardLayout, resolveBoardInset, type CalculateBoardSizeOptions } from './boardSizing';
 
 // Literal expectations catch duplicate portrait gutters, lost height constraints,
 // incorrect aspect-ratio handling, ignored caps/floors, and fractional widths.
@@ -85,3 +85,84 @@ test('portrait phone inset resolution fills a measured area through the sizing c
     areaWidth: 366, areaHeight: 600, maxSize: 560, minSize: 200, inset, aspectRatio: 1, extraHeight: 0,
   }), 366);
 });
+
+const gridCases = [
+  {
+    name: 'Crossword fills a 390x900 portrait shell with its real 6px chrome',
+    options: { areaWidth: 366, heightLimit: 396, maxSize: 400, isPhone: true, isLandscape: false, columns: 9, padding: 1, borderWidth: 2, gap: 0 },
+    boardWidth: 366, cellSize: 40,
+  },
+  {
+    name: 'Crossword fills a 430x1000 portrait shell beyond the old phone cap',
+    options: { areaWidth: 406, heightLimit: 440, maxSize: 400, isPhone: true, isLandscape: false, columns: 9, padding: 1, borderWidth: 2, gap: 0 },
+    boardWidth: 406, cellSize: 44.44444444444444,
+  },
+  {
+    name: 'Word Search fills a 390x900 portrait shell with its real 6px chrome',
+    options: { areaWidth: 366, heightLimit: 540, maxSize: 400, isPhone: true, isLandscape: false, columns: 10, padding: 2, borderWidth: 1, gap: 0 },
+    boardWidth: 366, cellSize: 36,
+  },
+  {
+    name: 'Word Search fills a 430x1000 portrait shell beyond the old phone cap',
+    options: { areaWidth: 406, heightLimit: 600, maxSize: 400, isPhone: true, isLandscape: false, columns: 10, padding: 2, borderWidth: 1, gap: 0 },
+    boardWidth: 406, cellSize: 40,
+  },
+  {
+    name: 'Word Grid fills a 390x900 portrait shell without border overflow',
+    options: { areaWidth: 366, heightLimit: 495, maxSize: 400, isPhone: true, isLandscape: false, columns: 4, padding: 12, borderWidth: 1, gap: 8 },
+    boardWidth: 366, cellSize: 79,
+  },
+  {
+    name: 'Word Grid fills a 430x1000 portrait shell beyond the old phone cap',
+    options: { areaWidth: 406, heightLimit: 550, maxSize: 400, isPhone: true, isLandscape: false, columns: 4, padding: 12, borderWidth: 1, gap: 8 },
+    boardWidth: 406, cellSize: 89,
+  },
+  {
+    name: 'Crossword retains an authoritative height cap at 430x900',
+    options: { areaWidth: 406, heightLimit: 396, maxSize: 400, isPhone: true, isLandscape: false, columns: 9, padding: 1, borderWidth: 2, gap: 0 },
+    boardWidth: 396, cellSize: 43.333333333333336,
+  },
+  {
+    name: 'Crossword retains its compact portrait height cap',
+    options: { areaWidth: 366, heightLimit: 200, maxSize: 400, isPhone: true, isLandscape: false, columns: 9, padding: 1, borderWidth: 2, gap: 0 },
+    boardWidth: 200, cellSize: 21.555555555555557,
+  },
+  {
+    name: 'Word Search retains its 220px short-landscape cap',
+    options: { areaWidth: 576, heightLimit: 220, maxSize: 560, isPhone: false, isLandscape: true, columns: 10, padding: 2, borderWidth: 1, gap: 0 },
+    boardWidth: 220, cellSize: 21.4,
+  },
+  {
+    name: 'Word Grid retains its 224px short-landscape cap',
+    options: { areaWidth: 576, heightLimit: 224, maxSize: 520, isPhone: false, isLandscape: true, columns: 4, padding: 12, borderWidth: 1, gap: 8 },
+    boardWidth: 224, cellSize: 43.5,
+  },
+  {
+    name: 'Crossword retains its 540px tablet and desktop cap',
+    options: { areaWidth: 696, heightLimit: 900, maxSize: 540, isPhone: false, isLandscape: false, columns: 9, padding: 1, borderWidth: 2, gap: 0 },
+    boardWidth: 540, cellSize: 59.333333333333336,
+  },
+  {
+    name: 'Word Search retains its 560px tablet and desktop cap',
+    options: { areaWidth: 696, heightLimit: 900, maxSize: 560, isPhone: false, isLandscape: false, columns: 10, padding: 2, borderWidth: 1, gap: 0 },
+    boardWidth: 560, cellSize: 55.4,
+  },
+  {
+    name: 'Word Grid retains its 520px tablet and desktop cap',
+    options: { areaWidth: 696, heightLimit: 900, maxSize: 520, isPhone: false, isLandscape: false, columns: 4, padding: 12, borderWidth: 1, gap: 8 },
+    boardWidth: 520, cellSize: 117.5,
+  },
+  {
+    name: 'landscape phones retain their 400px width cap',
+    options: { areaWidth: 526, heightLimit: 600, maxSize: 400, isPhone: true, isLandscape: true, columns: 4, padding: 12, borderWidth: 1, gap: 8 },
+    boardWidth: 400, cellSize: 87.5,
+  },
+];
+
+for (const { name, options, boardWidth, cellSize } of gridCases) {
+  test(name, () => {
+    const actual = calculateGridBoardLayout(options);
+    assert.equal(actual.boardWidth, boardWidth);
+    assert.equal(actual.cellSize, cellSize);
+  });
+}

@@ -23,3 +23,25 @@ export function resolveBoardInset({ inset, phoneInset, isPhone, isLandscape }: {
 }): number {
   return isPhone && !isLandscape ? phoneInset ?? 0 : inset;
 }
+
+export interface GridBoardLayoutOptions {
+  areaWidth: number;
+  heightLimit: number;
+  maxSize: number;
+  isPhone: boolean;
+  isLandscape: boolean;
+  columns: number;
+  padding: number;
+  borderWidth: number;
+  gap: number;
+}
+
+/** Fits the outer board, then distributes its content width without flooring cells. */
+export function calculateGridBoardLayout({
+  areaWidth, heightLimit, maxSize, isPhone, isLandscape, columns, padding, borderWidth, gap,
+}: GridBoardLayoutOptions): { boardWidth: number; cellSize: number } {
+  const widthCap = isPhone && !isLandscape ? Number.POSITIVE_INFINITY : maxSize;
+  const boardWidth = Math.min(areaWidth, widthCap, heightLimit);
+  const cellSize = (boardWidth - (padding + borderWidth) * 2 - gap * (columns - 1)) / columns;
+  return { boardWidth, cellSize };
+}

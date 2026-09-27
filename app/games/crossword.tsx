@@ -15,9 +15,11 @@ import { ThemedText } from '../../src/components/ui/ThemedText';
 import { Button } from '../../src/components/ui/Button';
 import { recordGameResult } from '../../src/storage/scores';
 import { useResponsive } from '../../src/utils/layout';
+import { calculateGridBoardLayout } from '../../src/utils/boardSizing';
 
 const GRID_SIZE = 9;
-const GRID_PADDING = 8;
+const GRID_PADDING = 1;
+const GRID_BORDER_WIDTH = 2;
 
 // ─── QWERTY keyboard rows ───────────────────────────────────────────────────
 const KEYBOARD_ROWS = [
@@ -271,11 +273,20 @@ function formatTime(totalSeconds: number): string {
 type Phase = 'modeSelect' | 'playing';
 
 export default function CrosswordScreen() {
-  const { contentWidth, height, isTablet, isLandscape } = useResponsive();
+  const { contentWidth, height, isPhone, isTablet, isLandscape } = useResponsive();
   // Keep the board above the fixed keyboard on compact phones.
-  const gridWidth = Math.min(contentWidth - 24, isTablet ? 540 : 400, height <= 640 && !isLandscape ? 200 : Math.max(200, height * 0.44));
+  const { boardWidth: gridWidth, cellSize } = calculateGridBoardLayout({
+    areaWidth: contentWidth - 24,
+    heightLimit: height <= 640 && !isLandscape ? 200 : Math.max(200, height * 0.44),
+    maxSize: isTablet ? 540 : 400,
+    isPhone,
+    isLandscape,
+    columns: GRID_SIZE,
+    padding: GRID_PADDING,
+    borderWidth: GRID_BORDER_WIDTH,
+    gap: 0,
+  });
   const keyWidth = Math.min(44, ((isLandscape && height < 560 ? (contentWidth - 24) * 0.58 : contentWidth - 24) - 45) / 10);
-  const cellSize = Math.floor((gridWidth - GRID_PADDING * 2) / GRID_SIZE);
   const { theme } = useTheme();
   const router = useRouter();
   const reducedMotion = useReducedMotion();
@@ -730,6 +741,7 @@ export default function CrosswordScreen() {
             style={[
               styles.gridContainer,
               {
+                width: gridWidth,
                 borderColor: theme.colors.border,
                 borderRadius: theme.borderRadius.md,
                 backgroundColor: theme.colors.border,
@@ -1000,8 +1012,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   gridContainer: {
-    borderWidth: 2,
-    padding: 1,
+    borderWidth: GRID_BORDER_WIDTH,
+    padding: GRID_PADDING,
     marginBottom: 12,
   },
   gridRow: {

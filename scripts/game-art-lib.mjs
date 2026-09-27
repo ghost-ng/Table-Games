@@ -1,7 +1,7 @@
 /** Deterministic, individual-source game-art validation and authoring helpers. */
 import assert from 'node:assert/strict';
-import { lstat, mkdir, readFile, realpath, stat, writeFile } from 'node:fs/promises';
-import { dirname, resolve, sep } from 'node:path';
+import { lstat, mkdir, readFile, readlink, realpath, stat, writeFile } from 'node:fs/promises';
+import { dirname, relative, resolve, sep } from 'node:path';
 import sharp from 'sharp';
 
 export const MAX_GAME_ART_BYTES = 2 * 1024 * 1024;
@@ -58,6 +58,11 @@ export function validateManifest(manifest, { requiredPaths } = {}) {
     if (!record.legacy && !record.authorityReferencePending) {
       assert.notEqual(record.sourcePath, record.finalPath, 'Individual source path must differ from final output path');
     }
+  }
+  for (const record of manifest.records) {
+    assert.ok(!outputs.has(record.sourcePath) || (record.sourcePath === record.finalPath
+      && (record.legacy === true || record.authorityReferencePending === true)),
+    `Final output collides with another registered source: ${record.sourcePath}`);
   }
   if (requiredPaths) assert.deepEqual([...outputs].sort(), [...requiredPaths].sort(), 'Manifest catalog coverage must be exact');
   return manifest.records;
@@ -155,6 +160,60 @@ async function containedPath(root, relativePath, { output = false } = {}) {
   return path;
 }
 
+/** Compare every selected output with every registered source, not just its own. */
+export async function assertManifestSourcePreservation(manifest, { root = process.cwd(), selectedRecords = manifest.records } = {}) {
+  validateManifest(manifest);
+  const project = await realpath(root);
+  const sourcesByPath = new Map(); const sourcesByIdentity = new Map();
+  for (const record of manifest.records) {
+    const source = await canonicalPath(resolve(project, record.sourcePath));
+    assert.ok(source.startsWith(project + sep), `Registered source escapes outside project: ${record.sourcePath}`);
+    sourcesByPath.set(source, record.sourcePath);
+    try {
+      const metadata = await stat(source, { bigint: true });
+      sourcesByIdentity.set(`${metadata.dev}:${metadata.ino}`, record.sourcePath);
+    } catch (error) {
+      // Unselected sources may not have been generated yet; their canonical
+      // paths (including dangling links) must still be protected before writes.
+      if (error.code !== 'ENOENT') throw error;
+    }
+  }
+  for (const record of selectedRecords) {
+    const finalPath = await containedPath(root, record.finalPath, { output: true });
+    const sourcePath = sourcesByPath.get(await canonicalPath(finalPath));
+    assert.equal(sourcePath, undefined, `Final output ${record.finalPath} collides with registered source ${sourcePath}`);
+    try {
+      const metadata = await stat(finalPath, { bigint: true });
+      const source = sourcesByIdentity.get(`${metadata.dev}:${metadata.ino}`);
+      assert.equal(source, undefined, `Final output ${record.finalPath} aliases registered source ${source}`);
+    } catch (error) { if (error.code !== 'ENOENT') throw error; }
+  }
+}
+
+/** Resolve file/directory aliases even when the final file has not been created. */
+async function canonicalPath(path, seenLinks = new Set()) {
+  try { return await realpath(path); } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+  }
+  let existing = path;
+  while (true) {
+    let metadata;
+    try { metadata = await lstat(existing); } catch (error) {
+      if (error.code !== 'ENOENT') throw error;
+      existing = dirname(existing); continue;
+    }
+    const suffix = relative(existing, path);
+    if (metadata.isSymbolicLink()) {
+      assert.ok(!seenLinks.has(existing), 'Registered source symbolic links cannot form a cycle');
+      seenLinks.add(existing);
+      const parent = await realpath(dirname(existing));
+      const target = resolve(parent, await readlink(existing));
+      return resolve(await canonicalPath(target, seenLinks), suffix);
+    }
+    return resolve(await realpath(existing), suffix);
+  }
+}
+
 /** Validate one individual source and write exactly its requested final WebP. */
 export async function normalizeGameArtAsset(record, { root = process.cwd(), write = true } = {}) {
   assert.ok(!Object.hasOwn(record, 'legacy'), 'Cannot normalize legacy placeholders; replace the source first');
@@ -185,7 +244,17 @@ export async function normalizeGameArtAsset(record, { root = process.cwd(), writ
     .webp({ quality: 86, alphaQuality: 100, effort: 6 }).toBuffer();
   const metrics = assertImageMetrics(await readImageMetrics(data), record);
   assert.ok(data.length <= MAX_GAME_ART_FILE_BYTES, 'Normalized WebP exceeds 64 KiB per-file budget');
-  if (write) { await mkdir(dirname(finalPath), { recursive: true }); await writeFile(finalPath, data); }
+  if (write) {
+    let manifest;
+    try {
+      manifest = JSON.parse(await readFile(resolve(root, 'docs/design/game-art-sources.json'), 'utf8'));
+    } catch (error) {
+      if (error.code !== 'ENOENT') throw error;
+      manifest = { schemaVersion: 1, stage: 'individual-assets', records: [record] };
+    }
+    await assertManifestSourcePreservation(manifest, { root, selectedRecords: [record] });
+    await mkdir(dirname(finalPath), { recursive: true }); await writeFile(finalPath, data);
+  }
   return { data, metrics, finalPath };
 }
 

@@ -184,6 +184,13 @@ test('manifest rejects malformed records, duplicate identities, missing catalog 
   assert.throws(() => validate({ ...manifestFixture(), stage: 'anything' }), /stage/i);
 });
 
+test('manifest rejects an output path used by another registered source', () => {
+  const x = individualRecord();
+  const o = individualRecord({ role: 'o', sourcePath: x.finalPath,
+    finalPath: 'assets/pieces/modern/tic-tac-toe/o.webp' });
+  assert.throws(() => art.validateManifest({ schemaVersion: 1, stage: 'accepted', records: [x, o] }), /source|collision/i);
+});
+
 test('decoded alpha metrics measure visible bounds, padding, and dominant components', async () => {
   const metrics = await requireHelper('readImageMetrics')(await fixture());
   assert.equal(metrics.width, 100); assert.equal(metrics.height, 100); assert.equal(metrics.hasAlpha, true);
@@ -309,6 +316,101 @@ test('the executable normalizer validates all selected sources before writing an
   const before = readFileSync(resolve(temporaryRoot, records[0].finalPath));
   assert.equal(invoke('--asset', 'modern/tic-tac-toe/x').status, 0);
   assert.deepEqual(readFileSync(resolve(temporaryRoot, records[0].finalPath)), before);
+});
+
+test('cross-record source bytes survive both all-asset and single-asset CLI selections, including filesystem aliases', async (t) => {
+  for (const kind of ['path', 'symlink', 'hardlink', 'relative-link']) {
+    for (const selection of ['all', 'single']) {
+      await t.test(`${kind} collision, ${selection} selection`, async (child) => {
+        const temporaryRoot = mkdtempSync(resolve(tmpdir(), 'game-art-cross-record-'));
+        child.after(() => rmSync(temporaryRoot, { recursive: true, force: true }));
+        mkdirSync(resolve(temporaryRoot, 'scripts'));
+        for (const filename of ['normalize-game-art.mjs', 'game-art-lib.mjs']) {
+          copyFileSync(resolve(root, 'scripts', filename), resolve(temporaryRoot, 'scripts', filename));
+        }
+        symlinkSync(resolve(root, 'node_modules'), resolve(temporaryRoot, 'node_modules'));
+        const x = individualRecord();
+        const o = individualRecord({ role: 'o',
+          sourcePath: kind === 'path' ? x.finalPath : kind === 'relative-link'
+            ? 'docs/design/linked-source/o.png' : 'docs/design/source-art/modern/tic-tac-toe/o.png',
+          finalPath: 'assets/pieces/modern/tic-tac-toe/o.webp' });
+        const xSource = resolve(temporaryRoot, x.sourcePath); const oSource = resolve(temporaryRoot, o.sourcePath);
+        const xFinal = resolve(temporaryRoot, x.finalPath);
+        mkdirSync(dirname(xSource), { recursive: true }); mkdirSync(dirname(xFinal), { recursive: true });
+        const input = await fixture();
+        const other = await fixture({ rectangles: [{ left: 12, top: 12, width: 76, height: 76, color: [210, 50, 80] }] });
+        writeFileSync(xSource, input); writeFileSync(xFinal, other);
+        if (kind === 'symlink') symlinkSync(xFinal, oSource);
+        if (kind === 'hardlink') linkSync(xFinal, oSource);
+        if (kind === 'relative-link') {
+          const directory = resolve(temporaryRoot, 'assets/pieces/modern/alias-source');
+          mkdirSync(directory);
+          symlinkSync(directory, resolve(temporaryRoot, 'docs/design/linked-source'));
+          symlinkSync('../tic-tac-toe/x.webp', resolve(directory, 'o.png'));
+        }
+        writeFileSync(resolve(temporaryRoot, 'docs/design/game-art-sources.json'),
+          JSON.stringify({ schemaVersion: 1, stage: 'accepted', records: [x, o] }));
+        const args = selection === 'all' ? ['--all'] : ['--asset', 'modern/tic-tac-toe/x'];
+        const cli = spawnSync(process.execPath, ['scripts/normalize-game-art.mjs', ...args],
+          { cwd: temporaryRoot, encoding: 'utf8' });
+        assert.equal(readFileSync(oSource).equals(other), true, 'The registered O source must remain byte-identical');
+        assert.deepEqual(readFileSync(xSource), input);
+        assert.equal(existsSync(resolve(temporaryRoot, o.finalPath)), false, 'No final may be created before collision rejection');
+        assert.equal(cli.status, 1, cli.stderr);
+        assert.match(cli.stderr, /source|collision|alias/i);
+      });
+    }
+  }
+});
+
+test('direct normalization protects every source registered in the project manifest', async (t) => {
+  const temporaryRoot = mkdtempSync(resolve(tmpdir(), 'game-art-direct-cross-record-'));
+  t.after(() => rmSync(temporaryRoot, { recursive: true, force: true }));
+  const x = individualRecord();
+  const o = individualRecord({ role: 'o', sourcePath: 'docs/design/source-art/modern/tic-tac-toe/o.png',
+    finalPath: 'assets/pieces/modern/tic-tac-toe/o.webp' });
+  const xSource = resolve(temporaryRoot, x.sourcePath); const xFinal = resolve(temporaryRoot, x.finalPath);
+  const oSource = resolve(temporaryRoot, o.sourcePath);
+  mkdirSync(dirname(xSource), { recursive: true }); mkdirSync(dirname(xFinal), { recursive: true });
+  const input = await fixture(); const other = await fixture({ rectangles: [{ left: 12, top: 12, width: 76, height: 76, color: [210, 50, 80] }] });
+  writeFileSync(xSource, input); writeFileSync(xFinal, other); linkSync(xFinal, oSource);
+  writeFileSync(resolve(temporaryRoot, 'docs/design/game-art-sources.json'),
+    JSON.stringify({ schemaVersion: 1, stage: 'accepted', records: [x, o] }));
+  await art.normalizeGameArtAsset(x, { root: temporaryRoot, write: false });
+  assert.equal(readFileSync(oSource).equals(other), true, 'Dry-run preflight must not write source bytes');
+  await assert.rejects(art.normalizeGameArtAsset(x, { root: temporaryRoot }), /source|collision|alias/i);
+  assert.equal(readFileSync(oSource).equals(other), true, 'Direct writes must preserve every registered source');
+});
+
+test('registered source aliases cannot be created by writing a previously missing selected output', async (t) => {
+  for (const kind of ['file-symlink', 'directory-symlink']) {
+    await t.test(kind, async (child) => {
+      const temporaryRoot = mkdtempSync(resolve(tmpdir(), 'game-art-future-alias-'));
+      child.after(() => rmSync(temporaryRoot, { recursive: true, force: true }));
+      mkdirSync(resolve(temporaryRoot, 'scripts'));
+      for (const filename of ['normalize-game-art.mjs', 'game-art-lib.mjs']) {
+        copyFileSync(resolve(root, 'scripts', filename), resolve(temporaryRoot, 'scripts', filename));
+      }
+      symlinkSync(resolve(root, 'node_modules'), resolve(temporaryRoot, 'node_modules'));
+      const x = individualRecord();
+      const o = individualRecord({ role: 'o',
+        sourcePath: kind === 'file-symlink' ? 'docs/design/source-art/modern/tic-tac-toe/o.png' : 'docs/design/linked-output/x.webp',
+        finalPath: 'assets/pieces/modern/tic-tac-toe/o.webp' });
+      const source = resolve(temporaryRoot, x.sourcePath); const final = resolve(temporaryRoot, x.finalPath);
+      mkdirSync(dirname(source), { recursive: true }); mkdirSync(dirname(final), { recursive: true });
+      const input = await fixture(); writeFileSync(source, input);
+      if (kind === 'file-symlink') symlinkSync(final, resolve(temporaryRoot, o.sourcePath));
+      else symlinkSync(dirname(final), resolve(temporaryRoot, 'docs/design/linked-output'));
+      writeFileSync(resolve(temporaryRoot, 'docs/design/game-art-sources.json'),
+        JSON.stringify({ schemaVersion: 1, stage: 'accepted', records: [x, o] }));
+      const cli = spawnSync(process.execPath, ['scripts/normalize-game-art.mjs', '--asset', 'modern/tic-tac-toe/x'],
+        { cwd: temporaryRoot, encoding: 'utf8' });
+      assert.equal(readFileSync(source).equals(input), true);
+      assert.equal(existsSync(final), false, 'An output must not create another registered source through an alias');
+      assert.equal(existsSync(resolve(temporaryRoot, o.sourcePath)), false);
+      assert.equal(cli.status, 1); assert.match(cli.stderr, /source|collision|alias/i);
+    });
+  }
 });
 
 test('normalizer selectors choose all, family, or an exact theme/family/role and reject ambiguous arguments', () => {

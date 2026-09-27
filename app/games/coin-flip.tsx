@@ -92,11 +92,13 @@ export default function CoinFlipScreen() {
     setResult(null);
   }, []);
 
-  const liftStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: reducedMotion ? 0 : -lift.value * coinSize * 0.12 }, { scale: reducedMotion ? 1 : 1 + lift.value * 0.04 }],
-  }));
-  const flipStyle = useAnimatedStyle(() => ({
-    transform: [{ perspective: 800 }, { rotateY: `${flipping && !reducedMotion ? rotation.value : 0}deg` }],
+  const motionStyle = useAnimatedStyle(() => ({
+    transform: [
+      { perspective: 800 },
+      { translateY: reducedMotion ? 0 : -lift.value * coinSize * 0.12 },
+      { scale: reducedMotion ? 1 : 1 + lift.value * 0.04 },
+      { rotateY: `${flipping && !reducedMotion ? rotation.value : 0}deg` },
+    ],
   }));
   const face = flipping ? 'edge' : result === 'T' ? 'tails' : 'heads';
 
@@ -138,7 +140,7 @@ export default function CoinFlipScreen() {
       <View style={[styles.body, { flexDirection: sideBySide ? 'row' : 'column' }]}>
         <View style={styles.coinArea} onLayout={onCoinAreaLayout}
           accessibilityLabel={flipping ? 'Coin flipping' : result === 'T' ? 'Coin showing Tails' : 'Coin showing Heads'}>
-          <Animated.View testID={`coin-${face}`} style={[{ width: coinSize, height: coinSize }, liftStyle, flipStyle]}>
+          <Animated.View testID={`coin-${face}`} style={[{ width: coinSize, height: coinSize }, motionStyle]}>
             <GamePieceImage source={GAME_VISUALS[themeName].coinFlip[face]} size={coinSize} />
           </Animated.View>
         </View>

@@ -92,7 +92,7 @@ function Die({
       accessibilityRole="button"
       accessibilityLabel={`d${sides} showing ${rolling && !held ? 'rolling' : value}${held ? ', held, tap to release' : canHold ? ', tap to hold' : ', tap to roll'}`}
       accessibilityState={{ selected: held, disabled: rolling }}
-      {...(Platform.OS === 'web' ? { 'aria-pressed': held, 'aria-selected': held } : {})}
+      {...(Platform.OS === 'web' ? { 'aria-pressed': held } : {})}
       testID={`die-${sides}`}
       disabled={rolling}
       onFocus={focus.onFocus}
@@ -308,7 +308,7 @@ export default function DiceScreen() {
 function DieTypeControl({ sides, active, disabled, onPress }: { sides: DieType; active: boolean; disabled: boolean; onPress: () => void }) {
   const { theme } = useTheme();
   const focus = useWebFocusRing(theme.colors.focus);
-  return <Pressable accessibilityRole="button" accessibilityLabel={`d${sides}${active ? ', selected' : ''}`} accessibilityState={{ selected: active, disabled }} {...(Platform.OS === 'web' ? { 'aria-pressed': active, 'aria-selected': active } : {})} disabled={disabled} onPress={onPress} onFocus={focus.onFocus} onBlur={focus.onBlur}
+  return <Pressable accessibilityRole="button" accessibilityLabel={`d${sides}${active ? ', selected' : ''}`} accessibilityState={{ selected: active, disabled }} {...(Platform.OS === 'web' ? { 'aria-pressed': active } : {})} disabled={disabled} onPress={onPress} onFocus={focus.onFocus} onBlur={focus.onBlur}
     style={[styles.chip, { backgroundColor: active ? theme.colors.primary : theme.colors.surfaceRaised, borderColor: active ? theme.colors.primary : theme.colors.border, borderRadius: theme.borderRadius.md, opacity: disabled ? 0.5 : 1 }, focus.style]}>
     <ThemedText variant="label" style={{ fontSize: 13, fontWeight: '700', color: active ? theme.colors.onPrimary : theme.colors.text }}>{active ? '✓ ' : ''}d{sides}</ThemedText>
   </Pressable>;

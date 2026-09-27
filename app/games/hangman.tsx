@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -9,7 +8,7 @@ import {
 } from 'react-native';
 import { useRouter, Stack, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import Animated, { FadeIn, useReducedMotion } from 'react-native-reanimated';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { GameShell } from '../../src/components/ui/GameShell';
 import { Card } from '../../src/components/ui/Card';
@@ -26,6 +25,8 @@ import {
 import { selectWord } from '../../src/ai/hangman-ai';
 import { DifficultySelector, type Difficulty } from '../../src/components/ui/DifficultySelector';
 import { useResponsive } from '../../src/utils/layout';
+import { GamePieceImage } from '../../src/components/game-visuals/GamePieceImage';
+import { GAME_VISUALS } from '../../src/game-visuals/registry';
 import { getHangmanStage } from '../../src/utils/hangmanStages';
 import { useWebFocusRing } from '../../src/utils/useWebFocusRing';
 
@@ -38,33 +39,19 @@ const KEYBOARD_ROWS = [
 ];
 
 // ─── Hangman Figure ─────────────────────────────────────────────────────────
-const HANGMAN_STAGE_IMAGES = [
-  require('../../assets/pieces/hangman/hangman-0.webp'),
-  require('../../assets/pieces/hangman/hangman-1.webp'),
-  require('../../assets/pieces/hangman/hangman-2.webp'),
-  require('../../assets/pieces/hangman/hangman-3.webp'),
-  require('../../assets/pieces/hangman/hangman-4.webp'),
-  require('../../assets/pieces/hangman/hangman-5.webp'),
-  require('../../assets/pieces/hangman/hangman-6.webp'),
-];
-
 interface HangmanFigureProps {
   wrongGuesses: number;
   size: number;
 }
 
 function HangmanFigure({ wrongGuesses, size }: HangmanFigureProps) {
+  const { themeName } = useTheme();
   const stage = getHangmanStage(wrongGuesses);
 
   return (
-    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
-        <Image
-          source={HANGMAN_STAGE_IMAGES[stage]}
-          accessibilityLabel={`Hangman stage ${stage} of 6`}
-          testID={`hangman-stage-${stage}`}
-          style={{ width: size, height: size }}
-          resizeMode="contain"
-        />
+    <View accessibilityRole="image" accessibilityLabel={`Hangman stage ${stage} of 6; ${stage} of 6 incorrect guesses`} testID={`hangman-stage-${stage}`} style={{ alignItems: 'center' }}>
+      <GamePieceImage source={GAME_VISUALS[themeName].hangman[getHangmanStage(wrongGuesses)]} size={size} />
+      <ThemedText variant="caption">{stage} of 6 incorrect guesses</ThemedText>
     </View>
   );
 }
@@ -102,6 +89,7 @@ type Phase = 'modeSelect' | 'wordEntry' | 'passDevice' | 'playing';
 
 export default function HangmanScreen() {
   const { theme } = useTheme();
+  const reducedMotion = useReducedMotion();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { contentWidth, height, isTablet } = useResponsive();
@@ -266,6 +254,7 @@ export default function HangmanScreen() {
       {phase === 'wordEntry' && (
         <View style={styles.centeredPhase}>
           <Card style={styles.setupCard}>
+          <HangmanFigure wrongGuesses={0} size={120} />
           <ThemedText variant="caption" style={{ color: theme.colors.primary, textAlign: 'center', marginBottom: 12 }}>PASS & PLAY</ThemedText>
           <ThemedText variant="heading" style={styles.phaseTitle}>
             Player 1
@@ -322,6 +311,7 @@ export default function HangmanScreen() {
       {phase === 'passDevice' && (
         <View style={styles.centeredPhase}>
           <Card style={styles.setupCard}>
+          <HangmanFigure wrongGuesses={0} size={120} />
           <ThemedText variant="caption" style={{ color: theme.colors.primary, textAlign: 'center', marginBottom: 12 }}>YOUR WORD IS READY</ThemedText>
           <ThemedText variant="heading" style={styles.phaseTitle}>
             Pass to Player 2
@@ -387,7 +377,7 @@ export default function HangmanScreen() {
 
           {/* Word display */}
           <Animated.View
-            entering={FadeIn.duration(theme.animation.duration.medium)}
+            entering={reducedMotion ? undefined : FadeIn.duration(theme.animation.duration.medium)}
             style={styles.wordRow}
           >
             {gameState.displayWord.map((ch, idx) => (

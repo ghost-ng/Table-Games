@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, {
   useAnimatedStyle,
@@ -16,11 +16,14 @@ import { useWebFocusRing } from '../../src/utils/useWebFocusRing';
 import { useResponsive } from '../../src/utils/layout';
 import { haptics } from '../../src/utils/haptics';
 import { randomInt } from '../../src/utils/random';
+import { GamePieceImage } from '../../src/components/game-visuals/GamePieceImage';
+import { GAME_VISUALS } from '../../src/game-visuals/registry';
+import { getMotionPreset } from '../../src/game-visuals/presentation';
+import type { DiceKind } from '../../src/game-visuals/types';
 
 const DIE_TYPES = [4, 6, 8, 10, 12, 20] as const;
 type DieType = (typeof DIE_TYPES)[number];
 const MAX_DICE = 6;
-const ROLL_MS = 600;
 const TUMBLE_STEP_MS = 70;
 const HISTORY_LENGTH = 8;
 
@@ -57,19 +60,20 @@ function Die({
   canHold: boolean;
   onPress: () => void;
 }) {
-  const { theme } = useTheme();
+  const { theme, themeName } = useTheme();
   const wobble = useSharedValue(0);
   const reducedMotion = useReducedMotion();
   const focus = useWebFocusRing(theme.colors.focus);
 
   useEffect(() => {
     if (rolling && !held && !reducedMotion) {
+      const step = getMotionPreset('roll', reducedMotion).duration / 5;
       wobble.value = withSequence(
-        withTiming(-14, { duration: 90 }),
-        withTiming(12, { duration: 110 }),
-        withTiming(-8, { duration: 110 }),
-        withTiming(5, { duration: 110 }),
-        withTiming(0, { duration: 120 }),
+        withTiming(-14, { duration: step }),
+        withTiming(12, { duration: step }),
+        withTiming(-8, { duration: step }),
+        withTiming(5, { duration: step }),
+        withTiming(0, { duration: step }),
       );
     }
     else wobble.value = 0;
@@ -79,7 +83,8 @@ function Die({
     transform: [{ rotate: `${wobble.value}deg` }, { scale: 1 - Math.abs(wobble.value) / 140 }],
   }));
 
-  const pip = size * 0.16;
+  const pip = size * 0.09;
+  const faceSize = size * 0.42;
 
   return (
     <Pressable
@@ -87,6 +92,8 @@ function Die({
       accessibilityRole="button"
       accessibilityLabel={`d${sides} showing ${rolling && !held ? 'rolling' : value}${held ? ', held, tap to release' : canHold ? ', tap to hold' : ', tap to roll'}`}
       accessibilityState={{ selected: held, disabled: rolling }}
+      {...(Platform.OS === 'web' ? { 'aria-pressed': held, 'aria-selected': held } : {})}
+      testID={`die-${sides}`}
       disabled={rolling}
       onFocus={focus.onFocus}
       onBlur={focus.onBlur}
@@ -99,49 +106,47 @@ function Die({
             width: size,
             height: size,
             borderRadius: size * 0.18,
-            borderBottomWidth: 5,
-            backgroundColor: held ? theme.colors.board : theme.colors.surfaceRaised,
-            borderColor: held ? theme.colors.primary : theme.colors.border,
-            ...theme.shadows.md,
+            borderWidth: held ? 3 : 0,
+            borderColor: held ? theme.colors.primary : 'transparent',
           },
           animatedStyle,
         ]}
       >
-        {rolling && reducedMotion && !held ? (
-          <ThemedText variant="heading" style={{ fontSize: size * 0.3 }}>…</ThemedText>
-        ) : sides === 6 ? (
-          <View style={{ width: size * 0.7, height: size * 0.7 }}>
-            {PIPS[value].map(([r, c], i) => (
-              <View
-                key={i}
-                style={{
-                  position: 'absolute',
-                  width: pip,
-                  height: pip,
-                  borderRadius: pip / 2,
-                  backgroundColor: theme.colors.text,
-                  top: (r * (size * 0.7 - pip)) / 2,
-                  left: (c * (size * 0.7 - pip)) / 2,
-                }}
-              />
-            ))}
-          </View>
-        ) : (
-          <>
-            <ThemedText
-              variant="heading"
-              style={{ fontSize: size * 0.42, lineHeight: size * 0.5, color: theme.colors.text, fontWeight: '800' }}
-            >
-              {value}
-            </ThemedText>
-            <ThemedText variant="caption" style={{ fontSize: Math.max(9, size * 0.12), color: theme.colors.textMuted }}>
-              d{sides}
-            </ThemedText>
-          </>
-        )}
+        <View style={StyleSheet.absoluteFill} pointerEvents="none">
+          <GamePieceImage source={GAME_VISUALS[themeName].dice[`d${sides}` as DiceKind]} size={size} />
+        </View>
+        <View style={{ alignItems: 'center', justifyContent: 'center', width: faceSize + 8, minHeight: faceSize + 8, borderRadius: size * 0.1, backgroundColor: theme.colors.surfaceRaised }} pointerEvents="none">
+          {rolling && reducedMotion && !held ? (
+            <ThemedText variant="heading" style={{ fontSize: size * 0.3 }}>…</ThemedText>
+          ) : sides === 6 ? (
+            <View style={{ width: faceSize, height: faceSize }}>
+              {PIPS[value].map(([r, c], i) => (
+                <View
+                  key={i}
+                  style={{
+                    position: 'absolute',
+                    width: pip,
+                    height: pip,
+                    borderRadius: pip / 2,
+                    backgroundColor: theme.colors.text,
+                    top: (r * (faceSize - pip)) / 2,
+                    left: (c * (faceSize - pip)) / 2,
+                  }}
+                />
+              ))}
+            </View>
+          ) : (
+              <ThemedText
+                variant="heading"
+                style={{ fontSize: size * 0.28, lineHeight: size * 0.34, color: theme.colors.text, fontWeight: '800' }}
+              >
+                {value}
+              </ThemedText>
+          )}
+        </View>
       </Animated.View>
       <ThemedText variant="caption" style={{ height: 24, lineHeight: 24, textAlign: 'center', fontSize: 11, color: held ? theme.colors.primary : theme.colors.textMuted, fontWeight: held ? '700' : '400' }}>
-        {rolling && !held ? 'Rolling…' : `${value}${held ? ' Held' : ''}`}
+        d{sides} · {rolling && !held ? 'Rolling…' : `${value}${held ? ' Held' : ''}`}
       </ThemedText>
     </Pressable>
   );
@@ -149,6 +154,8 @@ function Die({
 
 export default function DiceScreen() {
   const { theme } = useTheme();
+  const reducedMotion = useReducedMotion();
+  const rollDuration = getMotionPreset('roll', reducedMotion).duration;
   const router = useRouter();
   const { isLandscape, width, height, isDesktop } = useResponsive();
   const sideBySide = isLandscape && height < 560;
@@ -196,11 +203,11 @@ export default function DiceScreen() {
     if (rolling) return;
     const active = held.slice(0, count);
     if (active.every(Boolean)) return;
-    setRolling(true);
+    setRolling(rollDuration > 0);
     haptics.medium();
 
     // Tumble through random faces, then settle on the real result.
-    tumbleRef.current = setInterval(() => {
+    if (rollDuration > 0) tumbleRef.current = setInterval(() => {
       setValues((v) => v.map((x, i) => (i < count && !held[i] ? randomInt(sides) : x)));
     }, TUMBLE_STEP_MS);
 
@@ -209,14 +216,16 @@ export default function DiceScreen() {
     rollIdRef.current += 1;
     const record: RollRecord = { id: rollIdRef.current, sides, values: final.slice(0, count) };
 
-    finishRef.current = setTimeout(() => {
+    const reveal = () => {
       if (tumbleRef.current) clearInterval(tumbleRef.current);
       setValues(final);
       setHistory((h) => [record, ...h].slice(0, HISTORY_LENGTH));
       setRolling(false);
       haptics.success();
-    }, ROLL_MS);
-  }, [rolling, held, count, sides, values]);
+    };
+    if (rollDuration === 0) reveal();
+    else finishRef.current = setTimeout(reveal, rollDuration);
+  }, [rolling, held, count, sides, values, rollDuration]);
 
   const changeSides = (next: DieType) => {
     if (rolling || next === sides) return;
@@ -299,7 +308,7 @@ export default function DiceScreen() {
 function DieTypeControl({ sides, active, disabled, onPress }: { sides: DieType; active: boolean; disabled: boolean; onPress: () => void }) {
   const { theme } = useTheme();
   const focus = useWebFocusRing(theme.colors.focus);
-  return <Pressable accessibilityRole="button" accessibilityLabel={`d${sides}${active ? ', selected' : ''}`} accessibilityState={{ selected: active, disabled }} disabled={disabled} onPress={onPress} onFocus={focus.onFocus} onBlur={focus.onBlur}
+  return <Pressable accessibilityRole="button" accessibilityLabel={`d${sides}${active ? ', selected' : ''}`} accessibilityState={{ selected: active, disabled }} {...(Platform.OS === 'web' ? { 'aria-pressed': active, 'aria-selected': active } : {})} disabled={disabled} onPress={onPress} onFocus={focus.onFocus} onBlur={focus.onBlur}
     style={[styles.chip, { backgroundColor: active ? theme.colors.primary : theme.colors.surfaceRaised, borderColor: active ? theme.colors.primary : theme.colors.border, borderRadius: theme.borderRadius.md, opacity: disabled ? 0.5 : 1 }, focus.style]}>
     <ThemedText variant="label" style={{ fontSize: 13, fontWeight: '700', color: active ? theme.colors.onPrimary : theme.colors.text }}>{active ? '✓ ' : ''}d{sides}</ThemedText>
   </Pressable>;
@@ -326,7 +335,7 @@ const styles = StyleSheet.create({
   stepper: { width: 44, height: 44, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   diceArea: { flex: 1, minHeight: 0, alignItems: 'center', justifyContent: 'center' },
   diceGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center' },
-  die: { borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
+  die: { alignItems: 'center', justifyContent: 'center' },
   buttonWide: { width: '100%', maxWidth: 420, alignSelf: 'center' },
   history: { height: 44, width: '100%', maxWidth: 420, marginTop: 8 },
 });

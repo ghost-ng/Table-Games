@@ -19,9 +19,29 @@ function loadTs(relativePath, localRequire = require) {
   return module.exports;
 }
 
+function assertHangmanStages(stages, theme) {
+  assert.deepEqual(Object.keys(stages), ['0', '1', '2', '3', '4', '5', '6'], `${theme}: stages 0–6 are required`);
+  const files = Object.values(stages).map((file) => realpathSync(resolve(root, file)));
+  assert.equal(new Set(files).size, 7, `${theme}: seven distinct resolved Hangman files are required`);
+}
+
+test('Hangman validation rejects a duplicated stage file without changing production assets', () => {
+  const { GAME_VISUAL_PATHS } = loadTs('src/game-visuals/catalog.ts');
+  const duplicated = { ...GAME_VISUAL_PATHS.modern.hangman, 6: GAME_VISUAL_PATHS.modern.hangman[5] };
+  assert.throws(() => assertHangmanStages(duplicated, 'modern'), /seven distinct resolved Hangman files/);
+});
+
+test('Hangman validation rejects an omitted stage without changing production assets', () => {
+  const { GAME_VISUAL_PATHS } = loadTs('src/game-visuals/catalog.ts');
+  const omitted = { ...GAME_VISUAL_PATHS.retro.hangman };
+  delete omitted[3];
+  assert.throws(() => assertHangmanStages(omitted, 'retro'), /stages 0–6 are required/);
+});
+
 test('production assets exist, contain WebP data, and belong to their theme', () => {
   const { THEME_NAMES, GAME_VISUAL_PATHS } = loadTs('src/game-visuals/catalog.ts');
   for (const theme of THEME_NAMES) {
+    assertHangmanStages(GAME_VISUAL_PATHS[theme].hangman, theme);
     const base = realpathSync(resolve(root, 'assets/pieces', theme)) + sep;
     const hashes = new Set();
     const paths = Object.values(GAME_VISUAL_PATHS[theme]).flatMap((family) => Object.values(family).flat());
@@ -60,6 +80,7 @@ test('static registry resolves the pure catalog and selects each theme', () => {
     return path.slice(6);
   });
   for (const theme of THEME_NAMES) {
+    assertHangmanStages(registry.GAME_VISUALS[theme].hangman, theme);
     assert.deepEqual(registry.GAME_VISUALS[theme], GAME_VISUAL_PATHS[theme]);
     assert.equal(registry.getGameVisuals(theme), registry.GAME_VISUALS[theme]);
   }

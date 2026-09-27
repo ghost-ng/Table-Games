@@ -612,3 +612,17 @@ test('source-preservation preflight rejects two source paths that alias one phys
   await assert.rejects(art.assertManifestSourcePreservation({ schemaVersion: 1, stage: 'individual-assets', records: [x, o] },
     { root: dir }), /duplicate.*source|source.*alias/i);
 });
+
+test('Hangman production prompts require a shared frame and fixed base without independent centering', () => {
+  const manifest = JSON.parse(readFileSync(resolve(root, 'docs/design/game-art-sources.json'), 'utf8'));
+  const records = manifest.records.filter((record) => record.family === 'hangman');
+  assert.equal(records.length, 21);
+  for (const record of records) {
+    const identity = `${record.theme}/${record.role}`;
+    assert.doesNotMatch(record.prompt, /composition: one centered object/i, identity);
+    assert.match(record.prompt, /composition: shared-frame assembly/i, identity);
+    assert.match(record.prompt, /horizontally centered at x=512/i, identity);
+    assert.match(record.prompt, /fixed base anchor at y=901/i, identity);
+    assert.match(record.prompt, /do not vertically center or independently recenter any stage/i, identity);
+  }
+});

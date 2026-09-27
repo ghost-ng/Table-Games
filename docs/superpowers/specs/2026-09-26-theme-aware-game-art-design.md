@@ -35,6 +35,7 @@ Production assets derived from these references must be isolated transparent cut
 5. Boards, labels, letters, values, focus states, and responsive geometry remain code-native and readable at desktop and phone widths.
 6. Gameplay engines, persistence, scores, routing, and game modes retain existing behavior.
 7. Motion adds feedback but never carries essential state; reduced-motion users receive immediate state changes.
+8. In portrait phone layouts, every game board uses the full width available inside the shell's safe-area padding; desktop caps and extra board gutters must not make it look undersized.
 
 ## Design Principles
 
@@ -263,6 +264,8 @@ Use themed blank shells for each supported type (`d4`, `d6`, `d8`, `d10`, `d12`,
 ## Responsive Behavior
 
 - Boards remain square or preserve their game-specific aspect ratio and use the existing responsive helpers.
+- At phone widths below 600 logical pixels, portrait boards fill the shell's available content width (viewport minus safe-area and the shell's 12-pixel side padding), unless vertical fit would otherwise hide required controls.
+- Remove duplicate phone-only insets inside board wrappers. Compact landscape layouts may remain height-bound and side-by-side; tablet and desktop maximum sizes remain capped for comfortable play.
 - Minimum interactive target is 44 by 44 logical pixels where the game geometry permits; dense board cells remain operable through the entire cell.
 - Generated pieces use `resizeMode="contain"` and normalized transparent padding to avoid clipping.
 - On phone layouts, controls may wrap below the board; they must not shrink the board into illegibility or cause horizontal scrolling.
@@ -308,6 +311,7 @@ Use the available real-browser tooling; if the Browser plugin is unavailable, re
 - reduced motion and keyboard navigation;
 - home cards and compact icon/name utility presentation;
 - installed/offline PWA loading of newly added art.
+- portrait phone board bounds at 320, 390, and 430 logical pixels, confirming full available width without clipping or horizontal scrolling.
 
 Compare representative implemented screenshots directly with the approved references for material fidelity. Maintain a short fidelity ledger covering silhouette consistency, material cues, lighting/shadow, palette, and restrained effects.
 

@@ -1,7 +1,9 @@
 import type { Theme } from '../types';
+import { THEME_MATERIALS } from '../materials';
 
 export const arcadeTheme: Theme = {
   name: 'arcade',
+  materials: { ...THEME_MATERIALS.arcade, boardTexture: require('../../../assets/textures/arcade-bg.webp') },
   colors: {
     background: '#0A0A1A',
     surface: '#1A1A2E',

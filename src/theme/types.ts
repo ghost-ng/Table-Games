@@ -60,6 +60,17 @@ export interface ThemeAnimation {
   };
 }
 
+export interface ThemeMaterials {
+  boardTexture?: ImageSourcePropType;
+  boardBorderWidth: number;
+  cellDepth: number;
+  pieceShadowOpacity: number;
+  glowColor: string;
+  glowOpacity: number;
+  selectionTrail: string;
+  celebration: string;
+}
+
 export interface Theme {
   name: ThemeName;
   colors: ThemeColors;
@@ -67,5 +78,6 @@ export interface Theme {
   borderRadius: ThemeBorderRadius;
   shadows: ThemeShadows;
   animation: ThemeAnimation;
+  materials: ThemeMaterials;
   backgroundImage?: ImageSourcePropType;
 }

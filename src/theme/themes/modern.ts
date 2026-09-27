@@ -1,7 +1,9 @@
 import type { Theme } from '../types';
+import { THEME_MATERIALS } from '../materials';
 
 export const modernTheme: Theme = {
   name: 'modern',
+  materials: { ...THEME_MATERIALS.modern, boardTexture: require('../../../assets/textures/modern-bg.webp') },
   colors: {
     background: '#FAFAFA',
     surface: '#FFFFFF',

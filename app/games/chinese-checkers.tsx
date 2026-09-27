@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { View, Pressable, StyleSheet } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -627,11 +627,8 @@ export default function ChineseCheckersScreen() {
     </View>
   );
 
-  const moveControls = <ScrollView horizontal style={{ height: 52, flexGrow: 0, alignSelf: 'stretch' }} contentContainerStyle={{ gap: 8, alignItems: 'center' }}>{selected === null ? HOLES.filter((hole) => gameState.board[hole.index] === gameState.currentPlayer).map((hole, index) => <Button key={hole.index} title={`Peg ${index + 1}`} size="sm" variant="secondary" disabled={inputLocked} onPress={() => handleHolePress(hole.index)} />) : <><Button title="Change peg" size="sm" variant="ghost" disabled={inputLocked} onPress={deselect} />{destinations.map((move) => <Button key={move.to} title={`Move to ${move.to + 1}`} size="sm" variant="secondary" disabled={inputLocked} onPress={() => handleHolePress(move.to)} />)}</>}</ScrollView>;
-
   const rematch = (
     <View style={[styles.bottomButtons, sideLayout && { marginBottom: 8 }]}>
-      {moveControls}
       <Button title="Rematch" onPress={resetGame} variant="secondary" size={sideLayout ? 'sm' : 'md'} />
     </View>
   );

@@ -1,10 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import {
-  View,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-} from 'react-native';
+import { View, Pressable, StyleSheet } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -434,9 +429,7 @@ export default function CheckersScreen() {
       <ThemedText variant="caption" style={{ color: theme.colors.textMuted, textAlign: 'center' }}>Select a piece · Move to a ringed square</ThemedText>
       </>);
 
-  const selection = gameState.jumpSequence ?? gameState.selectedPiece;
-  const compactMoves = width < 400 || shortLandscape ? <ScrollView horizontal style={{ height: 52, flexGrow: 0 }} contentContainerStyle={{ gap: 8, alignItems: 'center' }}>{selection ? gameState.validMoves.map((move) => <Button key={`${move.to.row}-${move.to.col}`} title={`Move ${move.to.row + 1},${move.to.col + 1}`} size="sm" variant="secondary" onPress={() => handleCellPress(move.to.row, move.to.col)} />) : gameState.board.flatMap((row, r) => row.map((piece, c) => piece?.player === gameState.currentPlayer && getValidMoves(gameState.board, { row: r, col: c }, gameState.currentPlayer).length > 0 ? <Button key={`${r}-${c}`} title={`Piece ${r + 1},${c + 1}`} size="sm" variant="secondary" disabled={gameState.isGameOver || (mode === 'single' && gameState.currentPlayer === 'player2')} onPress={() => handleCellPress(r, c)} /> : null))}</ScrollView> : null;
-  const rematch = <View style={{ gap: 4 }}>{compactMoves}<Button title="Rematch" onPress={resetGame} variant="secondary" /></View>;
+  const rematch = <Button title="Rematch" onPress={resetGame} variant="secondary" />;
 
   return (
     <GameShell title="Checkers" onBack={() => router.back()} footer={shortLandscape ? undefined : rematch} status={shortLandscape ? undefined : gameStatus}>

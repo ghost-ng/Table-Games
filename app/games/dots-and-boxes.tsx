@@ -1,16 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import {
-  View,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-} from 'react-native';
+import { View, Pressable, StyleSheet } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   useReducedMotion,
   FadeIn,
-  FadeOut,
 } from 'react-native-reanimated';
 
 import { GameShell } from '../../src/components/ui/GameShell';
@@ -24,7 +18,6 @@ import { recordGameResult } from '../../src/storage/scores';
 import {
   createGame,
   drawLine,
-  getAvailableLines,
   isLineDrawn,
   type GameState,
   type Player,
@@ -80,7 +73,6 @@ export default function DotsAndBoxesScreen() {
   const lineHitThickness = Math.min(TAP_ZONE, cellSize * 0.4);
   const lineHitInset = lineHitThickness / 2 + 1;
   const lineHitLength = cellSize - lineHitInset * 2;
-  const needsLineControls = lineHitThickness < TAP_ZONE || lineHitLength < TAP_ZONE;
 
   const handleBoardSizeSelect = useCallback((size: number) => {
     setGridSize(size);
@@ -313,31 +305,13 @@ export default function DotsAndBoxesScreen() {
 
       <ThemedText variant="caption" style={{ color: theme.colors.textMuted, textAlign: 'center' }}>{gridSize}×{gridSize} dots · Complete a box to play again</ThemedText>
       </>);
+      <ThemedText
+        variant="caption"
+        accessibilityLiveRegion="polite"
+        style={{ minHeight: 20, color: theme.colors.textMuted, textAlign: 'center' }}
+      >{showExtraTurn ? 'Extra turn!' : aiThinking ? 'AI is thinking…' : ''}</ThemedText>
 
-  const rematch = (
-    <View style={{ gap: 4 }}>
-      {needsLineControls ? (
-        <>
-          <ScrollView horizontal style={{ height: 52, flexGrow: 0 }} contentContainerStyle={{ gap: 8, alignItems: 'center' }} accessibilityLabel="Line actions">
-            {getAvailableLines(gameState).map(({ orientation, row, col }) => (
-              <Button
-                key={`${orientation}-${row}-${col}`}
-                title={`${orientation === 'horizontal' ? 'Horizontal' : 'Vertical'} ${row + 1},${col + 1}`}
-                size="sm"
-                variant="secondary"
-                disabled={aiThinking || gameState.isGameOver || (mode === 'single' && gameState.currentPlayer === 'player2')}
-                onPress={() => handleLinePress(orientation, row, col)}
-              />
-            ))}
-          </ScrollView>
-          <ThemedText variant="caption" accessibilityLiveRegion="polite" style={{ minHeight: 20, textAlign: 'center' }}>
-            {showExtraTurn ? 'Extra turn!' : aiThinking ? 'AI is thinking…' : 'Tap a line or choose its action above'}
-          </ThemedText>
-        </>
-      ) : null}
-      <Button title="Rematch" onPress={handleRematch} variant="secondary" />
-    </View>
-  );
+  const rematch = <Button title="Rematch" onPress={handleRematch} variant="secondary" />;
 
   return (
     <GameShell title="Dots & Boxes" onBack={handleHome} footer={shortLandscape ? undefined : rematch} status={shortLandscape ? undefined : gameStatus}>
@@ -385,27 +359,6 @@ export default function DotsAndBoxesScreen() {
             {gameState.scores.player2}
           </ThemedText>
         </View>
-      </View>
-
-      {/* Extra Turn Banner (space is always reserved so the board doesn't resize) */}
-      <View style={[styles.extraTurnRow, shortLandscape && { display: 'none' }]}>
-      {showExtraTurn && (
-        <Animated.View
-          entering={reducedMotion ? undefined : FadeIn.duration(placementDuration)}
-          exiting={reducedMotion ? undefined : FadeOut.duration(placementDuration)}
-          style={[
-            styles.extraTurnBanner,
-            {
-              backgroundColor: getPlayerColor(gameState.currentPlayer),
-              borderRadius: theme.borderRadius.md,
-            },
-          ]}
-        >
-          <ThemedText variant="label" style={[styles.extraTurnText, { color: theme.colors.onPrimary }]}>
-            Extra turn!
-          </ThemedText>
-        </Animated.View>
-      )}
       </View>
 
       {/* Board */}
@@ -643,18 +596,6 @@ export default function DotsAndBoxesScreen() {
         </ThemedBoardSurface>
       </View>
 
-      {/* AI thinking indicator — fixed height to prevent layout shift */}
-      <View style={[styles.thinkingContainer, (shortLandscape || needsLineControls) && { display: 'none' }]}>
-        {aiThinking && (
-          <ThemedText
-            variant="caption"
-            style={[styles.thinkingText, { color: theme.colors.textMuted }]}
-          >
-            AI is thinking...
-          </ThemedText>
-        )}
-      </View>
-
       {/* Game Over Modal */}
 
       </View>
@@ -720,19 +661,6 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '700',
   },
-  extraTurnRow: {
-    minHeight: 32,
-    justifyContent: 'center',
-  },
-  extraTurnBanner: {
-    alignSelf: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-  },
-  extraTurnText: {
-    fontWeight: '700',
-    fontSize: 14,
-  },
   boardWrapper: {
     flex: 1,
     minHeight: 0,
@@ -763,14 +691,6 @@ const styles = StyleSheet.create({
     zIndex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  thinkingContainer: {
-    height: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  thinkingText: {
-    textAlign: 'center',
   },
   sizeSelector: {
     flex: 1,

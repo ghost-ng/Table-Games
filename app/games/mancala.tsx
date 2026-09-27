@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { View, Pressable, ScrollView, StyleSheet, type LayoutChangeEvent } from 'react-native';
+import { View, Pressable, StyleSheet, type LayoutChangeEvent } from 'react-native';
 import Animated, { FadeIn, useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -505,7 +505,7 @@ export default function MancalaScreen() {
   const s1 = gameState.pits[STORE.player1];
   const s2 = gameState.pits[STORE.player2];
 
-  const rematch = <View style={{ gap: 4 }}>{windowWidth < 360 ? <ScrollView horizontal style={{ height: 52, flexGrow: 0 }} contentContainerStyle={{ gap: 8, alignItems: 'center' }}>{gameState.pits.map((count, pit) => !isStore(pit) && ownerOf(pit) === gameState.currentPlayer ? <Button key={pit} title={`Sow ${pit < 6 ? pit + 1 : pit - 6} · ${count}`} size="sm" variant="secondary" disabled={!canInteract || !isLegalMove(gameState, pit)} onPress={() => handlePitPress(pit)} /> : null)}</ScrollView> : null}<Button title="Rematch" onPress={resetGame} variant="secondary" /></View>;
+  const rematch = <Button title="Rematch" onPress={resetGame} variant="secondary" />;
 
   return (
     <GameShell title="Mancala" onBack={() => router.back()} footer={compact ? undefined : rematch} trailingAction={compact ? <Button title="Rematch" onPress={resetGame} variant="secondary" size="sm" /> : undefined} status={<>

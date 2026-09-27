@@ -1,10 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import {
-  View,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-} from 'react-native';
+import { View, Pressable, StyleSheet } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -329,8 +324,7 @@ export default function ConnectFourScreen() {
       <ThemedText variant="caption" style={{ color: theme.colors.textMuted, textAlign: 'center' }}>Drop a disc · Connect four in any direction</ThemedText>
       </>);
 
-  const compactMoves = width < 400 || shortLandscape ? <ScrollView horizontal style={{ height: 52, flexGrow: 0 }} contentContainerStyle={{ gap: 8, alignItems: 'center' }}>{Array.from({ length: COLS }, (_, col) => <Button key={col} title={`Drop ${col + 1}`} size="sm" variant="secondary" disabled={gameState.isGameOver || aiThinking || getLowestEmptyRow(gameState.board, col) === null} onPress={() => handleColumnPress(col)} />)}</ScrollView> : null;
-  const rematch = <View style={{ gap: 4 }}>{compactMoves}<Button title="Rematch" onPress={handleRematch} variant="secondary" /></View>;
+  const rematch = <Button title="Rematch" onPress={handleRematch} variant="secondary" />;
 
   return (
     <GameShell title="Four in a Row" onBack={handleBack} footer={shortLandscape ? undefined : rematch} status={shortLandscape ? undefined : gameStatus}>

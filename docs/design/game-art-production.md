@@ -68,6 +68,27 @@ node scripts/normalize-game-art.mjs --family checkers
 node scripts/normalize-game-art.mjs --asset modern/checkers/player-1
 ```
 
+Checkerboard-to-alpha recovery is a separate, explicit preparation step for a
+built-in PNG that visibly flattened transparency into a regular matte:
+
+```sh
+node scripts/recover-checkerboard-alpha.mjs --input /path/to/raw.png --output /path/to/recovered.png
+```
+
+Use recovery only when the CLI verifies two strongly covered neutral tones,
+regular horizontal/vertical cell scale, exterior grid phase, and border safety.
+Enclosed matte is removed only when it continues that verified grid or is a
+large, palette-balanced region with the same cell scale and at least 90% local
+checker periodicity. Solid or gradient backgrounds, colorful patterns,
+non-periodic neutral regions, foreground edge contact, and implicit processing
+of already-transparent inputs are refused. The tool removes only verified matte
+pixels and conservatively unmattes a one-pixel chromatic antialias fringe; it
+does not replace normal source inspection or final alpha, framing, component,
+budget, and Hangman group checks. Recovery is never invoked automatically by
+the normalizer. Keep the raw built-in output path and SHA-256 in the ignored
+generation report, inspect recovered light/dark and phone previews, then copy
+only an accepted recovered PNG to its manifest `sourcePath`.
+
 Each output is derived from its own individual `sourcePath` and writes exactly its `finalPath`; Hangman also reads its six sibling sources to establish the shared framing. Missing files, absent alpha, non-square images, meaningful clipped content, and extra meaningful objects fail before any output is replaced. Non-Hangman source preparation removes only detached sub-5% alpha residue in memory; connected antialiasing remains intact. Strict final WebP validation still rejects every nonzero-alpha edge contact, opaque corners, unsafe padding, wrong fill, and extra meaningful objects. Legacy, generation-pending, and authority-pending records cannot be normalized. The CLI preflights every selected source and final output before writing output files.
 
 `readImageMetrics(input)` accepts a file path or encoded buffer and returns decoded dimensions, original `hasAlpha`, format, visible bounds, fill, per-side padding, corner/edge checks, visible-pixel count, and connected-component metrics. Geometry includes every nonzero alpha pixel. Connectivity uses alpha at least 13/255 (approximately 5%), eight-neighbor connectivity, and a meaningful component threshold of the greater of four pixels or 1% of connected foreground. Valid art requires one meaningful component containing at least 95% of the connected foreground.

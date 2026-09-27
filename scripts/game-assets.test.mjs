@@ -12,7 +12,8 @@ import { spawnSync } from 'node:child_process';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(import.meta.url);
-const art = await import('./game-art-lib.mjs');
+const art = { ...await import('./game-art-lib.mjs'),
+  ...await import('./checkerboard-alpha.mjs') };
 const normalizer = await import('./normalize-game-art.mjs');
 const visibleBounds = { minFill: 0.72, maxFill: 0.80, safePadding: 0.10 };
 
@@ -35,6 +36,23 @@ async function fixture({ width = 100, height = width, alpha = true,
     }
   }
   return sharp(data, { raw: { width, height, channels } }).png().toBuffer();
+}
+
+async function checkerboardFixture({ width = 96, height = width, cellSize = 8,
+  colors = [[204, 204, 204], [156, 156, 156]], paint } = {}) {
+  const channels = 3; const data = Buffer.alloc(width * height * channels);
+  for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+    const background = colors[(Math.floor(x / cellSize) + Math.floor(y / cellSize)) % 2];
+    const foreground = paint?.(x, y, background);
+    const color = foreground ?? background;
+    const offset = (y * width + x) * channels;
+    [data[offset], data[offset + 1], data[offset + 2]] = color;
+  }
+  return sharp(data, { raw: { width, height, channels } }).png().toBuffer();
+}
+
+function blend(foreground, background, alpha) {
+  return foreground.map((value, index) => Math.round(value * alpha + background[index] * (1 - alpha)));
 }
 
 function individualRecord(overrides = {}) {
@@ -676,4 +694,156 @@ test('Hangman production prompts require a shared frame and fixed base without i
     assert.match(record.prompt, /fixed base anchor at y=901/i, identity);
     assert.match(record.prompt, /do not vertically center or independently recenter any stage/i, identity);
   }
+});
+
+test('strict checkerboard recovery removes a neutral matte while preserving blue, white, black, and antialiased foreground', async () => {
+  const recover = requireHelper('recoverCheckerboardAlpha');
+  const input = await checkerboardFixture({ paint: (x, y, background) => {
+    const within = x >= 20 && x <= 75 && y >= 18 && y <= 77;
+    if (!within) return null;
+    if ([20, 75].includes(x) || [18, 77].includes(y)) return blend([26, 86, 219], background, 0.35);
+    if (x < 42) return [26, 86, 219];
+    if (x < 58) return [250, 250, 250];
+    return [10, 10, 12];
+  } });
+  const recovered = await recover(input);
+  const { data: pixels, info } = await sharp(recovered.data).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const pixel = (x, y) => [...pixels.subarray((y * info.width + x) * 4, (y * info.width + x) * 4 + 4)];
+  assert.equal(pixel(0, 0)[3], 0);
+  assert.deepEqual(pixel(30, 40), [26, 86, 219, 255]);
+  assert.deepEqual(pixel(50, 40), [250, 250, 250, 255]);
+  assert.deepEqual(pixel(65, 40), [10, 10, 12, 255]);
+  assert.ok(pixel(20, 40)[3] > 0 && pixel(20, 40)[3] < 255, 'antialiased blue edge must remain partially visible');
+  assert.deepEqual(recovered.detection.colors, [[156, 156, 156], [204, 204, 204]]);
+  assert.equal(recovered.detection.cellSize, 8);
+  assert.ok(recovered.detection.periodicAgreement >= 0.98);
+  assert.ok(recovered.removedPixels > 5000);
+});
+
+test('strict checkerboard recovery clears exterior-connected checkerboard through an open foreground shape', async () => {
+  const recover = requireHelper('recoverCheckerboardAlpha');
+  const input = await checkerboardFixture({ paint: (x, y) => {
+    const side = ((x >= 20 && x <= 27) || (x >= 68 && x <= 75)) && y >= 20 && y <= 75;
+    const bottom = y >= 68 && y <= 75 && x >= 20 && x <= 75;
+    return side || bottom ? [26, 86, 219] : null;
+  } });
+  const recovered = await recover(input);
+  const alpha = await sharp(recovered.data).ensureAlpha().extract({ left: 48, top: 48, width: 1, height: 1 }).raw().toBuffer();
+  assert.equal(alpha[3], 0, 'the checkerboard gap inside the open U remains connected to the exterior matte');
+  art.assertImageMetrics(await art.readImageMetrics(recovered.data), { visibleBounds: { minFill: 0.50, maxFill: 0.80, safePadding: 0.10 } });
+});
+
+test('strict checkerboard recovery refuses opaque non-mattes, edge contact, and implicit transparent-input conversion', async () => {
+  const recover = requireHelper('recoverCheckerboardAlpha');
+  const solid = await checkerboardFixture({ colors: [[245, 245, 245], [245, 245, 245]] });
+  const colorful = await checkerboardFixture({ colors: [[240, 30, 40], [30, 160, 230]] });
+  const gradient = await checkerboardFixture({ paint: (x) => [x * 2, x * 2, x * 2] });
+  const edge = await checkerboardFixture({ paint: (x, y) => x < 8 && y > 20 && y < 76 ? [26, 86, 219] : null });
+  const transparent = await fixture();
+  for (const [input, reason] of [[solid, /two|checker/i], [colorful, /neutral/i], [gradient, /period|checker/i],
+    [edge, /foreground.*edge|border/i], [transparent, /already.*alpha|transparent/i]]) {
+    await assert.rejects(recover(input), reason);
+  }
+  const noOp = await recover(transparent, { allowTransparentNoop: true });
+  assert.equal(noOp.noop, true); assert.deepEqual(noOp.data, transparent);
+});
+
+test('checkerboard recovery CLI is explicit, reports evidence, and never overwrites its input', async (t) => {
+  const temporaryRoot = mkdtempSync(resolve(tmpdir(), 'game-art-checkerboard-cli-'));
+  t.after(() => rmSync(temporaryRoot, { recursive: true, force: true }));
+  const input = resolve(temporaryRoot, 'candidate.png'); const output = resolve(temporaryRoot, 'recovered.png');
+  const original = await checkerboardFixture({ paint: (x, y) => x >= 20 && x <= 75 && y >= 18 && y <= 77 ? [26, 86, 219] : null });
+  writeFileSync(input, original);
+  const cli = spawnSync(process.execPath, ['scripts/recover-checkerboard-alpha.mjs', '--input', input, '--output', output],
+    { cwd: root, encoding: 'utf8' });
+  assert.equal(cli.status, 0, cli.stderr);
+  const report = JSON.parse(cli.stdout);
+  assert.deepEqual(report.detection.colors, [[156, 156, 156], [204, 204, 204]]);
+  assert.equal(report.detection.cellSize, 8);
+  assert.ok(report.removedPixels > 0);
+  assert.ok(report.outputAlphaBounds.width > 0 && report.outputAlphaBounds.height > 0);
+  assert.deepEqual(readFileSync(input), original, 'recovery must never mutate the rejected raw candidate');
+  assert.equal((await art.readImageMetrics(output)).hasAlpha, true);
+  const overwrite = spawnSync(process.execPath, ['scripts/recover-checkerboard-alpha.mjs', '--input', input, '--output', input],
+    { cwd: root, encoding: 'utf8' });
+  assert.equal(overwrite.status, 1); assert.match(overwrite.stderr, /different|overwrite|input/i);
+});
+
+test('strict checkerboard recovery distinguishes one-cell neutral matte transitions from wide neutral edge foreground', async () => {
+  const recover = requireHelper('recoverCheckerboardAlpha');
+  const noisyMatte = await checkerboardFixture({ paint: (x, y) => {
+    if (y === 95 && x >= 24 && x < 32) return [160 + (x - 24) * 6, 160 + (x - 24) * 6, 160 + (x - 24) * 6];
+    if (x >= 20 && x <= 75 && y >= 18 && y <= 77) return [26, 86, 219];
+    return null;
+  } });
+  assert.ok((await recover(noisyMatte)).removedPixels > 0);
+  const silverEdge = await checkerboardFixture({ paint: (x, y) => {
+    if (y === 95 && x >= 24 && x < 48) return [182, 182, 182];
+    if (x >= 20 && x <= 75 && y >= 18 && y <= 77) return [26, 86, 219];
+    return null;
+  } });
+  await assert.rejects(recover(silverEdge), /foreground.*edge|border/i);
+});
+
+test('strict checkerboard recovery bridges only thin neutral matte seams without consuming silver foreground', async () => {
+  const recover = requireHelper('recoverCheckerboardAlpha');
+  const input = await checkerboardFixture({ paint: (x, y) => {
+    if (x >= 20 && x <= 75 && y >= 18 && y <= 77) {
+      if (x >= 42 && x <= 58 && y >= 34 && y <= 61) return [182, 182, 182];
+      return [26, 86, 219];
+    }
+    if (x > 12 && x < 83 && y > 12 && y < 83 && (x % 8 <= 1 || y % 8 <= 1))
+      return [180, 180, 180];
+    return null;
+  } });
+  const recovered = await recover(input);
+  const { data: pixels, info } = await sharp(recovered.data).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const alpha = (x, y) => pixels[(y * info.width + x) * 4 + 3];
+  assert.equal(alpha(0, 0), 0);
+  assert.equal(alpha(50, 48), 255, 'silver foreground center must remain opaque');
+  assert.equal(alpha(42, 48), 255, 'silver foreground edge must not be materially eroded');
+  assert.ok(recovered.removedPixels > 5000);
+});
+
+test('strict checkerboard recovery removes an enclosed hole only when it continues the verified checker grid', async () => {
+  const recover = requireHelper('recoverCheckerboardAlpha');
+  const input = await checkerboardFixture({ paint: (x, y) => {
+    const vertical = ((x >= 18 && x <= 25) || (x >= 70 && x <= 77)) && y >= 18 && y <= 77;
+    const horizontal = ((y >= 18 && y <= 25) || (y >= 70 && y <= 77)) && x >= 18 && x <= 77;
+    return vertical || horizontal ? [26, 86, 219] : null;
+  } });
+  const recovered = await recover(input);
+  const { data: pixels, info } = await sharp(recovered.data).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const alpha = (x, y) => pixels[(y * info.width + x) * 4 + 3];
+  assert.equal(alpha(48, 48), 0, 'the checker grid continues through the enclosed workshop-frame opening');
+  assert.equal(alpha(20, 48), 255, 'the foreground frame remains opaque');
+});
+
+test('strict checkerboard recovery accepts a large locally rephased and slightly warped enclosed matte', async () => {
+  const colors = [[204, 204, 204], [156, 156, 156]];
+  const input = await checkerboardFixture({ colors, paint: (x, y) => {
+    const vertical = ((x >= 18 && x <= 25) || (x >= 70 && x <= 77)) && y >= 18 && y <= 77;
+    const horizontal = ((y >= 18 && y <= 25) || (y >= 70 && y <= 77)) && x >= 18 && x <= 77;
+    if (vertical || horizontal) return [26, 86, 219];
+    if (x > 25 && x < 70 && y > 25 && y < 70)
+      return colors[(Math.floor((x + 8 + Math.floor((y - 26) / 18)) / 8)
+        + Math.floor(y / 8)) % 2];
+    return null;
+  } });
+  const recovered = await requireHelper('recoverCheckerboardAlpha')(input);
+  const pixel = await sharp(recovered.data).ensureAlpha().extract({ left: 48, top: 48, width: 1, height: 1 }).raw().toBuffer();
+  assert.equal(pixel[3], 0);
+});
+
+test('strict checkerboard recovery preserves balanced neutral enclosed foreground without local checker periodicity', async () => {
+  const colors = [[204, 204, 204], [156, 156, 156]];
+  const input = await checkerboardFixture({ colors, paint: (x, y) => {
+    const vertical = ((x >= 18 && x <= 25) || (x >= 70 && x <= 77)) && y >= 18 && y <= 77;
+    const horizontal = ((y >= 18 && y <= 25) || (y >= 70 && y <= 77)) && x >= 18 && x <= 77;
+    if (vertical || horizontal) return [26, 86, 219];
+    if (x > 25 && x < 70 && y > 25 && y < 70) return colors[(x + y) % 2];
+    return null;
+  } });
+  await assert.rejects(requireHelper('recoverCheckerboardAlpha')(input),
+    /enclosed regions|checker grid|periodic/i);
 });

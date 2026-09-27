@@ -357,9 +357,8 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "generationPending": true,
+      "generatedAt": "2026-09-27T21:02:54Z",
+      "reviewedAt": "2026-09-27T21:12:56Z",
       "expectedOwner": "seat2",
       "expectedColor": "#1A56DB"
     },
@@ -376,9 +375,8 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "generationPending": true,
+      "generatedAt": "2026-09-27T21:03:37Z",
+      "reviewedAt": "2026-09-27T21:12:56Z",
       "expectedOwner": "seat1",
       "expectedColor": "#DC2626"
     },
@@ -395,9 +393,8 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "generationPending": true,
+      "generatedAt": "2026-09-27T21:05:06Z",
+      "reviewedAt": "2026-09-27T21:12:56Z",
       "expectedOwner": "seat3",
       "expectedColor": "#059669"
     },
@@ -414,9 +411,8 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "generationPending": true,
+      "generatedAt": "2026-09-27T21:05:55Z",
+      "reviewedAt": "2026-09-27T21:12:56Z",
       "expectedOwner": "seat4",
       "expectedColor": "#92400E"
     },
@@ -484,9 +480,8 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "generationPending": true,
+      "generatedAt": "2026-09-27T21:06:51Z",
+      "reviewedAt": "2026-09-27T21:12:56Z",
       "expectedOwner": "shared",
       "expectedColor": "#1A56DB"
     },
@@ -503,9 +498,8 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "generationPending": true,
+      "generatedAt": "2026-09-27T21:07:47Z",
+      "reviewedAt": "2026-09-27T21:12:56Z",
       "expectedOwner": "shared",
       "expectedColor": "#1A56DB"
     },
@@ -522,9 +516,8 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "generationPending": true,
+      "generatedAt": "2026-09-27T21:08:32Z",
+      "reviewedAt": "2026-09-27T21:12:56Z",
       "expectedOwner": "shared",
       "expectedColor": "#1A56DB"
     },
@@ -541,9 +534,8 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "generationPending": true,
+      "generatedAt": "2026-09-27T21:09:04Z",
+      "reviewedAt": "2026-09-27T21:12:56Z",
       "expectedOwner": "shared",
       "expectedColor": "#1A56DB"
     },
@@ -560,9 +552,8 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "generationPending": true,
+      "generatedAt": "2026-09-27T21:09:39Z",
+      "reviewedAt": "2026-09-27T21:12:56Z",
       "expectedOwner": "shared",
       "expectedColor": "#1A56DB"
     },
@@ -579,9 +570,8 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "generationPending": true,
+      "generatedAt": "2026-09-27T21:10:21Z",
+      "reviewedAt": "2026-09-27T21:12:56Z",
       "expectedOwner": "shared",
       "expectedColor": "#1A56DB"
     },

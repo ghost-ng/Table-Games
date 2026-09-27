@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { readFileSync } from 'node:fs';
+import { URL } from 'node:url';
 import { GAME_VISUAL_PATHS, THEME_NAMES, DICE_KINDS, HANGMAN_STAGES, REQUIRED_FILES } from './catalog';
 
 test('every theme supplies all game families and complete variant sets', () => {
@@ -46,4 +48,13 @@ test('Modern race seats follow red, blue, green, yellow ownership', () => {
     'assets/pieces/modern/trouble/pawn-2.webp', 'assets/pieces/modern/trouble/pawn-1.webp',
     'assets/pieces/modern/trouble/pawn-3.webp', 'assets/pieces/modern/trouble/pawn-4.webp',
   ]);
+});
+
+test('the portable source manifest covers every catalog sprite exactly once', () => {
+  const manifest = JSON.parse(readFileSync(new URL('../../docs/design/game-art-sources.json', import.meta.url), 'utf8'));
+  assert.equal(manifest.records?.length, 117, 'one record per catalog sprite is required');
+  const required = THEME_NAMES.flatMap((theme) => Object.values(GAME_VISUAL_PATHS[theme])
+    .flatMap((family) => Object.values(family).flat()));
+  assert.equal(new Set(manifest.records.map((record: { finalPath: string }) => record.finalPath)).size, 117);
+  assert.deepEqual(manifest.records.map((record: { finalPath: string }) => record.finalPath).sort(), required.sort());
 });

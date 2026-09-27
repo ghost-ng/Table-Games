@@ -1,40 +1,44 @@
-/** Reproduce production cutouts from the documented, locally generated family PNGs. */
-import { readFileSync, mkdirSync } from 'node:fs';
-import { execFileSync } from 'node:child_process';
+/** Normalize one individual source per manifest record; no sprite-sheet extraction. */
+import assert from 'node:assert/strict';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { normalizeGameArtAsset, validateManifest } from './game-art-lib.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const sources = JSON.parse(readFileSync(resolve(root, 'docs/design/game-art-sources.json'), 'utf8'));
-for (const source of sources) {
-  if (process.argv[2] && source.family !== process.argv[2]) continue;
-  const [width, height] = execFileSync('identify', ['-format', '%w %h', source.path], { encoding: 'utf8' }).trim().split(' ').map(Number);
-  const outDir = resolve(root, 'assets/pieces', source.theme, source.family);
-  mkdirSync(outDir, { recursive: true });
-  source.files.forEach((filename, index) => {
-    const col = index % source.cols;
-    const row = Math.floor(index / source.cols);
-    // Explicit fractional crop bounds document hand-inspected uneven sheets.
-    const crop = source.crops?.[index];
-    const x = Math.round(width * (crop ? crop[0] : col / source.cols));
-    const y = Math.round(height * (crop ? crop[1] : row / source.rows));
-    const w = crop ? Math.round(width * crop[2]) : Math.round(width * (col + 1) / source.cols) - x;
-    const h = crop ? Math.round(height * crop[3]) : Math.round(height * (row + 1) / source.rows) - y;
-    const size = source.size;
-    const args = [source.path, '-crop', `${w}x${h}+${x}+${y}`, '+repage'];
-    // Clear tiny disconnected generation specks; multiply the mask by original
-    // alpha so translucent material and antialiased boundaries remain intact.
-    args.push('(', '+clone', '-alpha', 'extract', '(', '+clone', '-threshold', '5%');
-    if (source.alphaOpening) args.push('-morphology', 'Open', `Disk:${source.alphaOpening}`);
-    args.push('-define', `connected-components:area-threshold=${source.family === 'hangman' ? 400 : 40}`,
-      '-define', 'connected-components:mean-color=true', '-connected-components', '8',
-      ')', '-compose', 'Multiply', '-composite', ')', '-compose', 'CopyOpacity', '-composite', '-compose', 'Over');
-    // Preserve a single framing/scale for the whole assembly sequence.
-    if (source.family !== 'hangman') args.push('-trim', '+repage');
-    args.push('-resize', `${Math.round(size * 0.82)}x${Math.round(size * 0.82)}`,
-      '-background', 'none', '-gravity', 'center', '-extent', `${size}x${size}`,
-      '-define', 'webp:method=6', '-quality', '86', resolve(outDir, filename));
-    execFileSync('convert', args);
-  });
-  console.log(`${source.theme}/${source.family}: ${source.files.length} transparent ${source.size}px WebP cutouts`);
+const usage = 'Usage: node scripts/normalize-game-art.mjs --all | --family <name> | --asset <theme/family/role>';
+
+export function selectRecords(manifest, args) {
+  assert.ok((args.length === 1 && args[0] === '--all')
+    || (args.length === 2 && ['--family', '--asset'].includes(args[0])), usage);
+  if (args[0] === '--asset') assert.match(args[1], /^[a-z0-9-]+\/[a-z0-9-]+\/[a-z0-9-]+$/, usage);
+  const selected = manifest.records.filter((record) => args[0] === '--all'
+    || (args[0] === '--family' && record.family === args[1])
+    || (args[0] === '--asset' && `${record.theme}/${record.family}/${record.role}` === args[1]));
+  assert.ok(selected.length > 0, 'No matching assets for selector');
+  return selected;
+}
+
+async function main() {
+  const manifest = JSON.parse(await readFile(resolve(root, 'docs/design/game-art-sources.json'), 'utf8'));
+  const selected = selectRecords(manifest, process.argv.slice(2));
+  validateManifest(manifest);
+  // Preflight every selected record before writing; temporary migration records
+  // must never be re-encoded or presented as accepted individual sources.
+  for (const record of selected) {
+    assert.ok(!Object.hasOwn(record, 'legacy'), `Replace legacy source before normalization: ${record.theme}/${record.family}/${record.role}`);
+    assert.ok(!Object.hasOwn(record, 'authorityReferencePending'), `Authority reference pending: ${record.theme}/${record.family}/${record.role}`);
+  }
+  const normalized = [];
+  for (const record of selected) normalized.push(await normalizeGameArtAsset(record, { root, write: false }));
+  for (let index = 0; index < selected.length; index++) {
+    const record = selected[index]; const { finalPath, data } = normalized[index];
+    await mkdir(dirname(finalPath), { recursive: true });
+    await writeFile(finalPath, data);
+    console.log(`${record.theme}/${record.family}/${record.role}: ${record.targetSize}px WebP`);
+  }
+}
+
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main().catch((error) => { console.error(error.message); process.exitCode = 1; });
 }

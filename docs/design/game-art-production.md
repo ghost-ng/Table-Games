@@ -1,77 +1,91 @@
 # Production game artwork
 
-Generated 2026-09-26 with the built-in image-generation tool, using the approved Modern, Retro, and Arcade art-direction references. The registry consumes only committed local WebP files. Source sheets are provenance, never application dependencies.
+The application loads 117 committed local WebP sprites: 39 per theme across Modern, Retro, and Arcade. Individual source images and authoring dependencies never become runtime dependencies. The inventory in `src/game-visuals/catalog.ts` remains the source of truth for final paths.
 
 ## Inventory
 
-Each of Modern, Retro, and Arcade has **39 unique cutouts**, for **117 total**:
-
-| Family | Files per theme | Canvas |
+| Family | Files per theme | Square canvas |
 | --- | --- | --- |
-| Tic-Tac-Toe | x, o | 256 × 256 |
-| Connect Four | player-1, player-2 | 192 × 192 |
-| Checkers | player-1, player-2, king-crown | 192 × 192 |
-| Chinese Checkers | marble-1 through marble-6 | 128 × 128 |
-| Mancala | seed-1 through seed-6 | 96 × 96 |
-| Pop & Race | pawn-1 through pawn-4 | 192 × 192 |
-| Coin Flip | heads, tails, edge | 256 × 256 |
-| Dice | d4, d6, d8, d10, d12, d20 | 256 × 256 |
-| Hangman | stage-0 through stage-6 | 384 × 384 |
+| Tic-Tac-Toe | x, o | 256 px |
+| Connect Four | player-1, player-2 | 192 px |
+| Checkers | player-1, player-2, king-crown | 192 px |
+| Chinese Checkers | marble-1 through marble-6 | 128 px |
+| Mancala | seed-1 through seed-6 | 96 px |
+| Pop & Race | pawn-1 through pawn-4 | 192 px |
+| Coin Flip | heads, tails, edge | 256 px |
+| Dice | d4, d6, d8, d10, d12, d20 | 256 px |
+| Hangman | stage-0 through stage-6 | 384 px |
 
-Every filename ends in `.webp` and lives under `assets/pieces/{modern,retro,arcade}/{family}/`. All filenames, including exact directory names, are enumerated in `src/game-visuals/catalog.ts` and the source manifest.
+Final paths are `assets/pieces/{theme}/{family}/{role}.webp`; all nine family directory names and variant filenames are enumerated by `REQUIRED_FILES`. Each family shares the same target dimension across themes.
 
-## Prompts and provenance
+## Portable individual-source manifest
 
-[game-art-sources.json](game-art-sources.json) records all 27 generated PNG source paths, complete family prompts, grid dimensions, output names, target dimensions, hand-inspected crop overrides, and alpha-opening settings. The built-in tool generated each coordinated family sheet separately. No CLI/API fallback or external network image dependency was used.
+[game-art-sources.json](game-art-sources.json) uses an envelope with `schemaVersion: 1`, a migration `stage`, and 117 individual `records`. Every record contains:
 
-The first Modern Tic-Tac-Toe prompt, whose manifest entry is abbreviated, was:
-
-> Use case: stylized-concept. Production game sprite family for a polished modern tabletop game. Generate one transparent PNG sprite sheet, 1024x512, two equal 512x512 cells in a single row, NO grid lines. Left cell: one thick chunky rounded cobalt-blue ceramic X. Right cell: one thick chunky rounded red ceramic O ring. Match the polished dimensional ceramic and soft polymer art direction in the provided modern reference, but these are isolated production cutouts, NOT a reference scene. Camera directly front-facing with tiny visible beveled depth and soft studio highlights. Each object centered in its own cell, same visual height 360px, generous empty padding, no overlap. Genuine alpha transparent background everywhere, including inside the O hole. No ground plane, no baked background, no shadow beyond small contact shade, no letters other than the two requested game piece silhouettes, no watermarks. Save local PNG output for production extraction.
-
-All other complete prompts are stored verbatim in the manifest. Source images were requested as genuine transparent PNGs; inspection confirmed RGBA with transparency. Generated dimensions vary from requested dimensions, so extraction reads actual source dimensions rather than assuming 1024 pixels.
-
-## Normalization and cleanup
-
-`scripts/normalize-game-art.mjs` is an optional authoring utility requiring Node and ImageMagick. Run it with the local source PNGs available:
-
-```sh
-node scripts/normalize-game-art.mjs
-# Reprocess one family only:
-node scripts/normalize-game-art.mjs hangman
+```ts
+interface GameArtSourceRecord {
+  theme: 'modern' | 'retro' | 'arcade';
+  family: string;
+  role: string;
+  prompt: string;
+  sourcePath: string;
+  finalPath: string;
+  targetSize: number;
+  visibleBounds: { minFill: number; maxFill: number; safePadding: number };
+  expectedOwner?: string;
+  generatedAt: string;
+  reviewedAt: string;
+}
 ```
 
-The normalizer extracts the documented grid cells, cleans their alpha, scales their visible bounds to at most 82% of the nominal square canvas, centers them, and writes WebP with quality 86 and method 6. It preserves the generated color and original alpha underneath its cleanup mask. No background color, checkerboard, text, runtime numeral, or runtime letter is added.
+Paths are portable, repository-relative paths with forward slashes. Absolute machine paths, parent traversal, grid dimensions, crops, and sheet-extraction fields are rejected. Individual accepted source paths differ from their final WebP paths. Store new source PNGs under `docs/design/source-art/{theme}/{family}/{role}.png`. Record the exact final generation prompt and real generation/inspection dates; visual inspection establishes semantic accuracy that decoded alpha alone cannot prove.
 
-The cleanup mask thresholds alpha at 5%, removes disconnected components below 40 source pixels (400 for Hangman), and multiplies this mask by the original alpha. Coin and Hangman masks additionally receive a six-pixel disk opening to remove narrow stray horizontal generation artifacts. The original alpha still supplies the retained edges and translucent material.
+The manifest currently has `stage: "contract-only"` and 117 `legacy: true` records whose source/final paths point to the existing committed sprites. Their prompts and dates describe historical generation and inspection on 2026-09-26. They are explicit migration placeholders, not newly generated or newly accepted artwork. This task generates no art and changes no production bitmap.
 
-Coin sheets used uneven spacing; the manifest records exact fractional crop bounds for each face and edge. Hangman uses one shared vertical crop and equal-width columns for all seven stages of each theme. It deliberately does **not** trim or independently scale each stage, preserving consistent scene scale and base position while parts are added. Stage 0 is the empty platform, followed by posts, crossbar, head, torso, arms, and feet. Modern is a modular desk toy, Retro a wooden peg-doll craft frame, and Arcade a cheerful holographic robot portal. None has a rope or execution imagery.
+Migration stages are enforced structurally by `validateManifest()`:
 
-## Visual acceptance
+| Stage | Allowed temporary records | Acceptance |
+| --- | --- | --- |
+| `contract-only` | `legacy: true`; pending coin authority references | Task 1 contract migration only |
+| `individual-assets` | `authorityReferencePending: true` only for Coin Flip | Task 2 must remove the `legacy` property from every record and advance to this stage; its nine coin slots await Task 3 |
+| `accepted` | None | Final acceptance must advance to this stage; any legacy property or pending reference fails |
 
-Each of the nine families in every theme was inspected at normalized dimensions on both `#f5f5f5` and `#101020` backgrounds. Contact sheets are retained under `docs/design/qa/`.
+Do not replace `legacy: true` with `legacy: false`; remove the property and provide an actual individual source. Pending and legacy flags cannot coexist. Strict composition checks apply to every migrated record. Temporary placeholders still undergo square-dimension, genuine-alpha, transparent-corner, unclipped-edge, path, distinctness, registry, and byte-budget checks.
 
-- Modern: polished ceramic/polymer, soft dimensional highlights, clean blue/red pieces.
-- Retro: painted wood with restrained wear, glass marbles, natural stones, antique abstract coins.
-- Arcade: dark molded shells, bright acrylic rims, restrained neon edges, readable silhouettes.
-- All dice remain blank; runtime values and pips belong to code.
-- Coin faces contain abstract sun/star and diamond/lightning crests, never human portraits.
-- Within each family, output dimensions and orientation are consistent, with transparent padding and no clipped silhouettes.
-- The 21 Hangman files are visually distinct and ordered from empty base through complete friendly character.
-- Marbles, pawns, and seeds preserve their separate color/material variants.
-- No opaque background boxes or baked checkerboard appeared on either inspection background.
+## Individual generation and normalization
 
-Inspection caught and corrected a compositing-mode carryover during normalization, uneven coin-sheet spacing, excess Hangman whitespace, and small generation specks. The accepted production outputs were inspected after correction.
+Generate one object or stage per source image, on a square canvas with genuine alpha. Prompts should specify the approved theme material, semantic owner/color, consistent camera and lighting, a complete silhouette, no text/watermark/ground plane, and a longest visible bound occupying 72–80% of the canvas. Dice faces remain blank so the application can render values. Hangman stages share scene framing and base placement; visual QA must confirm progression and reject rope/noose imagery. Quarter faces and edge use authoritative reference imagery in Task 3.
+
+The authoring tools require Node 22 and the locked `sharp` development dependency, installed through npm. ImageMagick is not required. Select exactly one authoring mode:
+
+```sh
+node scripts/normalize-game-art.mjs --all
+node scripts/normalize-game-art.mjs --family checkers
+node scripts/normalize-game-art.mjs --asset modern/checkers/player-1
+```
+
+Every selected record reads exactly one `sourcePath` and writes exactly its `finalPath`. Missing files, absent alpha, non-square images, edge-touching silhouettes (including faint alpha), opaque corners, unsafe padding, wrong fill, and extra meaningful objects fail before any output is replaced. Legacy and pending records cannot be normalized. The CLI validates every selected source before writing output files.
+
+`readImageMetrics(input)` accepts a file path or encoded buffer and returns decoded dimensions, original `hasAlpha`, format, visible bounds, fill, per-side padding, corner/edge checks, visible-pixel count, and connected-component metrics. Geometry includes every nonzero alpha pixel. Connectivity uses alpha at least 13/255 (approximately 5%), eight-neighbor connectivity, and a meaningful component threshold of the greater of four pixels or 1% of connected foreground. Valid art requires one meaningful component containing at least 95% of the connected foreground.
+
+`assertImageMetrics(metrics, record)` enforces the record's square target dimension, alpha requirements, at least 10% transparent padding on every side, and 72–80% longest-bound fill. Fill is the maximum of visible width/canvas width and visible height/canvas height, not opaque pixel area; thin quarter edges and wide Hangman platforms therefore retain sensible framing. The manifest's bounds are fixed at `{ minFill: 0.72, maxFill: 0.80, safePadding: 0.10 }` and cannot be weakened to make an image pass.
+
+`normalizeGameArtAsset(record, { root, write = true })` validates the source, crops only its empty border, scales visible pixels down toward 76% of the target canvas, and centers them. It never upscales, removes objects, fabricates alpha, or repairs clipped art. The final WebP uses quality 86, alpha quality 100, and effort 6, then is decoded and revalidated before writing. Too-small sources fail if they cannot meet minimum fill without upscaling. It returns `{ data, metrics, finalPath }`; `write: false` allows a no-write preflight. Repeat runs with the same sources and locked image-tool versions produce identical bytes.
+
+`createContactSheet(inputs, { root, columns = 6, cellSize = 160, background = '#f5f5f5', outputPath })` accepts manifest records, relative image paths, or image buffers in display order. It returns a lossless WebP buffer and optionally writes a repository-relative QA path. Produce both `#f5f5f5` and `#101020` backgrounds, inspect at original size, and retain QA outputs under `docs/design/qa/`. Contact sheets are inspection artifacts, not generation sources.
 
 ## Semantic ownership
 
-The generated Modern Connect Four, Checkers, and Pop & Race sheets placed blue before red. Their numbered filenames retain that source/extraction order. The registry and pure catalog map semantic player 1 / seat 1 to the red `player-2.webp` / `pawn-2.webp` cutout, and player 2 / seat 2 to the blue `player-1.webp` / `pawn-1.webp` cutout. This matches Modern `theme.colors.player1` (red) and `player2` (blue), including legends, track lanes, and owner numerals. The race's green and yellow seats remain in slots 3 and 4. Engine player identities are unchanged.
+The existing Modern Connect Four and Checkers `player-2.webp` sprites map to semantic `player1` (red), and `player-1.webp` maps to `player2` (blue). Modern race `pawn-2.webp` is `seat1`, `pawn-1.webp` is `seat2`, and seats 3/4 retain their numbered files. The manifest records these actual semantic identities in `expectedOwner`; do not infer ownership from numbered legacy filenames. Catalog ownership assertions and exact static-registry parity preserve the current application mapping during migration.
 
-Catalog assertions pin both sides of this mapping; the asset validator executes the static registry and checks exact catalog parity. Regenerating assets from the original manifest preserves source order and therefore preserves this semantic mapping.
+## Verification and production byte budget
 
-## Contract and verification
+```sh
+npm run test:assets
+npm run test:unit
+npm run verify
+```
 
-`types.ts` owns `GameVisuals`; material tokens remain outside this task. The pure catalog exports readonly theme/dice/stage/file tuples and structured relative paths without loading bitmap modules. `registry.ts` contains 117 literal local require calls and an exhaustive theme map, with `getGameVisuals(themeName)` returning the selected entry.
+The asset suite checks 117 unique manifest records and final-path parity with the catalog, portable schema and migration stages, required variant coverage, WebP signatures, resolved theme containment, per-theme distinctness, decoded alpha/dimensions, family dimensions, literal Metro require paths, and registry selection. Synthetic fixtures cover edge clipping, invalid transparency, unsafe framing, extra components, deterministic normalization, no upscaling, and contact-sheet backgrounds.
 
-`npm run test:assets` checks all required files, nonempty WebP signatures, theme-directory containment after resolving symlinks, per-theme distinctness, literal require syntax, registry/catalog parity, and theme selection. Catalog tests check exact family and variant coverage. Hangman tests cover stages 0–6, fractions, negative values, both infinities, overflow, NaN, and fresh/rematch state returning to stage zero.
-
-Route consumption, browser gameplay checks, and installed-PWA offline verification follow in the later migration tasks; this task supplies their complete local asset contract.
+`MAX_GAME_ART_BYTES = 2 * 1024 * 1024` limits the 117 registered nested theme sprites to 2 MiB total; `MAX_GAME_ART_FILE_BYTES = 64 * 1024` limits each final WebP to 64 KiB. The registered baseline is 759,902 bytes total with a 17,732-byte maximum. Source PNGs, QA images, and unrelated top-level legacy assets are outside this production-art allowance and are not added to the application's offline precache by this contract. Build/PWA verification remains responsible for application-wide cache contents and excluding authoring sources from `dist`.

@@ -21,6 +21,8 @@ import {
 import { isValidWordleGuess, randomWordleAnswer } from '../../src/data/wordle-words';
 import { useBoardFit, useResponsive } from '../../src/utils/layout';
 import { haptics } from '../../src/utils/haptics';
+import { LetterTile } from '../../src/components/game-visuals/LetterTile';
+import { ThemedBoardSurface } from '../../src/components/game-visuals/ThemedBoardSurface';
 
 type Phase = 'wordEntry' | 'passDevice' | 'playing';
 type PlayerId = 'player1' | 'player2';
@@ -45,7 +47,8 @@ export default function WordleScreen() {
     inset: 8,
     minSize: 120,
   });
-  const tileSize = (gridWidth - TILE_GAP * (WORD_LENGTH - 1)) / WORD_LENGTH;
+  const boardBorderWidth = theme.materials.boardBorderWidth;
+  const tileSize = (gridWidth - boardBorderWidth * 2 - TILE_GAP * (WORD_LENGTH - 1)) / WORD_LENGTH;
   const keyboardWidth = sideBySide ? (contentWidth - 24) * 0.62 : contentWidth - 24;
   const keyWidth = Math.min(48, (keyboardWidth - 16 - KEY_GAP * 9) / 10);
   const keyHeight = sideBySide
@@ -236,10 +239,13 @@ export default function WordleScreen() {
         gap: evaluation ? 1 : 0,
       },
     ];
-    const text = (
-      <ThemedText
-        variant="heading"
-        style={[
+    const tile = (
+      <LetterTile
+        letter={letter}
+        size={tileSize}
+        variant="word-guess"
+        style={tileStyle}
+        textStyle={[
           styles.tileLetter,
           {
             fontSize: tileSize * (evaluation ? 0.42 : 0.5),
@@ -251,8 +257,10 @@ export default function WordleScreen() {
           },
         ]}
       >
-        {letter}
-      </ThemedText>
+        {evaluation && <ThemedText variant="caption" style={{ fontSize: Math.max(9, tileSize * 0.16), lineHeight: Math.max(9, tileSize * 0.18), color: theme.colors.text, backgroundColor: theme.colors.surfaceRaised, borderRadius: 2, paddingHorizontal: 2 }}>
+          {evaluation === 'correct' ? '✓' : evaluation === 'present' ? '•' : '×'}
+        </ThemedText>}
+      </LetterTile>
     );
 
     if (evaluation) {
@@ -261,24 +269,20 @@ export default function WordleScreen() {
         <Animated.View
           key={`${row}-${col}-done`}
           entering={reducedMotion ? undefined : FlipInXDown.delay(col * 140).duration(280)}
-          style={tileStyle}
           accessibilityLabel={`Guess ${row + 1}, letter ${col + 1}: ${letter}, ${evaluation}`}
         >
-          {text}
-          <ThemedText variant="caption" style={{ fontSize: Math.max(9, tileSize * 0.16), lineHeight: Math.max(9, tileSize * 0.18), color: theme.colors.text, backgroundColor: theme.colors.surfaceRaised, borderRadius: 2, paddingHorizontal: 2 }}>
-            {evaluation === 'correct' ? '✓' : evaluation === 'present' ? '•' : '×'}
-          </ThemedText>
+          {tile}
         </Animated.View>
       );
     }
     if (letter) {
       return (
-        <Animated.View key={`${row}-${col}-${letter}`} entering={reducedMotion ? undefined : ZoomIn.duration(110)} style={tileStyle}>
-          {text}
+        <Animated.View key={`${row}-${col}-${letter}`} entering={reducedMotion ? undefined : ZoomIn.duration(110)}>
+          {tile}
         </Animated.View>
       );
     }
-    return <View key={`${row}-${col}-empty`} style={tileStyle} />;
+    return <View key={`${row}-${col}-empty`}>{tile}</View>;
   };
 
   const renderKey = (key: string) => {
@@ -424,13 +428,13 @@ export default function WordleScreen() {
 
           <View style={[styles.playArea, { flexDirection: sideBySide ? 'row' : 'column' }]}>
           <View style={styles.gridArea} onLayout={onGridAreaLayout}>
-            <View testID="game-board" style={{ gap: TILE_GAP }}>
+            <ThemedBoardSurface style={{ width: gridWidth, gap: TILE_GAP, borderRadius: theme.borderRadius.md }}>
               {Array.from({ length: MAX_GUESSES }, (_, row) => (
                 <View key={row} style={[styles.gridRow, { gap: TILE_GAP }]}>
                   {Array.from({ length: WORD_LENGTH }, (_, col) => renderTile(row, col))}
                 </View>
               ))}
-            </View>
+            </ThemedBoardSurface>
           </View>
 
           {gameState.isGameOver ? (

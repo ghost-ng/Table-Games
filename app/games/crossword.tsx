@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Pressable,
+  Platform,
   ScrollView,
   StyleSheet,
   View,
@@ -16,6 +17,8 @@ import { Button } from '../../src/components/ui/Button';
 import { recordGameResult } from '../../src/storage/scores';
 import { useResponsive } from '../../src/utils/layout';
 import { calculateGridBoardLayout } from '../../src/utils/boardSizing';
+import { LetterTile } from '../../src/components/game-visuals/LetterTile';
+import { ThemedBoardSurface } from '../../src/components/game-visuals/ThemedBoardSurface';
 
 const GRID_SIZE = 9;
 const GRID_PADDING = 1;
@@ -735,10 +738,8 @@ export default function CrosswordScreen() {
 
           </> : null}
           {/* Crossword grid */}
-          <Animated.View
-            testID="game-board"
-            entering={reducedMotion ? undefined : FadeIn.duration(300)}
-            style={[
+          <Animated.View entering={reducedMotion ? undefined : FadeIn.duration(300)}>
+          <ThemedBoardSurface style={[
               styles.gridContainer,
               {
                 width: gridWidth,
@@ -772,34 +773,24 @@ export default function CrosswordScreen() {
                         {
                           width: cellSize,
                           height: cellSize,
-                          backgroundColor: isBlack
-                            ? theme.colors.text
-                            : isSelected
-                            ? theme.colors.primary + '50'
-                            : isHighlighted
-                            ? theme.colors.primary + '20'
-                            : theme.colors.surface,
-                          borderColor: isSelected ? theme.colors.primary : theme.colors.border,
-                          borderWidth: isSelected ? 2 : 0.5,
-                          borderBottomWidth: isHighlighted ? 2 : 0.5,
                         },
                       ]}
                     >
-                      {clueNumber !== undefined && !isBlack && (
-                        <ThemedText
-                          variant="caption"
-                          style={[
-                            styles.clueNumber,
-                            { color: theme.colors.textMuted, fontSize: Math.max(8, cellSize * 0.25) },
-                          ]}
-                        >
-                          {clueNumber}
-                        </ThemedText>
-                      )}
-                      {!isBlack && userLetter && (
-                        <ThemedText
-                          variant="label"
-                          style={{
+                      <LetterTile
+                        variant="crossword"
+                        letter={isBlack ? '' : userLetter ?? ''}
+                        clueNumber={isBlack ? undefined : clueNumber}
+                        size={cellSize}
+                        state={isSelected ? 'selected' : 'neutral'}
+                        style={{
+                          backgroundColor: isBlack ? theme.colors.text : isSelected ? theme.colors.primary + '50' : isHighlighted ? theme.colors.primary + '20' : theme.colors.surface,
+                          borderColor: isSelected ? theme.colors.primary : theme.colors.border,
+                          borderWidth: isSelected ? 2 : 0.5,
+                          borderBottomWidth: isHighlighted ? 2 : 0.5,
+                          shadowOpacity: isBlack ? 0 : theme.materials.pieceShadowOpacity,
+                          elevation: isBlack ? 0 : theme.materials.cellDepth,
+                        }}
+                        textStyle={{
                             color: gameOver
                               ? isCorrect
                                 ? theme.colors.success
@@ -808,16 +799,16 @@ export default function CrosswordScreen() {
                             fontSize: cellSize * 0.5,
                             fontWeight: '700',
                             textAlign: 'center',
-                          }}
-                        >
-                          {userLetter}
-                        </ThemedText>
-                      )}
+                        }}
+                      >
+                        {gameOver && !isBlack && userLetter && <ThemedText variant="caption" style={{ position: 'absolute', right: 2, top: 1, fontSize: 9, color: isCorrect ? theme.colors.success : theme.colors.error }}>{isWrong ? '×' : '✓'}</ThemedText>}
+                      </LetterTile>
                     </GamePressable>
                   );
                 })}
               </View>
             ))}
+          </ThemedBoardSurface>
           </Animated.View>
 
           {shortLandscape ? <>
@@ -991,7 +982,7 @@ export default function CrosswordScreen() {
 const styles = StyleSheet.create({
   playContent: {
     alignItems: 'center',
-    paddingHorizontal: 8,
+    paddingHorizontal: 0,
   },
   clueBar: {
     flexDirection: 'row',
@@ -1020,7 +1011,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   cell: {
-    borderWidth: 0.5,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
@@ -1069,6 +1059,9 @@ function GamePressable({ style, ...props }: React.ComponentProps<typeof Pressabl
     <Pressable
       accessibilityRole="button"
       {...props}
+      {...(Platform.OS === 'web' && props.accessibilityState?.selected !== undefined
+        ? { 'aria-pressed': props.accessibilityState.selected, 'aria-selected': props.accessibilityState.selected }
+        : {})}
       onFocus={focus.onFocus}
       onBlur={focus.onBlur}
       style={(state) => [typeof style === 'function' ? style(state) : style, focus.style]}

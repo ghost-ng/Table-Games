@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   View,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -16,6 +17,9 @@ import { ThemedText } from '../../src/components/ui/ThemedText';
 import { recordGameResult } from '../../src/storage/scores';
 import { useResponsive } from '../../src/utils/layout';
 import { calculateGridBoardLayout } from '../../src/utils/boardSizing';
+import { LetterTile } from '../../src/components/game-visuals/LetterTile';
+import { ThemedBoardSurface } from '../../src/components/game-visuals/ThemedBoardSurface';
+import { SelectionTrail } from '../../src/components/game-visuals/SelectionTrail';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 const GRID_SIZE = 10;
@@ -498,10 +502,8 @@ export default function WordSearchScreen() {
 
         {/* Grid */}
         {puzzle && (
-          <Animated.View
-            testID="game-board"
-            entering={reducedMotion ? undefined : FadeIn.duration(300)}
-            style={[
+          <Animated.View entering={reducedMotion ? undefined : FadeIn.duration(300)}>
+          <ThemedBoardSurface style={[
               styles.board,
               {
                 width: boardWidth,
@@ -509,10 +511,19 @@ export default function WordSearchScreen() {
                 borderColor: theme.colors.border,
                 backgroundColor: theme.colors.surfaceRaised,
                 borderRadius: theme.borderRadius.md,
-                ...theme.shadows.md,
               },
             ]}
           >
+            {foundWords.map((word) => (
+              <SelectionTrail key={word.word} found points={word.cells.map(([r, c]) => ({
+                x: (GRID_PADDING + (c + 0.5) * cellSize) / (boardWidth - GRID_BORDER_WIDTH * 2),
+                y: (GRID_PADDING + (r + 0.5) * cellSize) / (boardWidth - GRID_BORDER_WIDTH * 2),
+              }))} />
+            ))}
+            {selStart && <SelectionTrail found={false} points={[{
+              x: (GRID_PADDING + (selStart[1] + 0.5) * cellSize) / (boardWidth - GRID_BORDER_WIDTH * 2),
+              y: (GRID_PADDING + (selStart[0] + 0.5) * cellSize) / (boardWidth - GRID_BORDER_WIDTH * 2),
+            }]} />}
             {puzzle.grid.map((row, r) => (
               <View key={r} style={styles.gridRow}>
                 {row.map((letter, c) => {
@@ -549,31 +560,27 @@ export default function WordSearchScreen() {
                         {
                           width: cellSize,
                           height: cellSize,
-                          backgroundColor: bgColor,
-                          borderWidth: isPreview ? 2 : 0,
-                          borderColor: theme.colors.primary,
-                          borderBottomWidth: foundBy ? 2 : isPreview ? 2 : 0,
-                          borderBottomColor: foundBy ? textColor : theme.colors.primary,
-                          borderRadius: theme.borderRadius.sm / 2,
                         },
                       ]}
                     >
-                      <ThemedText
-                        variant="label"
-                        style={{
+                      <LetterTile
+                        letter={letter}
+                        size={cellSize}
+                        state={isPreview ? 'selected' : foundBy ? 'found' : 'neutral'}
+                        style={{ backgroundColor: bgColor, borderRadius: theme.borderRadius.sm / 2, shadowOpacity: 0, elevation: 0, borderBottomColor: foundBy ? textColor : theme.colors.primary }}
+                        textStyle={{
                           color: textColor,
                           fontSize: Math.max(13, cellSize * 0.46),
                           fontWeight: foundBy || isPreview ? '800' : '600',
                           textAlign: 'center',
                         }}
-                      >
-                        {letter}
-                      </ThemedText>
+                      />
                     </GamePressable>
                   );
                 })}
               </View>
             ))}
+          </ThemedBoardSurface>
           </Animated.View>
         )}
 
@@ -652,7 +659,7 @@ export default function WordSearchScreen() {
 const styles = StyleSheet.create({
   scrollContent: {
     alignItems: 'center',
-    paddingHorizontal: 8,
+    paddingHorizontal: 0,
   },
   hintRow: {
     paddingVertical: 6,
@@ -700,6 +707,9 @@ function GamePressable({ style, ...props }: React.ComponentProps<typeof Pressabl
     <Pressable
       accessibilityRole="button"
       {...props}
+      {...(Platform.OS === 'web' && props.accessibilityState?.selected !== undefined
+        ? { 'aria-pressed': props.accessibilityState.selected, 'aria-selected': props.accessibilityState.selected }
+        : {})}
       onFocus={focus.onFocus}
       onBlur={focus.onBlur}
       style={(state) => [typeof style === 'function' ? style(state) : style, focus.style]}

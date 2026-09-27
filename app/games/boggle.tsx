@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Pressable,
+  Platform,
   ScrollView,
   StyleSheet,
   TextInput,
@@ -26,6 +27,9 @@ import {
 } from '../../src/engines/boggle';
 import { useResponsive } from '../../src/utils/layout';
 import { calculateGridBoardLayout } from '../../src/utils/boardSizing';
+import { LetterTile } from '../../src/components/game-visuals/LetterTile';
+import { ThemedBoardSurface } from '../../src/components/game-visuals/ThemedBoardSurface';
+import { SelectionTrail } from '../../src/components/game-visuals/SelectionTrail';
 import { haptics } from '../../src/utils/haptics';
 
 const GRID_PADDING = 12;
@@ -913,17 +917,14 @@ export default function BoggleScreen() {
         >
           <View style={{ width: '100%', flexDirection: shortLandscape ? 'row' : 'column', alignItems: 'center', gap: shortLandscape ? 16 : 0 }}>
           {/* Board grid */}
-          <Animated.View
-            testID="game-board"
-            entering={reducedMotion ? undefined : FadeIn.duration(300)}
-            style={[styles.boardContainer, {
+          <Animated.View entering={reducedMotion ? undefined : FadeIn.duration(300)}>
+          <ThemedBoardSurface style={[styles.boardContainer, {
               width: gridSize,
               backgroundColor: theme.colors.board,
               borderWidth: GRID_BORDER_WIDTH,
               borderColor: theme.colors.border,
               borderRadius: theme.borderRadius.lg,
               flexShrink: 0,
-              ...theme.shadows.md,
             }]}
           >
             {gameState.board.map((row, r) => (
@@ -940,45 +941,38 @@ export default function BoggleScreen() {
                     accessibilityRole="button"
                     accessibilityLabel={`Row ${r + 1}, column ${c + 1}: ${letter}${selected ? `, selected ${pathIndex + 1}` : ""}`}
                     accessibilityState={{ selected, disabled: isGameOver }}
-                    style={({ pressed }) => [styles.cell, {
-                      backgroundColor: isLast
-                        ? theme.colors.primary
-                        : selected
-                          ? theme.colors.primary + '30'
-                          : theme.colors.surfaceRaised,
-                      borderColor: selected ? theme.colors.primary : theme.colors.border,
-                      borderRadius: theme.borderRadius.md,
-                      width: cellSize,
-                      height: cellSize,
-                      opacity: pressed ? 0.8 : 1,
-                      borderBottomWidth: selected ? 4 : 3,
-                      ...theme.shadows.sm,
-                    }]}
+                    style={{ width: cellSize, height: cellSize }}
                   >
-                    <ThemedText
-                      variant="heading"
-                      style={[
-                        styles.cellLetter,
-                        { color: isLast ? theme.colors.onPrimary : theme.colors.text, fontSize: Math.max(20, cellSize * 0.34) },
-                      ]}
+                    {({ pressed }) => <LetterTile
+                      variant="word-grid"
+                      letter={letter}
+                      size={cellSize}
+                      state={selected ? 'selected' : 'neutral'}
+                      pressed={pressed}
+                      style={{ backgroundColor: isLast ? theme.colors.primary : selected ? theme.colors.primary + '30' : theme.colors.surfaceRaised, borderBottomWidth: selected ? 4 : 3 }}
+                      textStyle={[styles.cellLetter, { color: isLast ? theme.colors.onPrimary : theme.colors.text, fontSize: Math.max(20, cellSize * 0.34) }]}
                     >
-                      {letter}
-                    </ThemedText>
                     {selected && (
                       <ThemedText variant="caption" style={{ position: 'absolute', top: 3, left: 5, color: isLast ? theme.colors.onPrimary : theme.colors.primary, fontWeight: '700' }}>{pathIndex + 1}</ThemedText>
                     )}
                     {letter.length > 1 && (
                       <View style={[styles.quBadge, { backgroundColor: theme.colors.primary + '20' }]}>
-                        <ThemedText variant="caption" style={{ color: theme.colors.primary, fontSize: 8 }}>
+                        <ThemedText variant="caption" style={{ color: isLast ? theme.colors.onPrimary : theme.colors.primary, fontSize: 8 }}>
                           2
                         </ThemedText>
                       </View>
                     )}
+                    </LetterTile>}
                   </GamePressable>
                   );
                 })}
               </View>
             ))}
+            <SelectionTrail found={false} style={{ opacity: 0.28 }} points={highlightedPath.map(({ row, col }) => ({
+              x: (GRID_PADDING + col * (cellSize + GRID_GAP) + cellSize / 2) / (gridSize - GRID_BORDER_WIDTH * 2),
+              y: (GRID_PADDING + row * (cellSize + GRID_GAP) + cellSize / 2) / (gridSize - GRID_BORDER_WIDTH * 2),
+            }))} />
+          </ThemedBoardSurface>
           </Animated.View>
 
           <View style={{ alignSelf: 'stretch', flex: shortLandscape ? 1 : undefined, minWidth: 0 }}>
@@ -1158,7 +1152,7 @@ const styles = StyleSheet.create({
   // Playing screen
   playContent: {
     alignItems: 'center',
-    paddingHorizontal: 8,
+    paddingHorizontal: 0,
     paddingTop: 8,
   },
 
@@ -1290,6 +1284,9 @@ function GamePressable({ style, ...props }: React.ComponentProps<typeof Pressabl
     <Pressable
       accessibilityRole="button"
       {...props}
+      {...(Platform.OS === 'web' && props.accessibilityState?.selected !== undefined
+        ? { 'aria-pressed': props.accessibilityState.selected, 'aria-selected': props.accessibilityState.selected }
+        : {})}
       onFocus={focus.onFocus}
       onBlur={focus.onBlur}
       style={(state) => [typeof style === 'function' ? style(state) : style, focus.style]}

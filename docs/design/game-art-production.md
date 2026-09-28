@@ -81,13 +81,20 @@ Enclosed matte is removed only when it continues that verified grid or is a
 large, palette-balanced region with the same cell scale and at least 90% local
 checker periodicity. Solid or gradient backgrounds, colorful patterns,
 non-periodic neutral regions, foreground edge contact, and implicit processing
-of already-transparent inputs are refused. The tool removes only verified matte
-pixels and conservatively unmattes a one-pixel chromatic antialias fringe; it
-does not replace normal source inspection or final alpha, framing, component,
-budget, and Hangman group checks. Recovery is never invoked automatically by
-the normalizer. Keep the raw built-in output path and SHA-256 in the ignored
-generation report, inspect recovered light/dark and phone previews, then copy
-only an accepted recovered PNG to its manifest `sourcePath`.
+of already-transparent inputs are refused. Inputs are limited to 4096 pixels per
+dimension, four million pixels total, and a 64-pixel inferred checker cell. The
+tool removes only phase- and periodicity-verified matte pixels. Boundary
+antialiasing is unmatted only when the verified checker phase and a stable,
+nearby opaque foreground seed produce a consistent least-squares alpha and
+decontaminated foreground color. The established source sanitizer may then
+discard detached alpha below 13/255, but connected or meaningful edge contact
+still refuses. Recovery does not replace normal source inspection or final
+alpha, framing, component, budget, and Hangman group checks, and is never
+invoked automatically by the normalizer. The output path must not already
+exist; creation is exclusive so a concurrent file cannot be overwritten. Keep
+the raw built-in output path and SHA-256 in the ignored generation report,
+inspect recovered light/dark and phone previews, then copy only an accepted
+recovered PNG to its manifest `sourcePath`.
 
 Each output is derived from its own individual `sourcePath` and writes exactly its `finalPath`; Hangman also reads its six sibling sources to establish the shared framing. Missing files, absent alpha, non-square images, meaningful clipped content, and extra meaningful objects fail before any output is replaced. Non-Hangman source preparation removes only detached sub-5% alpha residue in memory; connected antialiasing remains intact. Strict final WebP validation still rejects every nonzero-alpha edge contact, opaque corners, unsafe padding, wrong fill, and extra meaningful objects. Legacy, generation-pending, and authority-pending records cannot be normalized. The CLI preflights every selected source and final output before writing output files.
 

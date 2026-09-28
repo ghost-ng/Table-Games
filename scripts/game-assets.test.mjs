@@ -764,6 +764,12 @@ test('checkerboard recovery CLI is explicit, reports evidence, and never overwri
   assert.ok(report.outputAlphaBounds.width > 0 && report.outputAlphaBounds.height > 0);
   assert.deepEqual(readFileSync(input), original, 'recovery must never mutate the rejected raw candidate');
   assert.equal((await art.readImageMetrics(output)).hasAlpha, true);
+  const existing = Buffer.from('existing distinct output');
+  writeFileSync(output, existing);
+  const existingOutput = spawnSync(process.execPath,
+    ['scripts/recover-checkerboard-alpha.mjs', '--input', input, '--output', output],
+    { cwd: root, encoding: 'utf8' });
+  assert.equal(existingOutput.status, 1); assert.deepEqual(readFileSync(output), existing);
   const overwrite = spawnSync(process.execPath, ['scripts/recover-checkerboard-alpha.mjs', '--input', input, '--output', input],
     { cwd: root, encoding: 'utf8' });
   assert.equal(overwrite.status, 1); assert.match(overwrite.stderr, /different|overwrite|input/i);
@@ -846,4 +852,97 @@ test('strict checkerboard recovery preserves balanced neutral enclosed foregroun
   } });
   await assert.rejects(requireHelper('recoverCheckerboardAlpha')(input),
     /enclosed regions|checker grid|periodic/i);
+});
+
+test('strict checkerboard recovery preserves silver foreground attached to blue', async () => {
+  const recover = requireHelper('recoverCheckerboardAlpha');
+  const input = await checkerboardFixture({ paint: (x, y) => {
+    if (x >= 16 && x <= 31 && y >= 36 && y <= 59) return [170, 170, 170];
+    if (x >= 28 && x <= 75 && y >= 18 && y <= 77) return [26, 86, 219];
+    return null;
+  } });
+  const recovered = await recover(input);
+  const { data: pixels, info } = await sharp(recovered.data).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const alpha = (x, y) => pixels[(y * info.width + x) * 4 + 3];
+  assert.equal(alpha(20, 48), 255, 'attached silver foreground must remain opaque');
+  assert.equal(alpha(32, 48), 255, 'attached blue foreground must remain opaque');
+  assert.equal(alpha(0, 0), 0, 'verified checker matte must still be removed');
+});
+
+test('strict checkerboard recovery refuses neutral foreground attached to blue at the canvas edge', async () => {
+  const recover = requireHelper('recoverCheckerboardAlpha');
+  const input = await checkerboardFixture({ paint: (x, y) => {
+    if (x <= 7 && y >= 36 && y <= 59) return [170, 170, 170];
+    if (x >= 8 && x <= 55 && y >= 36 && y <= 59) return [26, 86, 219];
+    return null;
+  } });
+  await assert.rejects(recover(input), /foreground.*edge|border/i);
+});
+
+test('strict checkerboard recovery unmattes neutral antialias samples over both checker tones', async () => {
+  const recover = requireHelper('recoverCheckerboardAlpha');
+  const samples = [
+    { y: 12, foreground: [250, 250, 250], alpha: 0.35, name: 'white/dark' },
+    { y: 16, foreground: [250, 250, 250], alpha: 0.35, name: 'white/light' },
+    { y: 28, foreground: [190, 190, 190], alpha: 0.50, name: 'silver/dark' },
+    { y: 32, foreground: [190, 190, 190], alpha: 0.50, name: 'silver/light' },
+    { y: 44, foreground: [170, 170, 170], alpha: 0.50, name: 'gray/dark' },
+    { y: 48, foreground: [170, 170, 170], alpha: 0.50, name: 'gray/light' },
+    { y: 60, foreground: [10, 10, 10], alpha: 0.10, name: 'black/dark' },
+    { y: 64, foreground: [10, 10, 10], alpha: 0.10, name: 'black/light' },
+  ];
+  const input = await checkerboardFixture({ paint: (x, y, background) => {
+    const sample = x === 19 ? samples.find((candidate) => candidate.y === y) : null;
+    if (sample) return blend(sample.foreground, background, sample.alpha);
+    const seed = x >= 20 && x <= 21
+      ? samples.find((candidate) => Math.abs(candidate.y - y) <= 1) : null;
+    if (seed) return seed.foreground;
+    if (x >= 22 && x <= 75 && y >= 8 && y <= 87) return [26, 86, 219];
+    return null;
+  } });
+  const recovered = await recover(input);
+  const { data: pixels, info } = await sharp(recovered.data).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  for (const sample of samples) {
+    const offset = (sample.y * info.width + 19) * 4;
+    const recoveredColor = [...pixels.subarray(offset, offset + 3)];
+    const alpha = pixels[offset + 3];
+    assert.ok(alpha > 0 && alpha < 255, `${sample.name} must retain partial coverage; got ${[...pixels.subarray(offset, offset + 12)]}; ${JSON.stringify(recovered.detection)}`);
+    assert.ok(Math.abs(alpha / 255 - sample.alpha) <= 0.06,
+      `${sample.name} alpha ${alpha} must approximate ${sample.alpha}`);
+    assert.ok(Math.max(...recoveredColor.map((value, channel) => Math.abs(value - sample.foreground[channel]))) <= 6,
+      `${sample.name} must decontaminate to ${sample.foreground}, got ${recoveredColor}`);
+  }
+});
+
+test('checkerboard recovery sanitizes only detached sub-five-percent reconstructed edge residue', async () => {
+  const recover = requireHelper('recoverCheckerboardAlpha');
+  const makeEdgeFixture = (connected) => checkerboardFixture({ paint: (x, y, background) => {
+    if (y === 48 && (connected ? x <= 2 : x === 0)) return blend([170, 170, 170], background, 0.03);
+    if (x >= 3 && x <= 7 && y >= 40 && y <= 55) return [170, 170, 170];
+    if (x >= 8 && x <= 60 && y >= 32 && y <= 63) return [26, 86, 219];
+    return null;
+  } });
+
+  const detached = await recover(await makeEdgeFixture(false));
+  const detachedPixels = await sharp(detached.data).ensureAlpha().raw().toBuffer();
+  assert.equal(detachedPixels[(48 * 96) * 4 + 3], 0,
+    'a detached reconstructed edge speck below 13/255 is discarded by established source sanitation');
+
+  await assert.rejects(recover(await makeEdgeFixture(true)), /edge/i,
+    'a faint reconstructed path connected to meaningful neutral foreground must still refuse');
+});
+
+test('checkerboard recovery enforces dimension, pixel, and inferred cell-size resource bounds', async () => {
+  const recover = requireHelper('recoverCheckerboardAlpha');
+  const dimension = await sharp({ create: { width: 4097, height: 1, channels: 3,
+    background: { r: 204, g: 204, b: 204 } } }).png().toBuffer();
+  await assert.rejects(recover(dimension), /maximum dimension/i);
+
+  const pixels = await sharp({ create: { width: 2001, height: 2000, channels: 3,
+    background: { r: 204, g: 204, b: 204 } } }).png().toBuffer();
+  await assert.rejects(recover(pixels), /maximum pixel/i);
+
+  const oversizedCells = await checkerboardFixture({ width: 768, cellSize: 96,
+    paint: (x, y) => x >= 300 && x <= 467 && y >= 300 && y <= 467 ? [26, 86, 219] : null });
+  await assert.rejects(recover(oversizedCells), /maximum checker cell/i);
 });

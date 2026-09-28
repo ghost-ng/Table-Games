@@ -1,6 +1,6 @@
 /** Explicit CLI for verified checkerboard-matte alpha recovery. */
 import assert from 'node:assert/strict';
-import { lstat, mkdir, stat, writeFile } from 'node:fs/promises';
+import { lstat, mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { recoverCheckerboardAlpha } from './checkerboard-alpha.mjs';
@@ -27,18 +27,15 @@ async function main() {
   const input = resolve(options.input); const output = resolve(options.output);
   assert.notEqual(input, output, 'Input and output must be different paths; raw candidates are never overwritten');
   try {
-    const metadata = await lstat(output);
-    assert.ok(!metadata.isSymbolicLink(), 'Output symbolic links are refused');
-    const [inputStat, outputStat] = await Promise.all([stat(input), stat(output)]);
-    assert.ok(inputStat.dev !== outputStat.dev || inputStat.ino !== outputStat.ino,
-      'Output must not alias or overwrite the input');
+    await lstat(output);
+    assert.fail('Output already exists; choose a new path');
   } catch (error) {
     if (error.code !== 'ENOENT') throw error;
   }
   const result = await recoverCheckerboardAlpha(input,
     { allowTransparentNoop: options.allowTransparentNoop });
   await mkdir(dirname(output), { recursive: true });
-  await writeFile(output, result.data);
+  await writeFile(output, result.data, { flag: 'wx' });
   console.log(JSON.stringify({
     detection: result.detection,
     removedPixels: result.removedPixels,

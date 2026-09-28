@@ -88,8 +88,8 @@ The evidence above is historical evidence for the previous artwork and build. Ta
 | Tic-Tac-Toe | 2 accepted in Task 2B | 2 pending | 2 pending | Complete X/O silhouettes and clear ring opening |
 | Connect Four | 2 accepted in Task 2B | 2 pending | 2 pending | Circular discs matching current semantic ownership |
 | Checkers | 3 accepted in Task 2B | 3 pending | 3 pending | Top-down ridged discs; separate centered king marker |
-| Chinese Checkers | 6 accepted in Task 2C | 6 pending | 6 pending | Equal round marbles with six distinct colors |
-| Mancala | 6 accepted in Task 2C | 6 pending | 6 pending | Individual recognizable stones/seeds with six shapes |
+| Chinese Checkers | 6 accepted in Task 2C | 6 accepted in Task 2G | 6 pending | Equal round marbles with six distinct colors |
+| Mancala | 6 accepted in Task 2C | 6 accepted in Task 2G | 6 pending | Individual recognizable stones/seeds with six shapes |
 | Pop & Race | 4 pending | 4 pending | 4 pending | Classic rounded pawns matching seat colors |
 | Dice | 6 pending | 6 pending | 6 pending | Correct d4/d6/d8/d10/d12/d20 geometry; blank faces |
 | Hangman | 7 pending | 7 pending | 7 pending | Friendly platform/posts/crossbar/head/torso/arms/feet assembly; one shared transform |
@@ -172,3 +172,20 @@ Accepted seven distinct first-pass built-in image generations after original-res
 Contact-sheet order is X, O, red Connect Four, blue Connect Four, red checker, blue checker, crown. Stage remains `generation-batches`: 43 completed custom records, 65 `generationPending` custom records, and nine unchanged `authorityReferencePending` quarter slots. All 117 production sprites total 823,254 bytes; the largest remains the inherited 17,732-byte Arcade Hangman stage 6, below the 2 MiB total and 64 KiB per-file limits.
 
 Only these seven records, sources, finals, and four QA sheets belong to this batch. No catalog, registry, validator, dependency, or gameplay change was needed, and this inspection does not claim a fresh browser gameplay audit.
+
+## Task 2G Retro marbles and Mancala stones — 2026-09-28
+
+Accepted twelve distinct first-pass built-in image generations, one per frozen manifest prompt, after native-resolution source inspection and deterministic exact-asset normalization. There were no retries, rejected candidates, reference images, output reuse, sheets, or CLI/API fallback. Exact prompts, portable paths, actual generation timestamps, and review timestamps remain in the twelve Retro manifest records; project source PNGs are byte-identical to their built-in originals.
+
+| Inspection | Evidence and result |
+| --- | --- |
+| Original sources | All twelve 1254×1254 true-alpha PNGs were inspected at native dimensions through the approved high-quality WebP inline fallback after `view_image` failed because bubblewrap is unavailable. Alpha and geometry measurements use the untouched PNGs. Every source is one complete object with one meaningful component containing 100% of connected foreground; only detached sub-5% alpha residue is removed in memory. |
+| Chinese Checkers | Six round top-down warm-glass marbles have consistent diameter and upper-left highlights, with distinct terracotta red, deep blue, muted green, amber brown, lavender and warm ivory ownership colors. Refraction, internal swirls and spherical contours distinguish them from flat discs, gems, buttons and clusters. |
+| Mancala | Six natural polished stones retain the requested amber oval, cream slender teardrop, green broad kidney, terracotta irregular pebble, charcoal plump almond and purple asymmetric river-stone profiles. Mineral grain and gentle wear remain readable without obscuring the colors; the pieces are visibly distinct from the glass marbles and are not bowls, piles, groups, icons or gemstones. |
+| Production-size light/dark | [Light](qa/retro-marbles-stones-full-light.webp) and [dark](qa/retro-marbles-stones-full-dark.webp) sheets show the twelve final WebPs in 128px cells. Colors, materials, family camera and complete silhouettes remain coherent on both backgrounds, with no opaque box, checkerboard, text, watermark, ground plane, clipping, edge contact or extra meaningful object. |
+| Phone-size readability | [Light](qa/retro-marbles-stones-phone-light.webp) and [dark](qa/retro-marbles-stones-phone-dark.webp) 32px-cell sheets preserve all six ownership colors, glass-vs-stone distinction and six organic stone profiles. Pale marble and cream stone retain readable contours on both backgrounds. |
+| Alpha, geometry and budget | Every final has genuine alpha, transparent corners, no edge contact, one meaningful component containing 100% of connected foreground, 75.78% marble / 76.04% stone longest-bound fill, and at least 11.46% padding. Batch finals total 46,666 bytes; largest final is 5,406 bytes. Sources total 16,217,886 bytes and remain outside the runtime budget. |
+
+Contact-sheet order is marble-1 through marble-6, then seed-1 through seed-6. Source preparation removes 154–974 detached faint-alpha pixels per marble and 202–1,677 per stone without rewriting stored PNGs. Byte-identical source checks and deterministic no-write renormalization passed for all twelve.
+
+Stage remains `generation-batches`: 55 completed custom records, 53 `generationPending` custom records, and nine unchanged `authorityReferencePending` quarter slots. All 117 production sprites total 834,948 bytes; the largest remains the inherited 17,732-byte Arcade Hangman stage 6, below the 2 MiB total and 64 KiB per-file limits. Only these twelve records, sources, finals, and four QA sheets belong to this batch. No catalog, registry, validator, dependency, or gameplay change was needed, and this inspection does not claim a fresh browser gameplay audit.

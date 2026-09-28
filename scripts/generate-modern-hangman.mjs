@@ -1,13 +1,12 @@
 /** Deterministic source authoring for the seven Modern Hangman stages. */
-import assert from 'node:assert/strict';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import sharp from 'sharp';
+import { createHangmanRenderer, HANGMAN_SOURCE_SIZE } from './hangman-geometry.mjs';
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 export const MODERN_HANGMAN_GENERATOR = 'scripts/generate-modern-hangman.mjs';
-export const MODERN_HANGMAN_SOURCE_SIZE = 1024;
+export const MODERN_HANGMAN_SOURCE_SIZE = HANGMAN_SOURCE_SIZE;
 
 const defs = `
   <defs>
@@ -108,16 +107,9 @@ const platform = `
     <circle cx="816" cy="863" r="13" fill="#79edff"/>
   </g>`;
 
-function stageGroups(stage) {
-  return [stage >= 6 ? feet : '', stage >= 5 ? arms : '', stage >= 4 ? torso : '',
-    stage >= 3 ? head : '', stage >= 2 ? crossbar : '', stage >= 1 ? posts : '', platform].join('');
-}
-
-export async function renderModernHangmanStage(stage) {
-  assert.ok(Number.isInteger(stage) && stage >= 0 && stage <= 6, 'Modern Hangman stage must be an integer from 0 through 6');
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">${defs}${stageGroups(stage)}</svg>`;
-  return sharp(Buffer.from(svg)).png({ compressionLevel: 9, adaptiveFiltering: false, palette: false }).toBuffer();
-}
+export const renderModernHangmanStage = createHangmanRenderer({
+  themeName: 'Modern', defs, groups: { feet, arms, torso, head, crossbar, posts, platform },
+});
 
 export async function writeModernHangmanSources({ root = projectRoot } = {}) {
   const outputs = [];

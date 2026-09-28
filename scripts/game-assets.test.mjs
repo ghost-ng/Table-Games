@@ -25,6 +25,15 @@ async function loadModernHangmanGenerator() {
   }
 }
 
+async function loadRetroHangmanGenerator() {
+  try {
+    return await import('./generate-retro-hangman.mjs');
+  } catch (error) {
+    if (error.code === 'ERR_MODULE_NOT_FOUND') return {};
+    throw error;
+  }
+}
+
 function requireHelper(name) {
   assert.equal(typeof art[name], 'function', `${name} must implement the individual-asset contract`);
   return art[name];
@@ -784,4 +793,116 @@ test('Modern Hangman 1024px sources normalize together by downscaling with one s
   assert.deepEqual(transform.sourceBounds, { left: 123, top: 206, width: 778, height: 695 });
   assert.deepEqual([...new Set(results.map(({ metrics }) => metrics.bounds.top + metrics.bounds.height))], [338]);
   assert.equal(new Set(results.map(({ data }) => createHash('sha256').update(data).digest('hex'))).size, 7);
+});
+
+test('Retro Hangman authoring renders deterministic 1024px alpha sources with the exact fixed platform', async () => {
+  const generator = await loadRetroHangmanGenerator();
+  assert.equal(typeof generator.renderRetroHangmanStage, 'function',
+    'renderRetroHangmanStage must provide deterministic Retro source authoring');
+  assert.equal(generator.RETRO_HANGMAN_GENERATOR, 'scripts/generate-retro-hangman.mjs');
+  const first = await generator.renderRetroHangmanStage(0);
+  const second = await generator.renderRetroHangmanStage(0);
+  assert.deepEqual(first, second, 'Repeated Retro authoring must produce byte-identical PNGs');
+  const metrics = art.assertImageMetrics(await art.readImageMetrics(first), { targetSize: 1024, visibleBounds });
+  assert.deepEqual(metrics.bounds, { left: 123, top: 789, width: 778, height: 112 });
+  assert.equal(metrics.bounds.top + metrics.bounds.height, 901, 'The fixed platform bottom edge is y=901');
+  assert.equal(metrics.components.meaningfulCount, 1);
+});
+
+test('Modern and Retro Hangman share exact stage geometry while Retro retains every prior opaque pixel', async () => {
+  const modern = await loadModernHangmanGenerator();
+  const retro = await loadRetroHangmanGenerator();
+  assert.equal(typeof retro.renderRetroHangmanStage, 'function',
+    'Retro Hangman must extend the deterministic shared geometry model');
+  const modernStages = await Promise.all(Array.from({ length: 7 }, (_, stage) => modern.renderModernHangmanStage(stage)));
+  const retroStages = await Promise.all(Array.from({ length: 7 }, (_, stage) => retro.renderRetroHangmanStage(stage)));
+  const decode = (input) => sharp(input).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const modernDecoded = await Promise.all(modernStages.map(decode));
+  const retroDecoded = await Promise.all(retroStages.map(decode));
+  assert.equal(new Set(retroStages.map((input) => createHash('sha256').update(input).digest('hex'))).size, 7,
+    'Every Retro stage must have distinct source bytes');
+  const visible = [];
+  for (let stage = 0; stage < 7; stage++) {
+    const current = retroDecoded[stage];
+    assert.deepEqual(current.info, modernDecoded[stage].info, `Stage ${stage} must use the shared source canvas`);
+    for (let offset = 3; offset < current.data.length; offset += 4) {
+      assert.equal(current.data[offset], modernDecoded[stage].data[offset],
+        `Stage ${stage} must use the exact shared alpha geometry at pixel ${Math.floor(offset / 4)}`);
+    }
+    const metrics = art.assertImageMetrics(await art.readImageMetrics(retroStages[stage]), { targetSize: 1024, visibleBounds });
+    assert.equal(metrics.bounds.left, 123); assert.equal(metrics.bounds.width, 778);
+    assert.equal(metrics.bounds.top + metrics.bounds.height, 901);
+    assert.equal(metrics.components.meaningfulCount, 1);
+    visible.push(metrics.visiblePixels);
+    if (!stage) continue;
+    const prior = retroDecoded[stage - 1].data;
+    for (let offset = 0; offset < prior.length; offset += 4) {
+      if (prior[offset + 3] !== 255) continue;
+      assert.deepEqual(current.data.subarray(offset, offset + 4), prior.subarray(offset, offset + 4),
+        `Retro stage ${stage} must retain every opaque pixel from stage ${stage - 1}`);
+    }
+  }
+  for (let stage = 1; stage < visible.length; stage++) {
+    assert.ok(visible[stage] > visible[stage - 1], `Retro stage ${stage} must add visible geometry`);
+  }
+  const alphaAt = (stage, x, y) => retroDecoded[stage].data[(y * 1024 + x) * 4 + 3];
+  for (const { stage, point: [x, y], label } of [
+    { stage: 1, point: [220, 500], label: 'posts' },
+    { stage: 2, point: [512, 235], label: 'crossbar' },
+    { stage: 3, point: [512, 380], label: 'head' },
+    { stage: 4, point: [512, 570], label: 'torso' },
+    { stage: 5, point: [376, 570], label: 'arms' },
+    { stage: 6, point: [456, 748], label: 'feet' },
+  ]) {
+    assert.equal(alphaAt(stage - 1, x, y), 0, `${label} must not appear before Retro stage ${stage}`);
+    assert.ok(alphaAt(stage, x, y) >= 250, `${label} must be unmistakable at Retro stage ${stage}`);
+  }
+});
+
+test('Retro Hangman normalizes as one downscaled group and preserves every Modern Hangman byte', async (t) => {
+  const generator = await loadRetroHangmanGenerator();
+  assert.equal(typeof generator.renderRetroHangmanStage, 'function',
+    'renderRetroHangmanStage must provide group-normalizable sources');
+  const modernSourceHashes = [
+    'e623b14fa530f6db1e0b9781102d7f74578e5a9b66a7f85addf03068cd36287b',
+    'b33b692537c3a18ada578c564d91377cfad5b500d4e1574fd96eee724a219080',
+    '59f4b22253bf22fa667b185bb30cfadd0f2abdc92a504c470c5faed6fa507ca5',
+    '5c94c3769114673e2d0c1e15bcb81bc6ce9ade6e211374964632c8dda25a4b64',
+    '1169acfd0f44cb8d05e3967e2ff1c18e36512bf1aa55bc88c596d9c1c9d46a65',
+    '0422ebe17a73eeef2074a2e05c2034007d49742c2195110f6f612e074f4e25cd',
+    'b8e14e3ae17c98fd19dd028df5e973859dac4e62b615ebc8f389d2f43ca516af',
+  ];
+  const modernFinalHashes = [
+    'cb6d553a808cbfcb718e196f0ed7b716491a5976c3788cb83fe19eae9da62868',
+    '3004c98d16357937b55189c9407a066bcc3f7642a2a8df114321ce633da42474',
+    '156bd2dafe88c06d0e389e271d0c049b17793345c18e851d6080dbcc21f1c208',
+    'db463f7f13c9245788fba752da6ea08520df3ec2b8ed6f0ac1f6a417cc1c05fe',
+    'ccfc465cfd247b075fede5c181d1e32d5045aa8e82835f7a8474e86f3cc48ef9',
+    'd243617f3890d7c2c00789b17ff95940107e261deba4050671c54a9eec4a128f',
+    '9706c615951a13e5f347ce9152c9b0799ffa7517b07c92cb61cfbb1c95965bf1',
+  ];
+  const hash = (input) => createHash('sha256').update(input).digest('hex');
+  assert.deepEqual(Array.from({ length: 7 }, (_, stage) => hash(readFileSync(resolve(root,
+    `docs/design/source-art/modern/hangman/stage-${stage}.png`)))), modernSourceHashes);
+  assert.deepEqual(Array.from({ length: 7 }, (_, stage) => hash(readFileSync(resolve(root,
+    `assets/pieces/modern/hangman/stage-${stage}.webp`)))), modernFinalHashes);
+
+  const dir = mkdtempSync(resolve(tmpdir(), 'retro-hangman-authoring-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const records = [];
+  for (let stage = 0; stage < 7; stage++) {
+    const record = individualRecord({ theme: 'retro', family: 'hangman', role: `stage-${stage}`,
+      sourcePath: `docs/design/source-art/retro/hangman/stage-${stage}.png`,
+      finalPath: `assets/pieces/retro/hangman/stage-${stage}.webp`, targetSize: 384,
+      generator: 'scripts/generate-retro-hangman.mjs' });
+    const path = resolve(dir, record.sourcePath);
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, await generator.renderRetroHangmanStage(stage));
+    records.push(record);
+  }
+  const { results, transform } = await art.normalizeHangmanGroup(records, { root: dir, write: false });
+  assert.ok(transform.scale > 0 && transform.scale < 1, 'Retro production normalization must downscale, never upscale');
+  assert.deepEqual(transform.sourceBounds, { left: 123, top: 206, width: 778, height: 695 });
+  assert.deepEqual([...new Set(results.map(({ metrics }) => metrics.bounds.top + metrics.bounds.height))], [338]);
+  assert.equal(new Set(results.map(({ data }) => hash(data))).size, 7);
 });

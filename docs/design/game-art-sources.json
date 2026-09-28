@@ -1294,11 +1294,11 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "generationPending": true,
+      "generatedAt": "2026-09-28T03:59:26.411Z",
+      "reviewedAt": "2026-09-28T04:00:45.881Z",
       "expectedOwner": "shared",
-      "expectedColor": "#8B6914"
+      "expectedColor": "#8B6914",
+      "generator": "scripts/generate-retro-hangman.mjs"
     },
     {
       "theme": "retro",
@@ -1313,11 +1313,11 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "generationPending": true,
+      "generatedAt": "2026-09-28T03:59:26.447Z",
+      "reviewedAt": "2026-09-28T04:00:45.881Z",
       "expectedOwner": "shared",
-      "expectedColor": "#8B6914"
+      "expectedColor": "#8B6914",
+      "generator": "scripts/generate-retro-hangman.mjs"
     },
     {
       "theme": "retro",
@@ -1332,11 +1332,11 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "generationPending": true,
+      "generatedAt": "2026-09-28T03:59:26.484Z",
+      "reviewedAt": "2026-09-28T04:00:45.881Z",
       "expectedOwner": "shared",
-      "expectedColor": "#8B6914"
+      "expectedColor": "#8B6914",
+      "generator": "scripts/generate-retro-hangman.mjs"
     },
     {
       "theme": "retro",
@@ -1351,11 +1351,11 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "generationPending": true,
+      "generatedAt": "2026-09-28T03:59:26.530Z",
+      "reviewedAt": "2026-09-28T04:00:45.881Z",
       "expectedOwner": "shared",
-      "expectedColor": "#8B6914"
+      "expectedColor": "#8B6914",
+      "generator": "scripts/generate-retro-hangman.mjs"
     },
     {
       "theme": "retro",
@@ -1370,11 +1370,11 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "generationPending": true,
+      "generatedAt": "2026-09-28T03:59:26.582Z",
+      "reviewedAt": "2026-09-28T04:00:45.881Z",
       "expectedOwner": "shared",
-      "expectedColor": "#8B6914"
+      "expectedColor": "#8B6914",
+      "generator": "scripts/generate-retro-hangman.mjs"
     },
     {
       "theme": "retro",
@@ -1389,11 +1389,11 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "generationPending": true,
+      "generatedAt": "2026-09-28T03:59:26.635Z",
+      "reviewedAt": "2026-09-28T04:00:45.881Z",
       "expectedOwner": "shared",
-      "expectedColor": "#8B6914"
+      "expectedColor": "#8B6914",
+      "generator": "scripts/generate-retro-hangman.mjs"
     },
     {
       "theme": "retro",
@@ -1408,11 +1408,11 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "generationPending": true,
+      "generatedAt": "2026-09-28T03:59:26.692Z",
+      "reviewedAt": "2026-09-28T04:00:45.881Z",
       "expectedOwner": "shared",
-      "expectedColor": "#8B6914"
+      "expectedColor": "#8B6914",
+      "generator": "scripts/generate-retro-hangman.mjs"
     },
     {
       "theme": "arcade",

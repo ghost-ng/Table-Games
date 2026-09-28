@@ -63,13 +63,14 @@ Do not replace status flags with `false`; remove the property when the real sour
 
 ### Approved deterministic Hangman authoring
 
-Modern Hangman uses `scripts/generate-modern-hangman.mjs` after independent generation, reference editing, checker-matte recovery, and shared-sheet generation could not preserve the fixed progression geometry. This Node 22/Sharp authoring tool renders seven separate 1024px true-alpha PNGs from one SVG geometry model with conditional stage groups:
+Modern and Retro Hangman use `scripts/generate-modern-hangman.mjs` and `scripts/generate-retro-hangman.mjs`. Both theme entrypoints delegate source framing, stage validation, conditional layer order, and 1024px Sharp rendering to `scripts/hangman-geometry.mjs`; each entrypoint supplies theme-styled SVG group definitions, while focused alpha-mask parity tests enforce the exact same fixed geometry. The Modern fragments remain unchanged and byte-pinned, while Retro supplies painted honey-brown wood, cream peg-doll surfaces, brass details, restrained grain and light age:
 
 ```sh
 node scripts/generate-modern-hangman.mjs
+node scripts/generate-retro-hangman.mjs
 ```
 
-The shared front-orthographic assembly fixes the 778px-wide platform at x=123..900 with bottom edge y=901. Later stages retain the exact platform/frame definitions and add posts, crossbar, connected friendly head, torso, arms, then feet. Additions are layered behind existing pieces so established opaque pixels remain byte-identical. The output uses no runtime dependency, text, baked interface, background, ground plane, cast shadow, or threatening imagery. After reviewing all seven individual PNGs, remove only their `generationPending` flags, record real dates plus the generator identifier, and normalize them together with `normalizeHangmanGroup`; all normal fill, padding, connected-component, distinctness, safety, and byte-budget gates remain unchanged.
+The shared front-orthographic assembly fixes the 778px-wide platform at x=123..900 with bottom edge y=901. Later stages retain the exact platform/frame definitions and add posts, crossbar, connected friendly head, torso, arms, then feet. Additions are layered behind existing pieces so established opaque pixels remain byte-identical. The output uses no runtime dependency, text, baked interface, background, ground plane, cast shadow, or threatening imagery. After reviewing all seven individual PNGs, remove only their `generationPending` flags, record real dates plus the theme entrypoint identifier, and normalize them together with `normalizeHangmanGroup`; all normal fill, padding, connected-component, distinctness, safety, and byte-budget gates remain unchanged.
 
 Generate one object or stage per source image, on a square canvas with genuine alpha. Prompts should specify the approved theme material, semantic owner/color, consistent camera and lighting, a complete silhouette, no text/watermark/ground plane, and a longest visible bound occupying 72–80% of the canvas. Dice faces remain blank so the application can render values. Hangman stages share scene framing and base placement; visual QA must confirm progression and reject rope/noose imagery. Quarter faces and edge use authoritative reference imagery in Task 3.
 

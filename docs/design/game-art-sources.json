@@ -721,9 +721,8 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "generationPending": true,
+      "generatedAt": "2026-09-28T01:37:07.886Z",
+      "reviewedAt": "2026-09-28T01:44:23Z",
       "expectedOwner": "player1",
       "expectedColor": "#C75B39"
     },
@@ -740,9 +739,8 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "generationPending": true,
+      "generatedAt": "2026-09-28T01:37:45.065Z",
+      "reviewedAt": "2026-09-28T01:44:23Z",
       "expectedOwner": "player2",
       "expectedColor": "#2E6B8A"
     },
@@ -759,9 +757,8 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "generationPending": true,
+      "generatedAt": "2026-09-28T01:38:24.895Z",
+      "reviewedAt": "2026-09-28T01:44:23Z",
       "expectedOwner": "player1",
       "expectedColor": "#C75B39"
     },
@@ -778,9 +775,8 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "generationPending": true,
+      "generatedAt": "2026-09-28T01:39:10.228Z",
+      "reviewedAt": "2026-09-28T01:44:23Z",
       "expectedOwner": "player2",
       "expectedColor": "#2E6B8A"
     },
@@ -797,9 +793,8 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "generationPending": true,
+      "generatedAt": "2026-09-28T01:39:48.345Z",
+      "reviewedAt": "2026-09-28T01:44:23Z",
       "expectedOwner": "player1",
       "expectedColor": "#C75B39"
     },
@@ -816,9 +811,8 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "generationPending": true,
+      "generatedAt": "2026-09-28T01:40:30.873Z",
+      "reviewedAt": "2026-09-28T01:44:23Z",
       "expectedOwner": "player2",
       "expectedColor": "#2E6B8A"
     },
@@ -835,9 +829,8 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "generationPending": true,
+      "generatedAt": "2026-09-28T01:41:10.018Z",
+      "reviewedAt": "2026-09-28T01:44:23Z",
       "expectedOwner": "shared",
       "expectedColor": "#D4A017"
     },

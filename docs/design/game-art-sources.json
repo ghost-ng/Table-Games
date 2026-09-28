@@ -588,9 +588,9 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "generationPending": true,
+      "generatedAt": "2026-09-28T01:04:22Z",
+      "reviewedAt": "2026-09-28T01:06:04Z",
+      "generator": "scripts/generate-modern-hangman.mjs",
       "expectedOwner": "shared",
       "expectedColor": "#1A56DB"
     },
@@ -607,9 +607,9 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "generationPending": true,
+      "generatedAt": "2026-09-28T01:04:22Z",
+      "reviewedAt": "2026-09-28T01:06:04Z",
+      "generator": "scripts/generate-modern-hangman.mjs",
       "expectedOwner": "shared",
       "expectedColor": "#1A56DB"
     },
@@ -626,9 +626,9 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "generationPending": true,
+      "generatedAt": "2026-09-28T01:04:22Z",
+      "reviewedAt": "2026-09-28T01:06:04Z",
+      "generator": "scripts/generate-modern-hangman.mjs",
       "expectedOwner": "shared",
       "expectedColor": "#1A56DB"
     },
@@ -645,9 +645,9 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "generationPending": true,
+      "generatedAt": "2026-09-28T01:04:22Z",
+      "reviewedAt": "2026-09-28T01:06:04Z",
+      "generator": "scripts/generate-modern-hangman.mjs",
       "expectedOwner": "shared",
       "expectedColor": "#1A56DB"
     },
@@ -664,9 +664,9 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "generationPending": true,
+      "generatedAt": "2026-09-28T01:04:22Z",
+      "reviewedAt": "2026-09-28T01:06:04Z",
+      "generator": "scripts/generate-modern-hangman.mjs",
       "expectedOwner": "shared",
       "expectedColor": "#1A56DB"
     },
@@ -683,9 +683,9 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "generationPending": true,
+      "generatedAt": "2026-09-28T01:04:22Z",
+      "reviewedAt": "2026-09-28T01:06:04Z",
+      "generator": "scripts/generate-modern-hangman.mjs",
       "expectedOwner": "shared",
       "expectedColor": "#1A56DB"
     },
@@ -702,9 +702,9 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "generationPending": true,
+      "generatedAt": "2026-09-28T01:04:22Z",
+      "reviewedAt": "2026-09-28T01:06:04Z",
+      "generator": "scripts/generate-modern-hangman.mjs",
       "expectedOwner": "shared",
       "expectedColor": "#1A56DB"
     },

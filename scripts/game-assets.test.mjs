@@ -16,6 +16,15 @@ const art = await import('./game-art-lib.mjs');
 const normalizer = await import('./normalize-game-art.mjs');
 const visibleBounds = { minFill: 0.72, maxFill: 0.80, safePadding: 0.10 };
 
+async function loadModernHangmanGenerator() {
+  try {
+    return await import('./generate-modern-hangman.mjs');
+  } catch (error) {
+    if (error.code === 'ERR_MODULE_NOT_FOUND') return {};
+    throw error;
+  }
+}
+
 function requireHelper(name) {
   assert.equal(typeof art[name], 'function', `${name} must implement the individual-asset contract`);
   return art[name];
@@ -676,4 +685,103 @@ test('Hangman production prompts require a shared frame and fixed base without i
     assert.match(record.prompt, /fixed base anchor at y=901/i, identity);
     assert.match(record.prompt, /do not vertically center or independently recenter any stage/i, identity);
   }
+});
+
+test('deterministic generator provenance is repository-relative and restricted to completed Hangman records', () => {
+  const generator = 'scripts/generate-modern-hangman.mjs';
+  const completed = individualRecord({ family: 'hangman', role: 'stage-0',
+    sourcePath: 'docs/design/source-art/modern/hangman/stage-0.png',
+    finalPath: 'assets/pieces/modern/hangman/stage-0.webp', generator });
+  assert.doesNotThrow(() => art.validateManifest(manifestFixture(completed)));
+  for (const record of [
+    { ...completed, family: 'dice', role: 'd6', sourcePath: 'docs/design/source-art/modern/dice/d6.png',
+      finalPath: 'assets/pieces/modern/dice/d6.webp' },
+    { ...completed, generationPending: true, generatedAt: null, reviewedAt: null },
+    { ...completed, generator: '/tmp/generate-modern-hangman.mjs' },
+    { ...completed, generator: '../generate-modern-hangman.mjs' },
+  ]) {
+    assert.throws(() => art.validateManifest(manifestFixture(record,
+      record.generationPending ? 'generation-batches' : 'individual-assets')), /generator|repository-relative|Hangman|completed/i);
+  }
+});
+
+test('Modern Hangman authoring renders deterministic 1024px alpha sources with the exact fixed platform', async () => {
+  const generator = await loadModernHangmanGenerator();
+  assert.equal(typeof generator.renderModernHangmanStage, 'function',
+    'renderModernHangmanStage must provide deterministic source authoring');
+  const first = await generator.renderModernHangmanStage(0);
+  const second = await generator.renderModernHangmanStage(0);
+  assert.deepEqual(first, second, 'Repeated authoring must produce byte-identical PNGs');
+  const metrics = art.assertImageMetrics(await art.readImageMetrics(first), { targetSize: 1024, visibleBounds });
+  assert.deepEqual(metrics.bounds, { left: 123, top: 789, width: 778, height: 112 });
+  assert.equal(metrics.bounds.top + metrics.bounds.height, 901, 'The fixed platform bottom edge is y=901');
+  assert.equal(metrics.components.meaningfulCount, 1);
+});
+
+test('Modern Hangman stages add one semantic group at a time while retaining every opaque prior pixel', async () => {
+  const generator = await loadModernHangmanGenerator();
+  assert.equal(typeof generator.renderModernHangmanStage, 'function',
+    'renderModernHangmanStage must provide shared conditional geometry');
+  const stages = await Promise.all(Array.from({ length: 7 }, (_, stage) => generator.renderModernHangmanStage(stage)));
+  const decoded = await Promise.all(stages.map((input) => sharp(input).ensureAlpha().raw().toBuffer({ resolveWithObject: true })));
+  const hashes = stages.map((input) => createHash('sha256').update(input).digest('hex'));
+  assert.equal(new Set(hashes).size, 7, 'Every stage must have distinct source bytes');
+  const visible = [];
+  for (let stage = 0; stage < decoded.length; stage++) {
+    const { data, info } = decoded[stage];
+    assert.equal(info.width, 1024); assert.equal(info.height, 1024); assert.equal(info.channels, 4);
+    const metrics = art.assertImageMetrics(await art.readImageMetrics(stages[stage]), { targetSize: 1024, visibleBounds });
+    assert.equal(metrics.bounds.left, 123); assert.equal(metrics.bounds.width, 778);
+    assert.equal(metrics.bounds.top + metrics.bounds.height, 901);
+    assert.equal(metrics.components.meaningfulCount, 1);
+    visible.push(metrics.visiblePixels);
+    if (stage === 0) continue;
+    const prior = decoded[stage - 1].data;
+    for (let offset = 0; offset < prior.length; offset += 4) {
+      if (prior[offset + 3] !== 255) continue;
+      assert.deepEqual(data.subarray(offset, offset + 4), prior.subarray(offset, offset + 4),
+        `Stage ${stage} must retain every opaque pixel from stage ${stage - 1}`);
+    }
+  }
+  for (let stage = 1; stage < visible.length; stage++) {
+    assert.ok(visible[stage] > visible[stage - 1], `Stage ${stage} must add visible geometry`);
+  }
+
+  const alphaAt = (stage, x, y) => decoded[stage].data[(y * 1024 + x) * 4 + 3];
+  const additions = [
+    { stage: 1, point: [220, 500], label: 'posts' },
+    { stage: 2, point: [512, 235], label: 'crossbar' },
+    { stage: 3, point: [512, 380], label: 'head' },
+    { stage: 4, point: [512, 570], label: 'torso' },
+    { stage: 5, point: [376, 570], label: 'arms' },
+    { stage: 6, point: [456, 748], label: 'feet' },
+  ];
+  for (const { stage, point: [x, y], label } of additions) {
+    assert.equal(alphaAt(stage - 1, x, y), 0, `${label} must not appear before stage ${stage}`);
+    assert.ok(alphaAt(stage, x, y) >= 250, `${label} must be unmistakable at stage ${stage}`);
+  }
+});
+
+test('Modern Hangman 1024px sources normalize together by downscaling with one shared transform', async (t) => {
+  const generator = await loadModernHangmanGenerator();
+  assert.equal(typeof generator.renderModernHangmanStage, 'function',
+    'renderModernHangmanStage must provide group-normalizable sources');
+  const dir = mkdtempSync(resolve(tmpdir(), 'modern-hangman-authoring-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const records = [];
+  for (let stage = 0; stage < 7; stage++) {
+    const record = individualRecord({ family: 'hangman', role: `stage-${stage}`,
+      sourcePath: `docs/design/source-art/modern/hangman/stage-${stage}.png`,
+      finalPath: `assets/pieces/modern/hangman/stage-${stage}.webp`, targetSize: 384,
+      generator: 'scripts/generate-modern-hangman.mjs' });
+    const path = resolve(dir, record.sourcePath);
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, await generator.renderModernHangmanStage(stage));
+    records.push(record);
+  }
+  const { results, transform } = await art.normalizeHangmanGroup(records, { root: dir, write: false });
+  assert.ok(transform.scale > 0 && transform.scale < 1, 'Production normalization must downscale, never upscale');
+  assert.deepEqual(transform.sourceBounds, { left: 123, top: 206, width: 778, height: 695 });
+  assert.deepEqual([...new Set(results.map(({ metrics }) => metrics.bounds.top + metrics.bounds.height))], [338]);
+  assert.equal(new Set(results.map(({ data }) => createHash('sha256').update(data).digest('hex'))).size, 7);
 });

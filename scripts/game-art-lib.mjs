@@ -12,7 +12,7 @@ const THEMES = ['modern', 'retro', 'arcade'];
 const STAGES = ['contract-only', 'generation-batches', 'individual-assets', 'accepted'];
 const REQUIRED_FIELDS = ['theme', 'family', 'role', 'prompt', 'sourcePath', 'finalPath', 'targetSize',
   'visibleBounds', 'generatedAt', 'reviewedAt'];
-const RECORD_FIELDS = new Set([...REQUIRED_FIELDS, 'expectedOwner', 'expectedColor', 'legacy', 'authorityReferencePending', 'generationPending']);
+const RECORD_FIELDS = new Set([...REQUIRED_FIELDS, 'expectedOwner', 'expectedColor', 'legacy', 'authorityReferencePending', 'generationPending', 'generator']);
 
 function assertRelativePath(path) {
   assert.ok(typeof path === 'string' && path.length > 0 && !/^(?:\/|[A-Za-z]:)|\\/.test(path)
@@ -76,6 +76,12 @@ export function validateManifest(manifest, { requiredPaths } = {}) {
     }
     if (record.expectedOwner !== undefined) assert.ok(typeof record.expectedOwner === 'string' && record.expectedOwner.trim(), 'Invalid expectedOwner');
     assertRelativePath(record.sourcePath); assertRelativePath(record.finalPath);
+    if (Object.hasOwn(record, 'generator')) {
+      assert.equal(record.family, 'hangman', 'Deterministic generator provenance is restricted to Hangman');
+      assert.equal(statuses.length, 0, 'Deterministic generator provenance requires a completed record');
+      assertRelativePath(record.generator);
+      assert.match(record.generator, /^scripts\/[a-z0-9]+(?:-[a-z0-9]+)*\.mjs$/, 'Generator must identify a repository-relative authoring script');
+    }
     assert.equal(record.finalPath, `assets/pieces/${record.theme}/${record.family}/${record.role}.webp`, 'Final path must identify its theme/family/role');
     assert.ok(Number.isInteger(record.targetSize) && record.targetSize > 0, 'Positive integer targetSize required');
     assert.deepEqual(record.visibleBounds, VISIBLE_BOUNDS, 'Visible bounds cannot weaken 72–80% fill or 10% safe padding');

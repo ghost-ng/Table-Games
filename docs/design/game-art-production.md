@@ -38,10 +38,13 @@ interface GameArtSourceRecord {
   reviewedAt: string | null;
   generationPending?: true;
   authorityReferencePending?: true;
+  generator?: string; // Repository-relative approved deterministic Hangman authoring script.
 }
 ```
 
 Paths are portable, repository-relative paths with forward slashes. Absolute machine paths, parent traversal, grid dimensions, crops, and sheet-extraction fields are rejected. Individual accepted source paths differ from their final WebP paths. Store new source PNGs under `docs/design/source-art/{theme}/{family}/{role}.png`. Record the exact final generation prompt and real generation/inspection dates; visual inspection establishes semantic accuracy that decoded alpha alone cannot prove.
+
+The optional `generator` provenance field is restricted to completed Hangman records fulfilled by an approved deterministic authoring script. It must identify a repository-relative `scripts/*.mjs` file. Pending, legacy, Coin Flip, and non-Hangman records cannot claim deterministic generator provenance. A generator does not replace the record's frozen prompt: that prompt remains the semantic visual specification and every rendered source and final still requires original-detail and contact-sheet review.
 
 Task 2A sets `stage: "generation-batches"` with 108 `generationPending: true` custom sprites and nine `authorityReferencePending: true` quarter slots. All source paths now point to distinct planned PNGs under `docs/design/source-art/`. All generation and inspection dates are `null`: the prompts are frozen instructions, not claims that generation or visual review has occurred. Existing final WebPs remain unchanged until each production batch supplies and inspects its replacement. There are no `legacy` records.
 
@@ -57,6 +60,16 @@ Migration stages are enforced structurally by `validateManifest()`:
 Do not replace status flags with `false`; remove the property when the real source has been generated and inspected, then record its actual generation and review dates. Migration flags cannot coexist. Pending records require both dates to be `null`; completed records require real dates. `generationPending` cannot survive `individual-assets` or `accepted`. Strict composition checks apply to completed replacements. Pending placeholders still undergo square-dimension, genuine-alpha, transparent-corner, unclipped-edge, path, distinctness, registry, and byte-budget checks. Duplicate source paths and physical source aliases are rejected, so one image cannot stand in for multiple roles.
 
 ## Individual generation and normalization
+
+### Approved deterministic Hangman authoring
+
+Modern Hangman uses `scripts/generate-modern-hangman.mjs` after independent generation, reference editing, checker-matte recovery, and shared-sheet generation could not preserve the fixed progression geometry. This Node 22/Sharp authoring tool renders seven separate 1024px true-alpha PNGs from one SVG geometry model with conditional stage groups:
+
+```sh
+node scripts/generate-modern-hangman.mjs
+```
+
+The shared front-orthographic assembly fixes the 778px-wide platform at x=123..900 with bottom edge y=901. Later stages retain the exact platform/frame definitions and add posts, crossbar, connected friendly head, torso, arms, then feet. Additions are layered behind existing pieces so established opaque pixels remain byte-identical. The output uses no runtime dependency, text, baked interface, background, ground plane, cast shadow, or threatening imagery. After reviewing all seven individual PNGs, remove only their `generationPending` flags, record real dates plus the generator identifier, and normalize them together with `normalizeHangmanGroup`; all normal fill, padding, connected-component, distinctness, safety, and byte-budget gates remain unchanged.
 
 Generate one object or stage per source image, on a square canvas with genuine alpha. Prompts should specify the approved theme material, semantic owner/color, consistent camera and lighting, a complete silhouette, no text/watermark/ground plane, and a longest visible bound occupying 72–80% of the canvas. Dice faces remain blank so the application can render values. Hangman stages share scene framing and base placement; visual QA must confirm progression and reject rope/noose imagery. Quarter faces and edge use authoritative reference imagery in Task 3.
 

@@ -63,7 +63,7 @@ Do not replace status flags with `false`; remove the property when the real sour
 
 ### Approved deterministic Hangman authoring
 
-Modern and Retro Hangman use `scripts/generate-modern-hangman.mjs` and `scripts/generate-retro-hangman.mjs`. Both theme entrypoints delegate source framing, stage validation, conditional layer order, and 1024px Sharp rendering to `scripts/hangman-geometry.mjs`; each entrypoint supplies theme-styled SVG group definitions, while focused alpha-mask parity tests enforce the exact same fixed geometry. The Modern fragments remain unchanged and byte-pinned, while Retro supplies painted honey-brown wood, cream peg-doll surfaces, brass details, restrained grain and light age:
+Modern and Retro Hangman use `scripts/generate-modern-hangman.mjs` and `scripts/generate-retro-hangman.mjs`. Both theme entrypoints delegate every structural silhouette, path and coordinate, source framing, stage validation, conditional layer order, and 1024px Sharp rendering to `scripts/hangman-geometry.mjs`; each entrypoint supplies only gradient definitions plus palette, material, and optional decor tokens. Focused alpha-mask parity and fresh-render byte tests enforce the exact same fixed geometry. Modern remains byte-pinned, while Retro supplies painted honey-brown wood, cream peg-doll surfaces, brass details, restrained grain and light age:
 
 ```sh
 node scripts/generate-modern-hangman.mjs

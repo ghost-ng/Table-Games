@@ -30,86 +30,40 @@ const defs = `
     </linearGradient>
   </defs>`;
 
-const feet = `
-  <g id="feet">
-    <rect x="433" y="671" width="52" height="88" rx="25" fill="#0a2b76"/>
-    <rect x="539" y="671" width="52" height="88" rx="25" fill="#0a2b76"/>
-    <rect x="401" y="718" width="108" height="94" rx="45" fill="#092760"/>
-    <rect x="515" y="718" width="108" height="94" rx="45" fill="#092760"/>
-    <rect x="410" y="726" width="90" height="70" rx="34" fill="url(#blue-soft)"/>
-    <rect x="524" y="726" width="90" height="70" rx="34" fill="url(#blue-soft)"/>
-    <path d="M427 742c19-14 42-15 59-5" fill="none" stroke="#9bc6ff" stroke-width="8" stroke-linecap="round" opacity=".72"/>
-    <path d="M541 742c19-14 42-15 59-5" fill="none" stroke="#9bc6ff" stroke-width="8" stroke-linecap="round" opacity=".72"/>
-  </g>`;
+export const MODERN_HANGMAN_THEME = {
+  themeName: 'Modern',
+  defs,
+  materials: {
+    limbConnector: '#0a2b76',
+    bodyOutline: '#092760',
+    limbSurface: 'url(#blue-soft)',
+    feetHighlight: '#9bc6ff',
+    armsHighlight: '#a9d1ff',
+    shell: 'url(#white-shell)',
+    shellHighlight: '#ffffff',
+    accent: 'url(#blue)',
+    inset: '#e9f7ff',
+    indicator: 'url(#cyan)',
+    torsoDetail: '#8ea8c2',
+    connectorMetal: 'url(#silver)',
+    face: 'url(#face)',
+    eye: 'url(#cyan)',
+    smile: '#5cecff',
+    frameOutline: '#08265f',
+    frameMetal: 'url(#silver)',
+    frameSurface: 'url(#blue)',
+    crossbarHighlight: '#9bc6ff',
+    crossbarRivet: '#d8f2ff',
+    postsHighlight: '#83b7ff',
+    postsFoot: '#d5e7f7',
+    platformInset: '#eaf5ff',
+    platformHighlight: '#6fa9ff',
+    platformRivet: '#79edff',
+  },
+  decor: {},
+};
 
-const arms = `
-  <g id="arms">
-    <rect x="332" y="506" width="116" height="136" rx="57" fill="#092760"/>
-    <rect x="576" y="506" width="116" height="136" rx="57" fill="#092760"/>
-    <rect x="343" y="516" width="94" height="112" rx="46" fill="url(#blue-soft)"/>
-    <rect x="587" y="516" width="94" height="112" rx="46" fill="url(#blue-soft)"/>
-    <ellipse cx="375" cy="546" rx="18" ry="12" fill="#a9d1ff" opacity=".74"/>
-    <ellipse cx="619" cy="546" rx="18" ry="12" fill="#a9d1ff" opacity=".74"/>
-  </g>`;
-
-const torso = `
-  <g id="torso">
-    <rect x="404" y="446" width="216" height="264" rx="84" fill="#092760"/>
-    <rect x="416" y="458" width="192" height="240" rx="74" fill="url(#white-shell)"/>
-    <path d="M431 503c33-33 91-43 143-22" fill="none" stroke="#ffffff" stroke-width="14" stroke-linecap="round" opacity=".82"/>
-    <rect x="450" y="522" width="124" height="94" rx="40" fill="url(#blue)"/>
-    <rect x="463" y="535" width="98" height="62" rx="28" fill="#e9f7ff"/>
-    <circle cx="512" cy="566" r="16" fill="url(#cyan)"/>
-    <rect x="468" y="642" width="88" height="18" rx="9" fill="#8ea8c2"/>
-  </g>`;
-
-const head = `
-  <g id="head">
-    <rect x="483" y="264" width="58" height="76" rx="27" fill="#092760"/>
-    <rect x="491" y="270" width="42" height="62" rx="20" fill="url(#silver)"/>
-    <rect x="396" y="300" width="232" height="190" rx="90" fill="#092760"/>
-    <rect x="407" y="311" width="210" height="168" rx="79" fill="url(#white-shell)"/>
-    <path d="M432 339c37-27 95-31 140-12" fill="none" stroke="#ffffff" stroke-width="13" stroke-linecap="round" opacity=".86"/>
-    <rect x="438" y="344" width="148" height="91" rx="42" fill="url(#face)"/>
-    <circle cx="479" cy="383" r="12" fill="url(#cyan)"/>
-    <circle cx="545" cy="383" r="12" fill="url(#cyan)"/>
-    <path d="M477 406c21 20 49 20 70 0" fill="none" stroke="#5cecff" stroke-width="10" stroke-linecap="round"/>
-  </g>`;
-
-const crossbar = `
-  <g id="crossbar">
-    <rect x="169" y="206" width="686" height="88" rx="43" fill="#08265f"/>
-    <rect x="179" y="216" width="666" height="68" rx="33" fill="url(#silver)"/>
-    <rect x="206" y="226" width="612" height="47" rx="23" fill="url(#blue)"/>
-    <path d="M228 237h420" fill="none" stroke="#9bc6ff" stroke-width="8" stroke-linecap="round" opacity=".7"/>
-    <circle cx="771" cy="250" r="13" fill="#d8f2ff"/>
-  </g>`;
-
-const posts = `
-  <g id="posts">
-    <rect x="169" y="242" width="108" height="588" rx="52" fill="#08265f"/>
-    <rect x="747" y="242" width="108" height="588" rx="52" fill="#08265f"/>
-    <rect x="181" y="254" width="84" height="564" rx="40" fill="url(#blue)"/>
-    <rect x="759" y="254" width="84" height="564" rx="40" fill="url(#blue)"/>
-    <path d="M201 281v429" fill="none" stroke="#83b7ff" stroke-width="11" stroke-linecap="round" opacity=".65"/>
-    <path d="M779 281v429" fill="none" stroke="#83b7ff" stroke-width="11" stroke-linecap="round" opacity=".65"/>
-    <rect x="194" y="742" width="58" height="54" rx="26" fill="#d5e7f7" opacity=".8"/>
-    <rect x="772" y="742" width="58" height="54" rx="26" fill="#d5e7f7" opacity=".8"/>
-  </g>`;
-
-const platform = `
-  <g id="platform">
-    <rect x="123" y="789" width="778" height="112" rx="52" fill="#08265f"/>
-    <rect x="133" y="799" width="758" height="92" rx="42" fill="url(#blue)"/>
-    <rect x="151" y="810" width="722" height="37" rx="18" fill="url(#silver)"/>
-    <rect x="168" y="818" width="688" height="20" rx="10" fill="#eaf5ff"/>
-    <path d="M171 861h539" fill="none" stroke="#6fa9ff" stroke-width="10" stroke-linecap="round" opacity=".68"/>
-    <circle cx="816" cy="863" r="13" fill="#79edff"/>
-  </g>`;
-
-export const renderModernHangmanStage = createHangmanRenderer({
-  themeName: 'Modern', defs, groups: { feet, arms, torso, head, crossbar, posts, platform },
-});
+export const renderModernHangmanStage = createHangmanRenderer(MODERN_HANGMAN_THEME);
 
 export async function writeModernHangmanSources({ root = projectRoot } = {}) {
   const outputs = [];

@@ -906,3 +906,69 @@ test('Retro Hangman normalizes as one downscaled group and preserves every Moder
   assert.deepEqual([...new Set(results.map(({ metrics }) => metrics.bounds.top + metrics.bounds.height))], [338]);
   assert.equal(new Set(results.map(({ data }) => hash(data))).size, 7);
 });
+
+test('theme entrypoints supply only material and decor tokens to shared Hangman geometry', async () => {
+  for (const file of ['generate-modern-hangman.mjs', 'generate-retro-hangman.mjs']) {
+    const source = readFileSync(resolve(root, 'scripts', file), 'utf8');
+    assert.doesNotMatch(source, /<(?:rect|path|circle|ellipse)\b/,
+      file + ' must not contain structural SVG shapes or paths');
+  }
+  const modern = await loadModernHangmanGenerator();
+  const retro = await loadRetroHangmanGenerator();
+  const { createHangmanRenderer } = await import('./hangman-geometry.mjs');
+  for (const [label, theme, render] of [
+    ['Modern', modern.MODERN_HANGMAN_THEME, modern.renderModernHangmanStage],
+    ['Retro', retro.RETRO_HANGMAN_THEME, retro.renderRetroHangmanStage],
+  ]) {
+    assert.equal(typeof theme, 'object', `${label} must expose material-only shared geometry configuration`);
+    assert.deepEqual(Object.keys(theme).sort(), ['decor', 'defs', 'materials', 'themeName']);
+    const sharedRender = createHangmanRenderer(theme);
+    assert.deepEqual(await sharedRender(6), await render(6),
+      `${label} entrypoint and shared geometry must render identical complete stages`);
+  }
+});
+
+test('fresh Modern and Retro rendering reproduces all 14 sources and all 14 normalized finals byte-for-byte', async (t) => {
+  const manifest = JSON.parse(readFileSync(resolve(root, 'docs/design/game-art-sources.json'), 'utf8'));
+  const modern = await loadModernHangmanGenerator();
+  const retro = await loadRetroHangmanGenerator();
+  const themes = [
+    { name: 'modern', render: modern.renderModernHangmanStage },
+    { name: 'retro', render: retro.renderRetroHangmanStage },
+  ];
+  const hash = (input) => createHash('sha256').update(input).digest('hex');
+  let sourceComparisons = 0; let finalComparisons = 0; let retroRepeatComparisons = 0;
+
+  for (const { name, render } of themes) {
+    const dir = mkdtempSync(resolve(tmpdir(), `${name}-hangman-reproduction-`));
+    t.after(() => rmSync(dir, { recursive: true, force: true }));
+    const records = manifest.records.filter((record) => record.theme === name && record.family === 'hangman');
+    assert.deepEqual(records.map((record) => record.role), Array.from({ length: 7 }, (_, stage) => `stage-${stage}`));
+    for (let stage = 0; stage < 7; stage++) {
+      const rendered = await render(stage);
+      const committed = readFileSync(resolve(root, records[stage].sourcePath));
+      assert.equal(hash(rendered), hash(committed), `${name} stage ${stage} source hash must reproduce`);
+      assert.deepEqual(rendered, committed, `${name} stage ${stage} source bytes must reproduce`);
+      sourceComparisons++;
+      if (name === 'retro') {
+        assert.deepEqual(await render(stage), rendered, `retro stage ${stage} repeat render must be byte-identical`);
+        retroRepeatComparisons++;
+      }
+      const path = resolve(dir, records[stage].sourcePath);
+      mkdirSync(dirname(path), { recursive: true });
+      writeFileSync(path, rendered);
+    }
+    const normalized = await art.normalizeHangmanGroup(records, { root: dir, write: false });
+    for (let stage = 0; stage < 7; stage++) {
+      const committed = readFileSync(resolve(root, records[stage].finalPath));
+      assert.equal(hash(normalized.results[stage].data), hash(committed),
+        `${name} stage ${stage} normalized final hash must reproduce`);
+      assert.deepEqual(normalized.results[stage].data, committed,
+        `${name} stage ${stage} normalized final bytes must reproduce`);
+      finalComparisons++;
+    }
+  }
+  assert.equal(sourceComparisons, 14);
+  assert.equal(finalComparisons, 14);
+  assert.equal(retroRepeatComparisons, 7);
+});

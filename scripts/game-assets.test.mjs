@@ -34,6 +34,15 @@ async function loadRetroHangmanGenerator() {
   }
 }
 
+async function loadArcadeHangmanGenerator() {
+  try {
+    return await import('./generate-arcade-hangman.mjs');
+  } catch (error) {
+    if (error.code === 'ERR_MODULE_NOT_FOUND') return {};
+    throw error;
+  }
+}
+
 function requireHelper(name) {
   assert.equal(typeof art[name], 'function', `${name} must implement the individual-asset contract`);
   return art[name];
@@ -908,17 +917,21 @@ test('Retro Hangman normalizes as one downscaled group and preserves every Moder
 });
 
 test('theme entrypoints supply only material and decor tokens to shared Hangman geometry', async () => {
-  for (const file of ['generate-modern-hangman.mjs', 'generate-retro-hangman.mjs']) {
-    const source = readFileSync(resolve(root, 'scripts', file), 'utf8');
+  for (const file of ['generate-modern-hangman.mjs', 'generate-retro-hangman.mjs', 'generate-arcade-hangman.mjs']) {
+    const path = resolve(root, 'scripts', file);
+    assert.ok(existsSync(path), file + ' must exist as an explicit theme entrypoint');
+    const source = readFileSync(path, 'utf8');
     assert.doesNotMatch(source, /<(?:rect|path|circle|ellipse)\b/,
       file + ' must not contain structural SVG shapes or paths');
   }
   const modern = await loadModernHangmanGenerator();
   const retro = await loadRetroHangmanGenerator();
+  const arcade = await loadArcadeHangmanGenerator();
   const { createHangmanRenderer } = await import('./hangman-geometry.mjs');
   for (const [label, theme, render] of [
     ['Modern', modern.MODERN_HANGMAN_THEME, modern.renderModernHangmanStage],
     ['Retro', retro.RETRO_HANGMAN_THEME, retro.renderRetroHangmanStage],
+    ['Arcade', arcade.ARCADE_HANGMAN_THEME, arcade.renderArcadeHangmanStage],
   ]) {
     assert.equal(typeof theme, 'object', `${label} must expose material-only shared geometry configuration`);
     assert.deepEqual(Object.keys(theme).sort(), ['decor', 'defs', 'materials', 'themeName']);
@@ -928,16 +941,21 @@ test('theme entrypoints supply only material and decor tokens to shared Hangman 
   }
 });
 
-test('fresh Modern and Retro rendering reproduces all 14 sources and all 14 normalized finals byte-for-byte', async (t) => {
+test('fresh three-theme rendering reproduces all 21 sources and all 21 normalized finals byte-for-byte', async (t) => {
   const manifest = JSON.parse(readFileSync(resolve(root, 'docs/design/game-art-sources.json'), 'utf8'));
   const modern = await loadModernHangmanGenerator();
   const retro = await loadRetroHangmanGenerator();
+  const arcade = await loadArcadeHangmanGenerator();
   const themes = [
     { name: 'modern', render: modern.renderModernHangmanStage },
     { name: 'retro', render: retro.renderRetroHangmanStage },
+    { name: 'arcade', render: arcade.renderArcadeHangmanStage },
   ];
+  for (const { name, render } of themes) {
+    assert.equal(typeof render, 'function', name + ' Hangman renderer must exist for exhaustive reproduction');
+  }
   const hash = (input) => createHash('sha256').update(input).digest('hex');
-  let sourceComparisons = 0; let finalComparisons = 0; let retroRepeatComparisons = 0;
+  let sourceComparisons = 0; let finalComparisons = 0; let arcadeRepeatComparisons = 0;
 
   for (const { name, render } of themes) {
     const dir = mkdtempSync(resolve(tmpdir(), `${name}-hangman-reproduction-`));
@@ -950,15 +968,19 @@ test('fresh Modern and Retro rendering reproduces all 14 sources and all 14 norm
       assert.equal(hash(rendered), hash(committed), `${name} stage ${stage} source hash must reproduce`);
       assert.deepEqual(rendered, committed, `${name} stage ${stage} source bytes must reproduce`);
       sourceComparisons++;
-      if (name === 'retro') {
-        assert.deepEqual(await render(stage), rendered, `retro stage ${stage} repeat render must be byte-identical`);
-        retroRepeatComparisons++;
+      if (name === 'arcade') {
+        assert.deepEqual(await render(stage), rendered, `arcade stage ${stage} repeat render must be byte-identical`);
+        arcadeRepeatComparisons++;
       }
       const path = resolve(dir, records[stage].sourcePath);
       mkdirSync(dirname(path), { recursive: true });
       writeFileSync(path, rendered);
     }
     const normalized = await art.normalizeHangmanGroup(records, { root: dir, write: false });
+    assert.ok(normalized.transform.scale > 0 && normalized.transform.scale < 1,
+      name + ' production normalization must downscale, never upscale');
+    assert.deepEqual(normalized.transform.sourceBounds, { left: 123, top: 206, width: 778, height: 695 });
+    assert.equal(normalized.transform.baseY, 338, name + ' normalization must retain the shared base anchor');
     for (let stage = 0; stage < 7; stage++) {
       const committed = readFileSync(resolve(root, records[stage].finalPath));
       assert.equal(hash(normalized.results[stage].data), hash(committed),
@@ -968,7 +990,132 @@ test('fresh Modern and Retro rendering reproduces all 14 sources and all 14 norm
       finalComparisons++;
     }
   }
-  assert.equal(sourceComparisons, 14);
-  assert.equal(finalComparisons, 14);
-  assert.equal(retroRepeatComparisons, 7);
+  assert.equal(sourceComparisons, 21);
+  assert.equal(finalComparisons, 21);
+  assert.equal(arcadeRepeatComparisons, 7);
+});
+
+test('Arcade Hangman authoring uses the fixed shared platform and deterministic bytes', async () => {
+  const generator = await loadArcadeHangmanGenerator();
+  assert.equal(typeof generator.renderArcadeHangmanStage, 'function',
+    'renderArcadeHangmanStage must provide deterministic Arcade source authoring');
+  assert.equal(generator.ARCADE_HANGMAN_GENERATOR, 'scripts/generate-arcade-hangman.mjs');
+  const first = await generator.renderArcadeHangmanStage(0);
+  const second = await generator.renderArcadeHangmanStage(0);
+  assert.deepEqual(first, second, 'Repeated Arcade authoring must produce byte-identical PNGs');
+  const metrics = art.assertImageMetrics(await art.readImageMetrics(first), { targetSize: 1024, visibleBounds });
+  assert.deepEqual(metrics.bounds, { left: 123, top: 789, width: 778, height: 112 });
+  assert.equal(metrics.bounds.top + metrics.bounds.height, 901);
+  assert.equal(metrics.components.meaningfulCount, 1);
+});
+
+test('Arcade Hangman shares alpha geometry, semantic progression, retention, and solid readable styling', async () => {
+  const modern = await loadModernHangmanGenerator();
+  const arcade = await loadArcadeHangmanGenerator();
+  assert.equal(typeof arcade.renderArcadeHangmanStage, 'function', 'Arcade renderer is required');
+  const modernStages = await Promise.all(Array.from({ length: 7 }, (_, stage) => modern.renderModernHangmanStage(stage)));
+  const arcadeStages = await Promise.all(Array.from({ length: 7 }, (_, stage) => arcade.renderArcadeHangmanStage(stage)));
+  const decode = (input) => sharp(input).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const modernDecoded = await Promise.all(modernStages.map(decode));
+  const arcadeDecoded = await Promise.all(arcadeStages.map(decode));
+  assert.equal(new Set(arcadeStages.map((input) => createHash('sha256').update(input).digest('hex'))).size, 7);
+  const visible = [];
+  for (let stage = 0; stage < 7; stage++) {
+    const current = arcadeDecoded[stage];
+    assert.deepEqual(current.info, modernDecoded[stage].info, 'Arcade stage ' + stage + ' must use the shared canvas');
+    for (let offset = 3; offset < current.data.length; offset += 4) {
+      assert.equal(current.data[offset], modernDecoded[stage].data[offset],
+        'Arcade stage ' + stage + ' must use the shared alpha mask at pixel ' + Math.floor(offset / 4));
+    }
+    const metrics = art.assertImageMetrics(await art.readImageMetrics(arcadeStages[stage]), { targetSize: 1024, visibleBounds });
+    assert.equal(metrics.bounds.left, 123); assert.equal(metrics.bounds.width, 778);
+    assert.equal(metrics.bounds.top + metrics.bounds.height, 901);
+    assert.equal(metrics.components.meaningfulCount, 1);
+    visible.push(metrics.visiblePixels);
+    if (!stage) continue;
+    const prior = arcadeDecoded[stage - 1].data;
+    for (let offset = 0; offset < prior.length; offset += 4) {
+      if (prior[offset + 3] !== 255) continue;
+      assert.deepEqual(current.data.subarray(offset, offset + 4), prior.subarray(offset, offset + 4),
+        'Arcade stage ' + stage + ' must retain every prior opaque pixel');
+    }
+  }
+  for (let stage = 1; stage < visible.length; stage++) {
+    assert.ok(visible[stage] > visible[stage - 1], 'Arcade stage ' + stage + ' must grow visibly');
+  }
+  const alphaAt = (stage, x, y) => arcadeDecoded[stage].data[(y * 1024 + x) * 4 + 3];
+  for (const addition of [
+    { stage: 1, point: [220, 500], label: 'posts' },
+    { stage: 2, point: [512, 235], label: 'crossbar' },
+    { stage: 3, point: [512, 380], label: 'head' },
+    { stage: 4, point: [512, 570], label: 'torso' },
+    { stage: 5, point: [376, 570], label: 'arms' },
+    { stage: 6, point: [456, 748], label: 'feet' },
+  ]) {
+    const [x, y] = addition.point;
+    assert.equal(alphaAt(addition.stage - 1, x, y), 0, addition.label + ' must not appear early');
+    assert.ok(alphaAt(addition.stage, x, y) >= 250, addition.label + ' must be unmistakable');
+  }
+
+  const complete = arcadeDecoded[6];
+  const pixel = (x, y) => [...complete.data.subarray((y * complete.info.width + x) * 4,
+    (y * complete.info.width + x) * 4 + 4)];
+  const boundary = pixel(123, 845); const center = pixel(512, 825);
+  const face = pixel(512, 390); const eye = pixel(479, 383); const smile = pixel(512, 416);
+  for (const [label, rgba] of [['boundary', boundary], ['center', center], ['face', face], ['eye', eye], ['smile', smile]]) {
+    assert.equal(rgba[3], 255, label + ' must be fully opaque and readable without glow');
+  }
+  assert.ok(Math.max(...boundary.slice(0, 3)) <= 80, 'Boundary must be a solid dark outline');
+  assert.ok(center[1] > center[0] && center[2] > center[0], 'Platform center must read as cyan plastic');
+  assert.ok(Math.max(...face.slice(0, 3)) <= 80, 'Face center must stay solid and dark');
+  assert.ok(eye[1] >= 160 && eye[2] >= 180, 'Friendly eye must be bright cyan');
+  assert.ok(smile[1] >= 140 && smile[2] >= 170, 'Friendly smile must be bright cyan');
+});
+
+test('all accepted Retro Hangman source and final bytes remain pinned', () => {
+  const hash = (input) => createHash('sha256').update(input).digest('hex');
+  const sourceHashes = [
+    '3bcf8b3908ecd31e40ced5720253b0054171fed59150fc376bfb330792733dbd',
+    '44b6c153a18578181cc64b0c37c73a4c74357c15bdf62d880bb72ba119265c81',
+    'db42ebd47ee391f004d6333fb2d543de566ec82a306a658b55ffe93cd78b2c04',
+    '6b5fcba66c28cc72d40704af2d810f37705db9ca844c2a84bd3ab03676168106',
+    'c04cbc9fa2751e4e4c448f693a0450e755daad961163d9c5648dde252c39f2c1',
+    'd1555f4f2a891a520da2563987cbacf56f982c8e0f17d88c277b4f532c9c2688',
+    '7a9642be38549ead5a903c71ac18e80dcda753b8696be9ec7aadfda6ee7f9ecb',
+  ];
+  const finalHashes = [
+    '0c402135f2bb943827d079022ab9d17e89ea90e325d0afb6ecaa8b890f56ddbc',
+    'a7f94503537691ecb4d8caad54a01f67c43139d58aa86b3561b0e28ad07dee7c',
+    'e841781f3c585f6e27514ab77f856f5ee334cd12e26922e16bd9a254a11812ac',
+    'f99fc1e5d9a6dda7e3691398a27a31c4518b5b700c4cd2e59b5bc80f15e80fc0',
+    '1d5238e5b2884293c57f0525c39ad0936c87172f92c812741047a146739abf6c',
+    '5953c2aba702e0efb8ae247fe70fa738ed009055ca0540f2bfcc2fe2bb9ec993',
+    '959b08f9af2544e0485b878119a0bbe3b80020f624df60071a4aad03f632830f',
+  ];
+  for (let stage = 0; stage < 7; stage++) {
+    assert.equal(hash(readFileSync(resolve(root, 'docs/design/source-art/retro/hangman/stage-' + stage + '.png'))),
+      sourceHashes[stage], 'Retro stage ' + stage + ' source must remain byte-identical');
+    assert.equal(hash(readFileSync(resolve(root, 'assets/pieces/retro/hangman/stage-' + stage + '.webp'))),
+      finalHashes[stage], 'Retro stage ' + stage + ' final must remain byte-identical');
+  }
+});
+
+test('Arcade Hangman QA sheets reproduce all seven finals in order at full and phone sizes', async () => {
+  const manifest = JSON.parse(readFileSync(resolve(root, 'docs/design/game-art-sources.json'), 'utf8'));
+  const records = manifest.records.filter((record) => record.theme === 'arcade' && record.family === 'hangman');
+  assert.deepEqual(records.map((record) => record.role),
+    Array.from({ length: 7 }, (_, stage) => 'stage-' + stage));
+  for (const qa of [
+    { mode: 'full-light', cellSize: 384, background: '#f5f5f5' },
+    { mode: 'full-dark', cellSize: 384, background: '#101020' },
+    { mode: 'phone-light', cellSize: 160, background: '#f5f5f5' },
+    { mode: 'phone-dark', cellSize: 160, background: '#101020' },
+  ]) {
+    const path = resolve(root, 'docs/design/qa/arcade-hangman-' + qa.mode + '.webp');
+    assert.ok(existsSync(path), 'Arcade Hangman ' + qa.mode + ' QA sheet must exist');
+    const fresh = await art.createContactSheet(records,
+      { root, columns: 4, cellSize: qa.cellSize, background: qa.background });
+    assert.deepEqual(fresh, readFileSync(path),
+      'Arcade Hangman ' + qa.mode + ' QA sheet must reproduce byte-for-byte');
+  }
 });

@@ -2000,11 +2000,11 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "generationPending": true,
+      "generatedAt": "2026-10-04T04:30:16.727Z",
+      "reviewedAt": "2026-10-04T04:36:28Z",
       "expectedOwner": "shared",
-      "expectedColor": "#00E5FF"
+      "expectedColor": "#00E5FF",
+      "generator": "scripts/generate-arcade-hangman.mjs"
     },
     {
       "theme": "arcade",
@@ -2019,11 +2019,11 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "generationPending": true,
+      "generatedAt": "2026-10-04T04:30:16.761Z",
+      "reviewedAt": "2026-10-04T04:36:28Z",
       "expectedOwner": "shared",
-      "expectedColor": "#00E5FF"
+      "expectedColor": "#00E5FF",
+      "generator": "scripts/generate-arcade-hangman.mjs"
     },
     {
       "theme": "arcade",
@@ -2038,11 +2038,11 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "generationPending": true,
+      "generatedAt": "2026-10-04T04:30:16.796Z",
+      "reviewedAt": "2026-10-04T04:36:28Z",
       "expectedOwner": "shared",
-      "expectedColor": "#00E5FF"
+      "expectedColor": "#00E5FF",
+      "generator": "scripts/generate-arcade-hangman.mjs"
     },
     {
       "theme": "arcade",
@@ -2057,11 +2057,11 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "generationPending": true,
+      "generatedAt": "2026-10-04T04:30:16.836Z",
+      "reviewedAt": "2026-10-04T04:36:28Z",
       "expectedOwner": "shared",
-      "expectedColor": "#00E5FF"
+      "expectedColor": "#00E5FF",
+      "generator": "scripts/generate-arcade-hangman.mjs"
     },
     {
       "theme": "arcade",
@@ -2076,11 +2076,11 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "generationPending": true,
+      "generatedAt": "2026-10-04T04:30:16.884Z",
+      "reviewedAt": "2026-10-04T04:36:28Z",
       "expectedOwner": "shared",
-      "expectedColor": "#00E5FF"
+      "expectedColor": "#00E5FF",
+      "generator": "scripts/generate-arcade-hangman.mjs"
     },
     {
       "theme": "arcade",
@@ -2095,11 +2095,11 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "generationPending": true,
+      "generatedAt": "2026-10-04T04:30:16.927Z",
+      "reviewedAt": "2026-10-04T04:36:28Z",
       "expectedOwner": "shared",
-      "expectedColor": "#00E5FF"
+      "expectedColor": "#00E5FF",
+      "generator": "scripts/generate-arcade-hangman.mjs"
     },
     {
       "theme": "arcade",
@@ -2114,11 +2114,11 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "generationPending": true,
+      "generatedAt": "2026-10-04T04:30:16.974Z",
+      "reviewedAt": "2026-10-04T04:36:28Z",
       "expectedOwner": "shared",
-      "expectedColor": "#00E5FF"
+      "expectedColor": "#00E5FF",
+      "generator": "scripts/generate-arcade-hangman.mjs"
     }
   ]
 }

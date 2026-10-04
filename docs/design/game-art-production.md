@@ -63,11 +63,12 @@ Do not replace status flags with `false`; remove the property when the real sour
 
 ### Approved deterministic Hangman authoring
 
-Modern and Retro Hangman use `scripts/generate-modern-hangman.mjs` and `scripts/generate-retro-hangman.mjs`. Both theme entrypoints delegate every structural silhouette, path and coordinate, source framing, stage validation, conditional layer order, and 1024px Sharp rendering to `scripts/hangman-geometry.mjs`; each entrypoint supplies only gradient definitions plus palette, material, and optional decor tokens. Focused alpha-mask parity and fresh-render byte tests enforce the exact same fixed geometry. Modern remains byte-pinned, while Retro supplies painted honey-brown wood, cream peg-doll surfaces, brass details, restrained grain and light age:
+Modern, Retro, and Arcade Hangman use `scripts/generate-modern-hangman.mjs`, `scripts/generate-retro-hangman.mjs`, and `scripts/generate-arcade-hangman.mjs`. All three theme entrypoints delegate every structural silhouette, path and coordinate, source framing, stage validation, conditional layer order, and 1024px Sharp rendering to `scripts/hangman-geometry.mjs`; each entrypoint supplies only gradient definitions plus palette, material, and optional decor tokens. Focused alpha-mask parity and fresh-render byte tests enforce the exact same fixed geometry. Modern remains byte-pinned; Retro supplies painted honey-brown wood, cream peg-doll surfaces, brass details, restrained grain and light age; Arcade supplies dark translucent cyan plastic, restrained neon-cyan rims, solid dark boundaries and centers, subtle acrylic depth, and a friendly bright-cyan face readable without glow:
 
 ```sh
 node scripts/generate-modern-hangman.mjs
 node scripts/generate-retro-hangman.mjs
+node scripts/generate-arcade-hangman.mjs
 ```
 
 The shared front-orthographic assembly fixes the 778px-wide platform at x=123..900 with bottom edge y=901. Later stages retain the exact platform/frame definitions and add posts, crossbar, connected friendly head, torso, arms, then feet. Additions are layered behind existing pieces so established opaque pixels remain byte-identical. The output uses no runtime dependency, text, baked interface, background, ground plane, cast shadow, or threatening imagery. After reviewing all seven individual PNGs, remove only their `generationPending` flags, record real dates plus the theme entrypoint identifier, and normalize them together with `normalizeHangmanGroup`; all normal fill, padding, connected-component, distinctness, safety, and byte-budget gates remain unchanged.

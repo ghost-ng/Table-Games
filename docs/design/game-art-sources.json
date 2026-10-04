@@ -1553,9 +1553,8 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "generationPending": true,
+      "generatedAt": "2026-10-04T01:37:12.389Z",
+      "reviewedAt": "2026-10-04T01:50:22Z",
       "expectedOwner": "player1",
       "expectedColor": "#FF2E8B"
     },
@@ -1572,9 +1571,8 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "generationPending": true,
+      "generatedAt": "2026-10-04T01:37:57.257Z",
+      "reviewedAt": "2026-10-04T01:50:22Z",
       "expectedOwner": "player2",
       "expectedColor": "#00E5FF"
     },
@@ -1591,9 +1589,8 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "generationPending": true,
+      "generatedAt": "2026-10-04T01:38:39.707Z",
+      "reviewedAt": "2026-10-04T01:50:22Z",
       "expectedOwner": "seat3",
       "expectedColor": "#00FF88"
     },
@@ -1610,9 +1607,8 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "generationPending": true,
+      "generatedAt": "2026-10-04T01:39:21.423Z",
+      "reviewedAt": "2026-10-04T01:50:22Z",
       "expectedOwner": "seat4",
       "expectedColor": "#FFD166"
     },
@@ -1629,9 +1625,8 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "generationPending": true,
+      "generatedAt": "2026-10-04T01:39:55.686Z",
+      "reviewedAt": "2026-10-04T01:50:22Z",
       "expectedOwner": "seat5",
       "expectedColor": "#A855F7"
     },
@@ -1648,9 +1643,8 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "generationPending": true,
+      "generatedAt": "2026-10-04T01:40:42.876Z",
+      "reviewedAt": "2026-10-04T01:50:22Z",
       "expectedOwner": "seat6",
       "expectedColor": "#EEEEFF"
     },
@@ -1667,9 +1661,8 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "generationPending": true,
+      "generatedAt": "2026-10-04T01:41:26.825Z",
+      "reviewedAt": "2026-10-04T01:50:22Z",
       "expectedOwner": "seed-variant-1",
       "expectedColor": "#C78A3B"
     },
@@ -1686,9 +1679,8 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "generationPending": true,
+      "generatedAt": "2026-10-04T01:42:08.442Z",
+      "reviewedAt": "2026-10-04T01:50:22Z",
       "expectedOwner": "seed-variant-2",
       "expectedColor": "#EEE1BA"
     },
@@ -1705,9 +1697,8 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "generationPending": true,
+      "generatedAt": "2026-10-04T01:43:37.771Z",
+      "reviewedAt": "2026-10-04T01:50:22Z",
       "expectedOwner": "seed-variant-3",
       "expectedColor": "#739460"
     },
@@ -1724,9 +1715,8 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "generationPending": true,
+      "generatedAt": "2026-10-04T01:44:20.183Z",
+      "reviewedAt": "2026-10-04T01:50:22Z",
       "expectedOwner": "seed-variant-4",
       "expectedColor": "#B66B46"
     },
@@ -1743,9 +1733,8 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "generationPending": true,
+      "generatedAt": "2026-10-04T01:44:51.843Z",
+      "reviewedAt": "2026-10-04T01:50:22Z",
       "expectedOwner": "seed-variant-5",
       "expectedColor": "#67727A"
     },
@@ -1762,9 +1751,8 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "generationPending": true,
+      "generatedAt": "2026-10-04T01:45:39.349Z",
+      "reviewedAt": "2026-10-04T01:50:22Z",
       "expectedOwner": "seed-variant-6",
       "expectedColor": "#9579A5"
     },

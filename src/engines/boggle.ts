@@ -165,7 +165,7 @@ export function traceWord(board: Board, word: string): Position[] | null {
  * Check if a word is valid: exists in dictionary AND can be traced on the board.
  */
 export function isValidWord(board: Board, word: string): boolean {
-  const upper = word.toUpperCase();
+  const upper = word.trim().toUpperCase();
   if (upper.length < 3) return false;
   if (!DICTIONARY.has(upper)) return false;
   return canTraceWord(board, upper);
@@ -195,7 +195,7 @@ export function submitWord(
   state: GameState,
   word: string,
 ): { state: GameState; valid: boolean; reason?: string } {
-  const upper = word.toUpperCase();
+  const upper = word.trim().toUpperCase();
 
   if (state.isGameOver) {
     return { state, valid: false, reason: 'Game is over' };

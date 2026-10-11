@@ -20,6 +20,7 @@ export interface GameOverModalProps {
   gameName: string;
   /** Display names, e.g. { player1: 'You', player2: 'AI' } in single-player games. */
   playerNames?: { player1: string; player2: string };
+  primaryActionLabel?: string;
 }
 
 export function GameOverModal({
@@ -29,6 +30,7 @@ export function GameOverModal({
   onHome,
   gameName,
   playerNames,
+  primaryActionLabel = 'Rematch',
 }: GameOverModalProps) {
   const { theme } = useTheme();
   const nameOf = (p: 'player1' | 'player2') =>
@@ -88,7 +90,7 @@ export function GameOverModal({
               <View style={styles.scoreItem}>
                 <ThemedText
                   variant="caption"
-                  style={{ color: theme.colors.text }}
+                  style={{ color: theme.colors.text, textAlign: 'center', width: '100%' }}
                 >
                   {nameOf('player1')}
                 </ThemedText>
@@ -107,7 +109,7 @@ export function GameOverModal({
               <View style={styles.scoreItem}>
                 <ThemedText
                   variant="caption"
-                  style={{ color: theme.colors.text }}
+                  style={{ color: theme.colors.text, textAlign: 'center', width: '100%' }}
                 >
                   {nameOf('player2')}
                 </ThemedText>
@@ -123,7 +125,7 @@ export function GameOverModal({
 
           <View style={styles.buttons}>
             <Button
-              title="Rematch"
+              title={primaryActionLabel}
               onPress={onRematch}
               variant="primary"
               size="lg"
@@ -162,10 +164,12 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   winnerText: {
+    width: '100%',
     textAlign: 'center',
     marginBottom: 16,
   },
   scoreRow: {
+    width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -173,6 +177,8 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   scoreItem: {
+    flex: 1,
+    minWidth: 0,
     alignItems: 'center',
   },
   scoreDivider: {

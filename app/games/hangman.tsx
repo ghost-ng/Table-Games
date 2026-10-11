@@ -22,6 +22,11 @@ import {
   createGame,
   guessLetter,
 } from '../../src/engines/hangman';
+import {
+  type HangmanSession,
+  createHangmanSession,
+  completeHangmanRound,
+} from '../../src/engines/hangman-session';
 import { selectWord } from '../../src/ai/hangman-ai';
 import { DifficultySelector, type Difficulty } from '../../src/components/ui/DifficultySelector';
 import { useResponsive } from '../../src/utils/layout';
@@ -85,7 +90,7 @@ function LetterKey({ letter, guessed, correct, disabled, onPress }: {
 }
 
 // ─── Main Screen ────────────────────────────────────────────────────────────
-type Phase = 'modeSelect' | 'wordEntry' | 'passDevice' | 'playing';
+type Phase = 'modeSelect' | 'nameSetup' | 'wordEntry' | 'passDevice' | 'playing';
 
 export default function HangmanScreen() {
   const { theme } = useTheme();
@@ -101,9 +106,13 @@ export default function HangmanScreen() {
   const resolvedMode = (modeParam === 'multiplayer' ? 'multiplayer' : 'single') as 'single' | 'multiplayer';
 
   const [mode] = useState<'single' | 'multiplayer'>(resolvedMode);
-  const [phase, setPhase] = useState<Phase>(resolvedMode === 'multiplayer' ? 'wordEntry' : 'modeSelect');
+  const [phase, setPhase] = useState<Phase>(resolvedMode === 'multiplayer' ? 'nameSetup' : 'modeSelect');
   const [showDifficultySelector, setShowDifficultySelector] = useState(resolvedMode === 'single');
   const [difficulty, setDifficulty] = useState<Difficulty>('medium');
+
+  const [player1Name, setPlayer1Name] = useState('');
+  const [player2Name, setPlayer2Name] = useState('');
+  const [session, setSession] = useState<HangmanSession>(() => createHangmanSession('', ''));
 
   // 2P word entry
   const [enteredWord, setEnteredWord] = useState('');
@@ -112,10 +121,20 @@ export default function HangmanScreen() {
   // Game state
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [showModal, setShowModal] = useState(false);
-  const [resultRecorded, setResultRecorded] = useState(false);
+  const resultRecordedRef = useRef(false);
   const startTimeRef = useRef(Date.now());
 
   const isSinglePlayer = mode === 'single';
+  const completedSession = !isSinglePlayer && gameState?.isGameOver
+    ? completeHangmanRound(session, gameState.isWinner)
+    : null;
+  const displayedWins = completedSession?.wins ?? session.wins;
+  const scoreText = `Round ${session.round} · ${session.names.player1}: ${displayedWins.player1} wins · ${session.names.player2}: ${displayedWins.player2} wins`;
+
+  const handleSessionStart = useCallback(() => {
+    setSession(createHangmanSession(player1Name, player2Name));
+    setPhase('wordEntry');
+  }, [player1Name, player2Name]);
 
   const handleDifficultySelect = useCallback((d: Difficulty) => {
     setDifficulty(d);
@@ -139,6 +158,7 @@ export default function HangmanScreen() {
     }
     setWordError('');
     setGameState(createGame(cleaned));
+    setEnteredWord('');
     setPhase('passDevice');
   }, [enteredWord]);
 
@@ -158,8 +178,10 @@ export default function HangmanScreen() {
 
   // ── Game over handling ──────────────────────────────────────────────────
   useEffect(() => {
-    if (gameState?.isGameOver && !resultRecorded) {
-      setResultRecorded(true);
+    if (!gameState?.isGameOver) return;
+
+    if (!resultRecordedRef.current) {
+      resultRecordedRef.current = true;
 
       const durationSeconds = Math.round(
         (Date.now() - startTimeRef.current) / 1000,
@@ -177,26 +199,26 @@ export default function HangmanScreen() {
           durationSeconds,
         });
       } else {
-        // In 2P the guesser is player2; record from player2's perspective
+        const winner = won ? session.guesser : session.setter;
         recordGameResult({
           game: 'hangman',
           mode: 'multiplayer',
-          player: 'Player 2',
-          score: won ? 1 : 0,
-          result: won ? 'win' : 'loss',
+          player: session.names[winner],
+          score: 1,
+          result: 'win',
           durationSeconds,
         });
       }
-
-      const timeout = setTimeout(() => setShowModal(true), 600);
-      return () => clearTimeout(timeout);
     }
-  }, [gameState?.isGameOver]);
+
+    const timeout = setTimeout(() => setShowModal(true), 600);
+    return () => clearTimeout(timeout);
+  }, [gameState?.isGameOver, gameState?.isWinner, isSinglePlayer, session]);
 
   // ── Rematch / Home ──────────────────────────────────────────────────────
   const handleRematch = useCallback(() => {
     setShowModal(false);
-    setResultRecorded(false);
+    resultRecordedRef.current = false;
     setEnteredWord('');
     setWordError('');
 
@@ -206,10 +228,12 @@ export default function HangmanScreen() {
       startTimeRef.current = Date.now();
       setPhase('playing');
     } else {
+      if (!gameState?.isGameOver) return;
+      setSession(completeHangmanRound(session, gameState.isWinner));
       setGameState(null);
       setPhase('wordEntry');
     }
-  }, [isSinglePlayer, difficulty]);
+  }, [isSinglePlayer, difficulty, gameState, session]);
 
   const handleHome = useCallback(() => {
     setShowModal(false);
@@ -219,17 +243,23 @@ export default function HangmanScreen() {
   // ── Modal result ────────────────────────────────────────────────────────
   const getModalResult = () => {
     if (!gameState) return { winner: 'draw' as const };
+    if (!isSinglePlayer) {
+      return {
+        winner: gameState.isWinner ? session.guesser : session.setter,
+        score: displayedWins,
+      };
+    }
     if (gameState.isWinner) {
       // Guesser won
-      return { winner: isSinglePlayer ? ('player1' as const) : ('player2' as const) };
+      return { winner: 'player1' as const };
     }
     // Guesser lost
-    return { winner: isSinglePlayer ? ('player2' as const) : ('player1' as const) };
+    return { winner: 'player2' as const };
   };
 
   const playerNames = isSinglePlayer
     ? { player1: 'You', player2: 'AI' }
-    : { player1: 'Player 1', player2: 'Player 2' };
+    : session.names;
 
   const remaining = gameState ? gameState.maxWrongGuesses - gameState.wrongGuesses : 6;
 
@@ -250,6 +280,46 @@ export default function HangmanScreen() {
         gameName="Hangman"
       />
 
+      {/* ── 2P: Name setup ────────────────────────────────────────────── */}
+      {phase === 'nameSetup' && (
+        <ScrollView contentContainerStyle={styles.centeredPhase} keyboardShouldPersistTaps="handled">
+          <Card style={styles.setupCard}>
+            <ThemedText variant="heading" style={styles.phaseTitle}>Who's playing?</ThemedText>
+            <ThemedText variant="body" style={styles.phaseSubtitle}>
+              Take turns setting and guessing words. Wins carry over each round.
+            </ThemedText>
+            {[
+              { label: 'Player 1 name', value: player1Name, onChangeText: setPlayer1Name, placeholder: 'Player 1' },
+              { label: 'Player 2 name', value: player2Name, onChangeText: setPlayer2Name, placeholder: 'Player 2' },
+            ].map((field) => (
+              <View key={field.label} style={styles.nameField}>
+                <ThemedText variant="label">{field.label}</ThemedText>
+                <TextInput
+                  value={field.value}
+                  onChangeText={field.onChangeText}
+                  placeholder={field.placeholder}
+                  placeholderTextColor={theme.colors.textMuted}
+                  accessibilityLabel={field.label}
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                  onSubmitEditing={handleSessionStart}
+                  style={[styles.nameInput, {
+                    color: theme.colors.text,
+                    borderColor: theme.colors.border,
+                    backgroundColor: theme.colors.surfaceSunken,
+                    borderRadius: theme.borderRadius.md,
+                    fontFamily: theme.fonts.body,
+                  }]}
+                />
+              </View>
+            ))}
+            <View style={{ marginTop: 20, width: '100%', maxWidth: 280 }}>
+              <Button title="Start" onPress={handleSessionStart} variant="primary" size="lg" />
+            </View>
+          </Card>
+        </ScrollView>
+      )}
+
       {/* ── 2P: Enter Word ────────────────────────────────────────────── */}
       {phase === 'wordEntry' && (
         <View style={styles.centeredPhase}>
@@ -257,14 +327,15 @@ export default function HangmanScreen() {
           <HangmanFigure wrongGuesses={0} size={120} />
           <ThemedText variant="caption" style={{ color: theme.colors.primary, textAlign: 'center', marginBottom: 12 }}>PASS & PLAY</ThemedText>
           <ThemedText variant="heading" style={styles.phaseTitle}>
-            Player 1
+            {session.names[session.setter]}
           </ThemedText>
           <ThemedText
             variant="body"
             style={[styles.phaseSubtitle, { color: theme.colors.textMuted }]}
           >
-            Enter a word for Player 2 to guess
+            Enter a word for {session.names[session.guesser]} to guess
           </ThemedText>
+          <ThemedText variant="caption" style={styles.sessionScore}>{scoreText}</ThemedText>
 
           <TextInput
             value={enteredWord}
@@ -277,7 +348,7 @@ export default function HangmanScreen() {
             autoCapitalize="characters"
             autoCorrect={false}
             secureTextEntry
-            accessibilityLabel="Secret word"
+            accessibilityLabel={`Secret word from ${session.names[session.setter]} for ${session.names[session.guesser]}`}
             onSubmitEditing={handleWordSubmit}
             style={[
               styles.textInput,
@@ -314,14 +385,15 @@ export default function HangmanScreen() {
           <HangmanFigure wrongGuesses={0} size={120} />
           <ThemedText variant="caption" style={{ color: theme.colors.primary, textAlign: 'center', marginBottom: 12 }}>YOUR WORD IS READY</ThemedText>
           <ThemedText variant="heading" style={styles.phaseTitle}>
-            Pass to Player 2
+            Pass to {session.names[session.guesser]}
           </ThemedText>
           <ThemedText
             variant="body"
             style={[styles.phaseSubtitle, { color: theme.colors.textMuted }]}
           >
-            Hand the device to Player 2, then tap Ready.
+            Hand the device to {session.names[session.guesser]}, then tap Ready.
           </ThemedText>
+          <ThemedText variant="caption" style={styles.sessionScore}>{scoreText}</ThemedText>
           <View style={{ marginTop: 24, width: '100%', maxWidth: 260 }}>
             <Button title="Ready" onPress={handlePassReady} variant="primary" size="lg" />
           </View>
@@ -342,8 +414,11 @@ export default function HangmanScreen() {
         >
           <StatusRail style={{ width: '100%' }}>
             <ThemedText variant="label" style={{ textAlign: 'center' }}>
-              {gameState.isGameOver ? (gameState.isWinner ? 'Word solved!' : 'No guesses left') : (isSinglePlayer ? 'Your turn to guess' : 'Player 2 · Your turn to guess')}
+              {gameState.isGameOver ? (gameState.isWinner ? 'Word solved!' : 'No guesses left') : (isSinglePlayer ? 'Your turn to guess' : `${session.names[session.guesser]} · Your turn to guess`)}
             </ThemedText>
+          {!isSinglePlayer && (
+            <ThemedText variant="caption" style={styles.sessionScore}>{scoreText}</ThemedText>
+          )}
           {isSinglePlayer && (
             <ThemedText variant="caption" style={{ color: theme.colors.textMuted, textAlign: 'center', marginTop: 2 }}>
               Difficulty: {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
@@ -453,6 +528,7 @@ export default function HangmanScreen() {
         onHome={handleHome}
         gameName="Hangman"
         playerNames={playerNames}
+        primaryActionLabel={isSinglePlayer ? undefined : 'Next Round'}
       />
     </GameShell>
   );
@@ -462,7 +538,7 @@ export default function HangmanScreen() {
 const styles = StyleSheet.create({
   // Phase screens (word entry, pass device)
   centeredPhase: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 8,
@@ -475,10 +551,12 @@ const styles = StyleSheet.create({
     paddingVertical: 32,
   },
   phaseTitle: {
+    width: '100%',
     textAlign: 'center',
     marginBottom: 8,
   },
   phaseSubtitle: {
+    width: '100%',
     textAlign: 'center',
     marginBottom: 16,
   },
@@ -491,6 +569,22 @@ const styles = StyleSheet.create({
     fontSize: 18,
     letterSpacing: 4,
     textAlign: 'center',
+  },
+  nameField: {
+    width: '100%',
+    maxWidth: 280,
+    gap: 8,
+    marginTop: 16,
+  },
+  nameInput: {
+    height: 52,
+    borderWidth: 2,
+    paddingHorizontal: 16,
+    fontSize: 18,
+  },
+  sessionScore: {
+    textAlign: 'center',
+    marginVertical: 8,
   },
 
   // Playing screen

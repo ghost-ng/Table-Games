@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { createGame, guessLetter, MAX_WRONG_GUESSES } from './hangman';
+import { createHangmanSession, completeHangmanRound } from './hangman-session';
 
 test('a new game gives the guesser six misses before losing', () => {
   const state = createGame('APPLE');
@@ -68,4 +69,29 @@ test('guessing every distinct letter wins and freezes the completed round', () =
   assert.equal(state.wrongGuesses, 0);
   assert.equal(state.maxWrongGuesses - state.wrongGuesses, 6);
   assert.equal(guessLetter(state, 'Z'), state);
+});
+
+test('continuous sessions keep secrets and guesses local to each of three rounds', () => {
+  let session = createHangmanSession('Ada', 'Grace');
+  let round = createGame('AB');
+  round = guessLetter(guessLetter(round, 'A'), 'B');
+  session = completeHangmanRound(session, round.isWinner);
+  assert.deepEqual(session.wins, { player1: 0, player2: 1 });
+
+  round = createGame('CD');
+  assert.deepEqual(round.displayWord, ['_', '_']);
+  assert.equal(round.guessedLetters.size, 0);
+  assert.equal(round.wrongGuesses, 0);
+  for (const letter of ['A', 'B', 'E', 'F', 'G', 'H']) round = guessLetter(round, letter);
+  assert.equal(round.isGameOver, true);
+  session = completeHangmanRound(session, round.isWinner);
+  assert.deepEqual(session.wins, { player1: 0, player2: 2 });
+
+  round = createGame('EF');
+  round = guessLetter(guessLetter(round, 'E'), 'F');
+  session = completeHangmanRound(session, round.isWinner);
+  assert.deepEqual(session.wins, { player1: 0, player2: 3 });
+  assert.equal(session.round, 4);
+  assert.equal(session.guesser, 'player1');
+  assert.equal('secretWord' in session, false);
 });

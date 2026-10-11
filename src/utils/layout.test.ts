@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { calculateBoardSize, calculateGridBoardLayout, resolveBoardInset, type CalculateBoardSizeOptions } from './boardSizing';
+import { calculateBoardSize, calculateGridBoardLayout, calculateWordGuessLayout, resolveBoardInset, type CalculateBoardSizeOptions } from './boardSizing';
 
 // Literal expectations catch duplicate portrait gutters, lost height constraints,
 // incorrect aspect-ratio handling, ignored caps/floors, and fractional widths.
@@ -185,4 +185,30 @@ test('portrait boards remain height-bound and non-board tools may retain their c
   assert.equal(calculateBoardSize({ ...options, phoneMaxSize: 280 }), 280);
   assert.equal(calculateBoardSize({ ...options, areaHeight: 1100, isPhone: false }), 420);
   assert.equal(calculateBoardSize({ ...options, areaHeight: 1100, isLandscape: true }), 420);
+});
+
+test('Word Guess consumes the safe portrait width at 390x844', () => {
+  const layout = calculateWordGuessLayout({ contentWidth: 390, availableHeight: 844, isLandscape: false, rows: 6, columns: 5, tileGap: 4, keyGap: 4, borderWidth: 2 });
+  assert.equal(layout.boardWidth, 390);
+  assert.equal(layout.keyboardWidth, 390);
+  assert.equal(layout.tileSize, 74);
+  assert.equal(layout.keyHeight, 58);
+  assert.ok(layout.keyWidth * 10 + 4 * 9 <= layout.keyboardWidth);
+});
+
+test('Word Guess keeps a large square grid and full-width keyboard at 390x664 without vertical collision', () => {
+  const layout = calculateWordGuessLayout({ contentWidth: 390, availableHeight: 664, isLandscape: false, rows: 6, columns: 5, tileGap: 4, keyGap: 4, borderWidth: 2 });
+  assert.ok(layout.boardWidth >= 320 && layout.boardWidth <= 330);
+  assert.equal(layout.keyboardWidth, 390);
+  assert.equal(layout.boardHeight, 388);
+  assert.equal(layout.keyHeight, 48);
+  assert.ok(layout.boardWidth <= 390);
+});
+
+test('Word Guess compact landscape remains height-bound and horizontally contained', () => {
+  const layout = calculateWordGuessLayout({ contentWidth: 844, availableHeight: 300, isLandscape: true, rows: 6, columns: 5, tileGap: 4, keyGap: 4, borderWidth: 2 });
+  assert.equal(layout.sideBySide, true);
+  assert.ok(layout.boardHeight <= 300);
+  assert.ok(layout.boardWidth + 8 + layout.keyboardWidth <= 844);
+  assert.equal(layout.keyHeight, 44);
 });

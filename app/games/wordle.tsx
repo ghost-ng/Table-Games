@@ -19,7 +19,8 @@ import {
   submitGuess,
 } from '../../src/engines/wordle';
 import { isValidWordleGuess, randomWordleAnswer } from '../../src/data/wordle-words';
-import { useBoardFit, useResponsive } from '../../src/utils/layout';
+import { useResponsive } from '../../src/utils/layout';
+import { calculateWordGuessLayout } from '../../src/utils/boardSizing';
 import { haptics } from '../../src/utils/haptics';
 import { LetterTile } from '../../src/components/game-visuals/LetterTile';
 import { ThemedBoardSurface } from '../../src/components/game-visuals/ThemedBoardSurface';
@@ -28,8 +29,8 @@ type Phase = 'wordEntry' | 'passDevice' | 'playing';
 type PlayerId = 'player1' | 'player2';
 
 const KEY_ROWS = ['QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM'];
-const TILE_GAP = 6;
-const KEY_GAP = 5;
+const TILE_GAP = 4;
+const KEY_GAP = 4;
 const PLAYER_LABEL: Record<PlayerId, string> = { player1: 'Player 1', player2: 'Player 2' };
 
 export default function WordleScreen() {
@@ -39,23 +40,18 @@ export default function WordleScreen() {
   const { gameContentWidth: contentWidth, height, isLandscape } = useResponsive();
   // Short landscape screens (phones on their side) can't stack grid + keyboard,
   // so they sit side by side: grid on the left, keyboard on the right.
-  const sideBySide = isLandscape && height < 560;
-  // 6 rows × 5 columns plus gaps: height ≈ 1.21 × width.
-  const { onLayout: onGridAreaLayout, size: gridWidth } = useBoardFit({
-    aspectRatio: 1.21,
-    maxSize: 420,
-    inset: 8,
-    minSize: 120,
-  });
   const boardBorderWidth = theme.materials.boardBorderWidth;
-  const tileSize = (gridWidth - boardBorderWidth * 2 - TILE_GAP * (WORD_LENGTH - 1)) / WORD_LENGTH;
-  const keyboardWidth = sideBySide ? (contentWidth - 24) * 0.62 : contentWidth - 24;
-  const keyWidth = Math.min(48, (keyboardWidth - 16 - KEY_GAP * 9) / 10);
-  const keyHeight = sideBySide
-    ? 44
-    : height <= 640
-      ? 44
-      : 54;
+  const wordGuessLayout = calculateWordGuessLayout({
+    contentWidth: Math.max(0, contentWidth - 24),
+    availableHeight: height,
+    isLandscape,
+    rows: MAX_GUESSES,
+    columns: WORD_LENGTH,
+    tileGap: TILE_GAP,
+    keyGap: KEY_GAP,
+    borderWidth: boardBorderWidth,
+  });
+  const { sideBySide, boardWidth: gridWidth, tileSize, keyboardWidth, keyWidth, keyHeight } = wordGuessLayout;
 
   const { mode: modeParam } = useLocalSearchParams<{ mode: string }>();
   const isSinglePlayer = modeParam !== 'multiplayer';
@@ -287,6 +283,8 @@ export default function WordleScreen() {
 
   const renderKey = (key: string) => {
     const wide = key === 'ENTER' || key === 'BACK';
+    const enter = key === 'ENTER';
+    const back = key === 'BACK';
     const state = keyStates[key];
     return (
       <GamePressable
@@ -302,8 +300,8 @@ export default function WordleScreen() {
             width: wide ? keyWidth * 1.5 + KEY_GAP / 2 : keyWidth,
             height: keyHeight,
             borderRadius: theme.borderRadius.sm,
-            backgroundColor: state ? theme.colors.surfaceRaised : theme.colors.surface,
-            borderColor: state ? stateColor(state) : theme.colors.border,
+            backgroundColor: enter ? theme.colors.primary : state ? theme.colors.surfaceRaised : theme.colors.surface,
+            borderColor: enter ? theme.colors.primary : back ? theme.colors.textMuted : state ? stateColor(state) : theme.colors.border,
             opacity: pressed ? 0.7 : 1,
             borderBottomWidth: state ? 3 : 1,
           },
@@ -314,12 +312,12 @@ export default function WordleScreen() {
           style={[
             styles.keyLabel,
             {
-              color: theme.colors.text,
-              fontSize: wide ? 10 : 14,
+              color: enter ? theme.colors.onPrimary : theme.colors.text,
+              fontSize: wide ? 11 : 15,
             },
           ]}
         >
-          {key === 'BACK' ? 'DEL' : key}
+          {back ? 'Delete' : enter ? 'Enter' : key}
 
         </ThemedText>
         {state ? <ThemedText variant="caption" style={{ position: 'absolute', bottom: 1, right: 2, fontSize: 9, color: theme.colors.text, backgroundColor: theme.colors.surfaceRaised, borderRadius: 2, paddingHorizontal: 2 }}>{state === 'correct' ? '✓' : state === 'present' ? '•' : '×'}</ThemedText> : null}
@@ -404,7 +402,7 @@ export default function WordleScreen() {
 
       {/* ── Playing ───────────────────────────────────────────────────── */}
       {phase === 'playing' && (
-        <>
+        <View style={styles.playing}>
           <StatusRail style={{ minHeight: sideBySide ? 40 : 48, padding: 8 }}>
           <ThemedText variant="caption" style={[styles.status, { color: theme.colors.textMuted }]}>
             {statusText} · {gameState.guesses.length}/{MAX_GUESSES}
@@ -412,8 +410,8 @@ export default function WordleScreen() {
 
           </StatusRail>
 
-          {/* Toast (space is always reserved so the grid doesn't resize) */}
-          <View style={styles.messageRow} accessibilityLiveRegion="polite">
+          {/* Transient feedback overlays the play area without shrinking the board. */}
+          <View pointerEvents="none" style={styles.messageRow} accessibilityLiveRegion="polite">
             {message && (
               <Animated.View
                 entering={reducedMotion ? undefined : FadeIn.duration(120)}
@@ -427,7 +425,7 @@ export default function WordleScreen() {
           </View>
 
           <View style={[styles.playArea, { flexDirection: sideBySide ? 'row' : 'column' }]}>
-          <View style={styles.gridArea} onLayout={onGridAreaLayout}>
+          <View style={styles.gridArea}>
             <ThemedBoardSurface style={{ width: gridWidth, gap: TILE_GAP, borderRadius: theme.borderRadius.md }}>
               {Array.from({ length: MAX_GUESSES }, (_, row) => (
                 <View key={row} style={[styles.gridRow, { gap: TILE_GAP }]}>
@@ -470,7 +468,7 @@ export default function WordleScreen() {
               </View>
             </Animated.View>
           ) : (
-            <View style={[styles.keyboard, { gap: KEY_GAP }, sideBySide && { width: keyboardWidth, justifyContent: 'center' }]}>
+            <View style={[styles.keyboard, { gap: KEY_GAP, width: keyboardWidth, justifyContent: 'center' }]}>
               {KEY_ROWS.map((row, i) => (
                 <View key={row} style={[styles.keyRow, { gap: KEY_GAP }]}>
                   {i === 2 && renderKey('ENTER')}
@@ -481,7 +479,7 @@ export default function WordleScreen() {
             </View>
           )}
           </View>
-        </>
+        </View>
       )}
     </GameShell>
   );
@@ -491,8 +489,16 @@ const styles = StyleSheet.create({
   status: {
     textAlign: 'center',
   },
+  playing: {
+    flex: 1,
+    position: 'relative',
+  },
   messageRow: {
-    minHeight: 34,
+    position: 'absolute',
+    top: 48,
+    left: 0,
+    right: 0,
+    zIndex: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -368,3 +368,36 @@ The exhaustive 324 untouched viewport screenshots are retained only in this run'
 | [game-art-refresh-modern-hangman-390x664-stage-6.png](qa/game-art-refresh-modern-hangman-390x664-stage-6.png) | 1 | 67,408 |
 
 All original matrix, stage/die, Word Guess and offline screens were inspected at native detail or in the larger temporary contact sheets, followed by checks of the curated derivatives. Native critical states retain detailed full-width/toast/scroll, king-overlay, side-count and stage-6 evidence. Complete command logs, browser assertions, fixture disclosure, screenshot-source mapping and isolated multi-intermediate-build QA-profile notes are recorded in the local Task 10 report. Independent complete-diff review and external publication remain the root agent's separate gates; this QA task does not push or deploy.
+
+## Task 10 Final review-fixes re-verification -- 2026-10-11
+
+This addendum supersedes the earlier Task 10 build/version and the sixteen refreshed evidence entries below. Reviewed fixes `bce75e8` (attribution), `57df349` (Hangman landscape reachability), and `a4b8a70` (Mancala rotation/count separation) received independent PASS results. Fresh consolidated gates on their combined HEAD pass: **18 WSL + 136 unit + 62 assets + 4 dictionary + 54 public tests = 274 tests**, dictionary regeneration/check, TypeScript, public tracked-tree scan, root production build, and Pages build. Final Pages version is **`4f666ce6ce0f`**, with 177 precached files and entry `entry-2770efec5b69ca43a44eaeb51d8d7d25.js`. No source, dependency, runtime-budget, or service-worker implementation changes belong to this re-verification.
+
+The corrected quarter-edge credit is Makia Minich. Source and built public notices are byte-identical; the notice is explicitly precached and fetched identically offline in both fresh browser profiles (SHA256 `15355bbf432bc3ac17473cdbe28e54b603cbc4b7ad039ccf989712fb8750364f`). Hangman at 844x390 passes physical wheel, CDP touch gestures, coordinate-pointer secret/Submit/Ready controls and fixed-header assertions; three alternating Unicode-named rounds, both portraits and single-player also pass. Mancala passes all three themes at 390x664 and 1280x900 in normal/reduced motion: 12 cases, 60 low/12/over-12/both-store-16 checks with zero opaque-stone/count intersections or opaque clipping, deterministic rotate-plus-scale transforms, and 12 real sow/extra-turn checks before presentation fixtures. The simultaneous both-store-16 fixture is deliberately not a conserved gameplay state.
+
+The fresh broader matrix passes all 144 route/theme/viewport combinations across twelve routes, three themes and 390x844/390x664/844x390/1280x900. Its 258 screenshots include physical three-round Hangman flows and all eight other GamePieceImage consumers. Decoded natural dimensions are nonzero; document/body horizontal overflow, runtime/console errors, warnings and failed requests are absent. Fresh final-only ordinary and actually installed standalone PWA profiles each pass fifteen offline reloads (all five required routes in all themes): **30 total**, correct final 177-entry cache, working controls/art/dictionary/navigation, and correct public attribution.
+
+### Refreshed compact evidence manifest
+
+Only **16 existing PNGs** are refreshed: twelve matrix sheets, three installed-offline sheets, and one native Mancala count screenshot. Landscape sheets now contain 23 states, including physically reachable secret-entry/Submit and pass-device/Ready; other matrix sheets retain 21. Ten unaffected supplemental/Word Guess/native entries remain byte-unchanged. The complete curated set still has **26 PNGs, 10,030,459 bytes (9.566 MiB), below 10 MiB**. Fresh exhaustive captures remain outside the repository in this run's temporary directory; no bulk files were added. Contact-sheet sizing, captions and lossless non-palette encoding are unchanged; the refreshed native PNG is raw-pixel-identical to its fresh original.
+
+| Refreshed evidence file | Captured states | Bytes |
+| --- | ---: | ---: |
+| [game-art-refresh-modern-390x844-sheet.png](qa/game-art-refresh-modern-390x844-sheet.png) | 21 | 701,960 |
+| [game-art-refresh-modern-390x664-sheet.png](qa/game-art-refresh-modern-390x664-sheet.png) | 21 | 581,898 |
+| [game-art-refresh-modern-844x390-sheet.png](qa/game-art-refresh-modern-844x390-sheet.png) | 23 | 335,132 |
+| [game-art-refresh-modern-1280x900-sheet.png](qa/game-art-refresh-modern-1280x900-sheet.png) | 21 | 372,195 |
+| [game-art-refresh-modern-installed-offline-sheet.png](qa/game-art-refresh-modern-installed-offline-sheet.png) | 5 | 177,201 |
+| [game-art-refresh-retro-390x844-sheet.png](qa/game-art-refresh-retro-390x844-sheet.png) | 21 | 854,995 |
+| [game-art-refresh-retro-390x664-sheet.png](qa/game-art-refresh-retro-390x664-sheet.png) | 21 | 739,807 |
+| [game-art-refresh-retro-844x390-sheet.png](qa/game-art-refresh-retro-844x390-sheet.png) | 23 | 429,170 |
+| [game-art-refresh-retro-1280x900-sheet.png](qa/game-art-refresh-retro-1280x900-sheet.png) | 21 | 524,782 |
+| [game-art-refresh-retro-installed-offline-sheet.png](qa/game-art-refresh-retro-installed-offline-sheet.png) | 5 | 217,482 |
+| [game-art-refresh-arcade-390x844-sheet.png](qa/game-art-refresh-arcade-390x844-sheet.png) | 21 | 914,270 |
+| [game-art-refresh-arcade-390x664-sheet.png](qa/game-art-refresh-arcade-390x664-sheet.png) | 21 | 795,825 |
+| [game-art-refresh-arcade-844x390-sheet.png](qa/game-art-refresh-arcade-844x390-sheet.png) | 23 | 458,949 |
+| [game-art-refresh-arcade-1280x900-sheet.png](qa/game-art-refresh-arcade-1280x900-sheet.png) | 21 | 530,618 |
+| [game-art-refresh-arcade-installed-offline-sheet.png](qa/game-art-refresh-arcade-installed-offline-sheet.png) | 5 | 235,703 |
+| [game-art-refresh-modern-mancala-390x664-low-12-over12-side-counts.png](qa/game-art-refresh-modern-mancala-390x664-low-12-over12-side-counts.png) | 1 | 248,654 |
+
+All sixteen refreshed files were inspected using `view_image` at original detail. Native Hangman secret/pass/single-player and six native Mancala theme/device screenshots were additionally inspected: reachable controls, fixed header, readable side/store counts, complete rotated silhouettes and intact theme materials are preserved. Existing stage/die, Word Guess and other native evidence remains applicable to unchanged code. Chromium on this WSL host is certified here; CDP touch is not physical-device or Safari/Firefox certification. The reviewed unchanged Arcade-phone pit-12/13 text-range overhang of 0.562px is overflow-visible, not clipped or overlapping, and nonblocking. Full logs, assertions and source mappings are in the local final-review-fixes report. Publication remains the root agent's separate gate; no push or deployment occurred.

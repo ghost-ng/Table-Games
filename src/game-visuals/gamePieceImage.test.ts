@@ -74,3 +74,29 @@ test('rendered string transforms compose without changing untransformed sprite c
   assert.match(renderPiece(false, false), /transform:scale\(1\)/);
   assert.match(renderPiece(true, true), /transform:scale\(0.96\)/);
 });
+
+test('coin-only lighting removes the inner sprite shadow without removing other piece shadows', () => {
+  for (const theme of ['modern', 'retro', 'arcade'] as const) {
+    for (const reducedMotion of [false, true]) {
+      const html = renderPiece(false, reducedMotion, presentation.getCoinLightingPresentation(theme));
+      const shadows = [...html.matchAll(/box-shadow:([^;"]+)/g)].map((match) => match[1]);
+      assert.ok(shadows.every((shadow) => shadow === 'none' || /rgba\([^)]*,0(?:\.0+)?\)/.test(shadow)), `${theme} inner quarter has a visible shadow: ${shadows}`);
+      assert.match(html, /width:32px/);
+      assert.match(html, /transform:scale\(1\)/);
+      assert.match(html, /aria-hidden="true"/);
+    }
+  }
+  assert.match(renderPiece(false, false), /box-shadow:[^;"]*rgba\([^)]*,0\.20\)/, 'other games retain their normal piece shadow');
+});
+
+test('all dice artwork can render without padding-shaped shadows while remaining decorative', () => {
+  assert.equal(typeof presentation.getDiceLightingPresentation, 'function', 'dice need their own halo-free presentation');
+  for (const theme of ['modern', 'retro', 'arcade'] as const) {
+    const lighting = presentation.getDiceLightingPresentation(theme);
+    assert.equal(lighting.elevation, 0);
+    const html = renderPiece(false, false, lighting);
+    const shadows = [...html.matchAll(/box-shadow:([^;"]+)/g)].map((match) => match[1]);
+    assert.ok(shadows.every(shadow => shadow === 'none' || /rgba\([^)]*,0(?:\.0+)?\)/.test(shadow)));
+    assert.match(html, /aria-hidden="true"/);
+  }
+});

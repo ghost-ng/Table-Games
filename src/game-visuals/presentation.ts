@@ -18,8 +18,8 @@ const motionPresets: Record<PieceMotionKind, MotionPreset> = {
   place: { ...still, duration: 220, scaleFrom: 0.88, opacityFrom: 0 },
   drop: { ...still, duration: 320, translateYFrom: -24 },
   sow: { ...still, duration: 260, translateYFrom: -12, scaleFrom: 0.9 },
-  flip: { ...still, duration: 320, rotateFrom: '180deg' },
-  roll: { ...still, duration: 380, rotateFrom: '-20deg', scaleFrom: 0.9 },
+  flip: { ...still, duration: 720, rotateFrom: '180deg' },
+  roll: { ...still, duration: 640, rotateFrom: '-20deg', scaleFrom: 0.9 },
   victory: { ...still, duration: 420, scaleFrom: 0.9, opacityFrom: 0 },
 };
 
@@ -134,13 +134,75 @@ export function getCheckerPiecePresentation(cellSize: number) {
   };
 }
 
-/** Theme personality belongs around the shared natural-silver quarter, never in its bitmap. */
-export function getCoinLightingPresentation(themeName: ThemeName) {
+/** The quarter's transparent padding must not cast a box shadow or colored halo. */
+export function getCoinLightingPresentation(_themeName: ThemeName) {
   return {
-    modern: { shadowColor: '#111827', shadowOpacity: 0.28, shadowRadius: 12, elevation: 8 },
-    retro: { shadowColor: '#7C3F18', shadowOpacity: 0.34, shadowRadius: 14, elevation: 8 },
-    arcade: { shadowColor: '#00E5FF', shadowOpacity: 0.46, shadowRadius: 20, elevation: 10 },
-  }[themeName];
+    shadowColor: 'transparent', shadowOpacity: 0, shadowRadius: 0, elevation: 0,
+  };
+}
+
+/** Dice keep their original art and code-rendered face, without a square-padding halo. */
+export function getDiceLightingPresentation(themeName: ThemeName) {
+  return getCoinLightingPresentation(themeName);
+}
+
+/** A short ballistic rise/fall followed by one much smaller contact bounce. */
+function tossHeight(progress: number) {
+  'worklet';
+  if (progress <= 0 || progress >= 1) return 0;
+  if (progress < 0.72) {
+    const flight = progress / 0.72;
+    return 4 * flight * (1 - flight);
+  }
+  return 0.13 * Math.sin(Math.PI * (progress - 0.72) / 0.28);
+}
+
+/** Display-only motion: it never selects or changes a coin outcome. */
+export function getCoinTossFrame(progress: number, size: number, landsOpposite: boolean, reducedMotion: boolean) {
+  'worklet';
+  const p = reducedMotion ? 0 : Math.max(0, Math.min(1, progress));
+  const spin = Math.min(1, p / 0.72);
+  const rotateY = (landsOpposite ? 900 : 720) * (1 - (1 - spin) * (1 - spin));
+  const facing = Math.cos(rotateY * Math.PI / 180);
+  // Keep the photographed surfaces opaque: crossfading makes the face read as a translucent halo behind the edge.
+  const edgeOn = Math.abs(facing) <= 0.2;
+  const frontOpacity = !edgeOn && facing > 0 ? 1 : 0;
+  const backOpacity = !edgeOn && facing < 0 ? 1 : 0;
+  const height = tossHeight(p);
+  return {
+    translateY: height === 0 ? 0 : -Math.min(28, Math.max(0, size) * 0.1) * height,
+    rotateY,
+    rotateZ: p === 1 ? 0 : 7 * Math.sin(Math.PI * p) * (1 - p),
+    scale: 1 + height * 0.04,
+    frontOpacity,
+    backOpacity,
+    edgeOpacity: edgeOn ? 1 : 0,
+  };
+}
+
+/** Independent, bounded tumble paths; every die returns to an upright readable face. */
+export function getDiceRollFrame(progress: number, size: number, index: number, reducedMotion: boolean) {
+  'worklet';
+  const p = Math.max(0, Math.min(1, progress));
+  if (reducedMotion || p === 0 || p === 1) {
+    return { translateX: 0, translateY: 0, rotateX: 0, rotateY: 0, rotateZ: 0, scale: 1 };
+  }
+  const direction = index % 2 === 0 ? 1 : -1;
+  const spin = Math.min(1, p / 0.72);
+  const rotateZ = direction * 360 * (1 - Math.pow(1 - spin, 3));
+  const angle = rotateZ * Math.PI / 180;
+  const envelope = Math.sin(Math.PI * p);
+  const height = tossHeight(p);
+  // Keep rotated transparent canvases inside their existing grid allocation.
+  const scale = (1 - height * 0.06) / (Math.abs(Math.cos(angle)) + Math.abs(Math.sin(angle)));
+  return {
+    translateX: direction * Math.min(5, Math.max(0, size) * 0.025) * envelope,
+    translateY: -Math.min(12, Math.max(0, size) * 0.08) * height,
+    rotateX: 28 * envelope * Math.cos(p * Math.PI * 4 + index * 0.8),
+    rotateY: 22 * envelope * Math.sin(p * Math.PI * 3 + index * 0.4),
+    rotateZ,
+    scale,
+  };
 }
 
 /** Reserve a real side gutter so Mancala counts never cover the stone sprites. */

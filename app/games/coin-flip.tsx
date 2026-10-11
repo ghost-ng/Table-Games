@@ -2,11 +2,11 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, {
+  cancelAnimation,
   Easing,
   useAnimatedStyle,
   useSharedValue,
   useReducedMotion,
-  withSequence,
   withTiming,
 } from 'react-native-reanimated';
 import { useTheme } from '../../src/theme/ThemeProvider';
@@ -18,7 +18,7 @@ import { haptics } from '../../src/utils/haptics';
 import { randomInt } from '../../src/utils/random';
 import { GamePieceImage } from '../../src/components/game-visuals/GamePieceImage';
 import { GAME_VISUALS } from '../../src/game-visuals/registry';
-import { getCoinLightingPresentation, getMotionPreset } from '../../src/game-visuals/presentation';
+import { getCoinLightingPresentation, getCoinTossFrame, getMotionPreset } from '../../src/game-visuals/presentation';
 
 type Side = 'H' | 'T';
 
@@ -45,15 +45,15 @@ export default function CoinFlipScreen() {
   const [flipping, setFlipping] = useState(false);
   const revealTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Cumulative decorative rotation; the settled face is selected from the result.
-  const rotation = useSharedValue(0);
-  const lift = useSharedValue(0);
+  const [toss, setToss] = useState<{ from: Side; to: Side }>({ from: 'H', to: 'H' });
+  const tossProgress = useSharedValue(0);
 
   useEffect(
     () => () => {
       if (revealTimeoutRef.current) clearTimeout(revealTimeoutRef.current);
+      cancelAnimation(tossProgress);
     },
-    [],
+    [tossProgress],
   );
 
   const flip = useCallback(() => {
@@ -68,24 +68,17 @@ export default function CoinFlipScreen() {
       haptics.success();
     };
     if (flipDuration === 0) {
-      rotation.value = 0;
-      lift.value = 0;
+      tossProgress.value = 0;
       reveal();
       return;
     }
+    setToss({ from: result ?? 'H', to: side });
     setFlipping(true);
-
-    const current = rotation.value;
-    const base = Math.ceil(current / 360) * 360 + 360 * 2; // brief, non-essential motion
-    const target = base + (side === 'T' ? 180 : 0);
-    rotation.value = withTiming(target, { duration: flipDuration, easing: Easing.out(Easing.cubic) });
-    lift.value = withSequence(
-      withTiming(1, { duration: flipDuration * 0.45, easing: Easing.out(Easing.quad) }),
-      withTiming(0, { duration: flipDuration * 0.55, easing: Easing.bounce }),
-    );
+    tossProgress.value = 0;
+    tossProgress.value = withTiming(1, { duration: flipDuration, easing: Easing.linear });
 
     revealTimeoutRef.current = setTimeout(reveal, flipDuration);
-  }, [flipping, rotation, lift, flipDuration]);
+  }, [flipping, result, tossProgress, flipDuration]);
 
   const reset = useCallback(() => {
     setHistory([]);
@@ -93,15 +86,25 @@ export default function CoinFlipScreen() {
     setResult(null);
   }, []);
 
-  const motionStyle = useAnimatedStyle(() => ({
-    transform: [
-      { perspective: 800 },
-      { translateY: reducedMotion ? 0 : -lift.value * coinSize * 0.12 },
-      { scale: reducedMotion ? 1 : 1 + lift.value * 0.04 },
-      { rotateY: `${flipping && !reducedMotion ? rotation.value : 0}deg` },
-    ],
-  }));
+  const motionStyle = useAnimatedStyle(() => {
+    const frame = getCoinTossFrame(flipping ? tossProgress.value : 0, coinSize, toss.from !== toss.to, reducedMotion);
+    return { transform: [{ translateY: frame.translateY }, { rotateZ: `${frame.rotateZ}deg` }, { scale: frame.scale }] };
+  });
+  const frontStyle = useAnimatedStyle(() => {
+    const frame = getCoinTossFrame(flipping ? tossProgress.value : 0, coinSize, toss.from !== toss.to, reducedMotion);
+    return { opacity: frame.frontOpacity, transform: [{ perspective: 800 }, { rotateY: `${frame.rotateY}deg` }] };
+  });
+  const backStyle = useAnimatedStyle(() => {
+    const frame = getCoinTossFrame(flipping ? tossProgress.value : 0, coinSize, toss.from !== toss.to, reducedMotion);
+    return { opacity: frame.backOpacity, transform: [{ perspective: 800 }, { rotateY: `${frame.rotateY + 180}deg` }] };
+  });
+  const edgeStyle = useAnimatedStyle(() => {
+    const frame = getCoinTossFrame(flipping ? tossProgress.value : 0, coinSize, toss.from !== toss.to, reducedMotion);
+    return { opacity: frame.edgeOpacity };
+  });
   const face = flipping ? 'edge' : result === 'T' ? 'tails' : 'heads';
+  const frontFace = (flipping ? toss.from : result ?? 'H') === 'H' ? 'heads' : 'tails';
+  const backFace = frontFace === 'heads' ? 'tails' : 'heads';
   const coinLighting = getCoinLightingPresentation(themeName);
 
   const total = counts.H + counts.T;
@@ -149,7 +152,15 @@ export default function CoinFlipScreen() {
             shadowOffset: { width: 0, height: themeName === 'arcade' ? 0 : 8 },
             ...coinLighting,
           }, motionStyle]}>
-            <GamePieceImage source={GAME_VISUALS[themeName].coinFlip[face]} size={coinSize} />
+            <Animated.View testID="coin-front-art" pointerEvents="none" aria-hidden accessible={false} style={[StyleSheet.absoluteFill, frontStyle]}>
+              <GamePieceImage source={GAME_VISUALS[themeName].coinFlip[frontFace]} size={coinSize} style={coinLighting} />
+            </Animated.View>
+            <Animated.View testID="coin-back-art" pointerEvents="none" aria-hidden accessible={false} style={[StyleSheet.absoluteFill, backStyle]}>
+              <GamePieceImage source={GAME_VISUALS[themeName].coinFlip[backFace]} size={coinSize} style={coinLighting} />
+            </Animated.View>
+            <Animated.View testID="coin-edge-art" pointerEvents="none" aria-hidden accessible={false} style={[StyleSheet.absoluteFill, edgeStyle]}>
+              <GamePieceImage source={GAME_VISUALS[themeName].coinFlip.edge} size={coinSize} style={coinLighting} />
+            </Animated.View>
           </Animated.View>
         </View>
         <View style={[styles.panel, sideBySide && styles.panelSide]}>

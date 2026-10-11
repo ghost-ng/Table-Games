@@ -32,13 +32,21 @@ test('reduced motion makes every transition immediate and removes movement', () 
 test('motion durations stay within approved press and action ranges', () => {
   const press = getMotionPreset('press', false);
   assert.ok(press.duration >= 80 && press.duration <= 140);
-  for (const kind of ['place', 'drop', 'sow', 'flip', 'roll'] as const) {
+  for (const kind of ['place', 'drop', 'sow'] as const) {
     const preset = getMotionPreset(kind, false);
     assert.ok(preset.duration >= 180 && preset.duration <= 450, kind);
   }
   assert.ok(getMotionPreset('victory', false).duration <= 450);
   assert.ok(getMotionPreset('drop', false).translateYFrom < 0);
   assert.notEqual(getMotionPreset('flip', false).rotateFrom, '0deg');
+});
+
+test('coin and dice allow a readable single toss and landing without prolonged motion', () => {
+  for (const kind of ['flip', 'roll'] as const) {
+    assert.ok(getMotionPreset(kind, false).duration >= 600);
+    assert.ok(getMotionPreset(kind, false).duration <= 800);
+    assert.equal(getMotionPreset(kind, true).duration, 0);
+  }
 });
 
 test('semantic states expose a shape or symbol independently of color', () => {
@@ -172,16 +180,14 @@ test('checker sprites stay complete while selection and king state remain overla
   }
 });
 
-test('coin themes change only surrounding light while keeping the photographed quarter neutral', () => {
-  assert.deepEqual(getCoinLightingPresentation('modern'), {
-    shadowColor: '#111827', shadowOpacity: 0.28, shadowRadius: 12, elevation: 8,
-  });
-  assert.deepEqual(getCoinLightingPresentation('retro'), {
-    shadowColor: '#7C3F18', shadowOpacity: 0.34, shadowRadius: 14, elevation: 8,
-  });
-  assert.deepEqual(getCoinLightingPresentation('arcade'), {
-    shadowColor: '#00E5FF', shadowOpacity: 0.46, shadowRadius: 20, elevation: 10,
-  });
+test('the photographed quarter has no padding-shaped shadow or halo in any theme', () => {
+  for (const theme of ['modern', 'retro', 'arcade'] as const) {
+    const lighting = getCoinLightingPresentation(theme);
+    assert.equal(lighting.shadowOpacity, 0, `${theme} quarter must not cast a padding-shaped shadow`);
+    assert.equal(lighting.shadowRadius, 0);
+    assert.equal(lighting.elevation, 0, `${theme} quarter must not gain an Android elevation shadow`);
+    assert.ok(!('tintColor' in lighting), 'photographed silver remains untinted');
+  }
 });
 
 test('mancala reserves a side gutter outside the stone pit for exact counts', () => {

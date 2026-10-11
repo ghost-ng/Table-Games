@@ -2,10 +2,11 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, {
+  cancelAnimation,
+  Easing,
   useAnimatedStyle,
   useSharedValue,
   useReducedMotion,
-  withSequence,
   withTiming,
 } from 'react-native-reanimated';
 import { useTheme } from '../../src/theme/ThemeProvider';
@@ -18,7 +19,7 @@ import { haptics } from '../../src/utils/haptics';
 import { randomInt } from '../../src/utils/random';
 import { GamePieceImage } from '../../src/components/game-visuals/GamePieceImage';
 import { GAME_VISUALS } from '../../src/game-visuals/registry';
-import { getMotionPreset } from '../../src/game-visuals/presentation';
+import { getDiceLightingPresentation, getDiceRollFrame, getMotionPreset } from '../../src/game-visuals/presentation';
 import type { DiceKind } from '../../src/game-visuals/types';
 
 const DIE_TYPES = [4, 6, 8, 10, 12, 20] as const;
@@ -44,6 +45,7 @@ interface RollRecord {
 }
 
 function Die({
+  index,
   value,
   sides,
   size,
@@ -52,6 +54,7 @@ function Die({
   canHold,
   onPress,
 }: {
+  index: number;
   value: number;
   sides: DieType;
   size: number;
@@ -61,27 +64,30 @@ function Die({
   onPress: () => void;
 }) {
   const { theme, themeName } = useTheme();
-  const wobble = useSharedValue(0);
+  const progress = useSharedValue(1);
   const reducedMotion = useReducedMotion();
   const focus = useWebFocusRing(theme.colors.focus);
 
   useEffect(() => {
     if (rolling && !held && !reducedMotion) {
-      const step = getMotionPreset('roll', reducedMotion).duration / 5;
-      wobble.value = withSequence(
-        withTiming(-14, { duration: step }),
-        withTiming(12, { duration: step }),
-        withTiming(-8, { duration: step }),
-        withTiming(5, { duration: step }),
-        withTiming(0, { duration: step }),
-      );
+      progress.value = 0;
+      progress.value = withTiming(1, { duration: getMotionPreset('roll', false).duration, easing: Easing.linear });
+    } else {
+      cancelAnimation(progress);
+      progress.value = 1;
     }
-    else wobble.value = 0;
-  }, [rolling, held, wobble, reducedMotion]);
+    return () => cancelAnimation(progress);
+  }, [rolling, held, progress, reducedMotion]);
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ rotate: `${wobble.value}deg` }, { scale: 1 - Math.abs(wobble.value) / 140 }],
-  }));
+  const animatedStyle = useAnimatedStyle(() => {
+    const frame = getDiceRollFrame(progress.value, size, index, reducedMotion || held || !rolling);
+    return { transform: [
+      { perspective: 800 },
+      { translateX: frame.translateX }, { translateY: frame.translateY },
+      { rotateX: `${frame.rotateX}deg` }, { rotateY: `${frame.rotateY}deg` },
+      { rotateZ: `${frame.rotateZ}deg` }, { scale: frame.scale },
+    ] };
+  });
 
   const pip = size * 0.09;
   const faceSize = size * 0.42;
@@ -113,7 +119,7 @@ function Die({
         ]}
       >
         <View style={StyleSheet.absoluteFill} pointerEvents="none">
-          <GamePieceImage source={GAME_VISUALS[themeName].dice[`d${sides}` as DiceKind]} size={size} />
+          <GamePieceImage source={GAME_VISUALS[themeName].dice[`d${sides}` as DiceKind]} size={size} style={getDiceLightingPresentation(themeName)} />
         </View>
         <View style={{ alignItems: 'center', justifyContent: 'center', width: faceSize + 8, minHeight: faceSize + 8, borderRadius: size * 0.1, backgroundColor: theme.colors.surfaceRaised }} pointerEvents="none">
           {rolling && reducedMotion && !held ? (
@@ -287,7 +293,7 @@ export default function DiceScreen() {
         <View style={styles.diceArea} onLayout={onAreaLayout}>
           {area.width > 0 ? (
             <View style={[styles.diceGrid, { gap, maxWidth: perRow * dieSize + (perRow - 1) * gap }]}>
-              {shown.map((v, i) => <Die key={i} value={v} sides={sides} size={dieSize} held={held[i] && count > 1} rolling={rolling} canHold={count > 1} onPress={() => count === 1 ? roll() : toggleHold(i)} />)}
+              {shown.map((v, i) => <Die key={i} index={i} value={v} sides={sides} size={dieSize} held={held[i] && count > 1} rolling={rolling} canHold={count > 1} onPress={() => count === 1 ? roll() : toggleHold(i)} />)}
             </View>
           ) : null}
         </View>

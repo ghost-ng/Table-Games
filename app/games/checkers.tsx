@@ -14,7 +14,7 @@ import { useTheme } from '../../src/theme/ThemeProvider';
 import { ThemedText } from '../../src/components/ui/ThemedText';
 import { TurnIndicator } from '../../src/components/ui/TurnIndicator';
 import { GAME_VISUALS } from '../../src/game-visuals/registry';
-import { getMotionPreset } from '../../src/game-visuals/presentation';
+import { getCheckerPiecePresentation, getMotionPreset } from '../../src/game-visuals/presentation';
 import { ThemedBoardSurface } from '../../src/components/game-visuals/ThemedBoardSurface';
 import { GamePieceImage } from '../../src/components/game-visuals/GamePieceImage';
 import { TactileCell } from '../../src/components/game-visuals/TactileCell';
@@ -94,7 +94,8 @@ function AnimatedPiece({
     opacity: opacity.value,
   }));
 
-  const pieceSize = cellSize * 0.75;
+  const piecePresentation = getCheckerPiecePresentation(cellSize);
+  const { pieceSize, selectionRingSize, crownSize } = piecePresentation;
   const visuals = GAME_VISUALS[themeName].checkers;
   const pieceImage = player === 'player1' ? visuals.player1 : visuals.player2;
 
@@ -120,10 +121,10 @@ function AnimatedPiece({
       <View
         style={[
           {
-            width: pieceSize,
-            height: pieceSize,
-            borderRadius: pieceSize / 2,
-            overflow: 'hidden',
+            width: selectionRingSize,
+            height: selectionRingSize,
+            borderRadius: selectionRingSize / 2,
+            overflow: piecePresentation.spriteOverflow,
             justifyContent: 'center',
             alignItems: 'center',
             borderWidth: isSelected ? 3 : 0,
@@ -140,7 +141,7 @@ function AnimatedPiece({
       >
         <GamePieceImage source={pieceImage} size={pieceSize} state={isSelected ? 'selected' : isKing ? 'king' : 'neutral'} />
         {isKing && (
-          <GamePieceImage source={visuals.crown} size={pieceSize * 0.55} style={{ position: 'absolute' }} />
+          <GamePieceImage source={visuals.crown} size={crownSize} style={{ position: 'absolute' }} />
         )}
         <ThemedText aria-hidden accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" variant="caption" style={{ position: 'absolute', bottom: 1, color: theme.colors.text, backgroundColor: theme.colors.surfaceRaised, borderRadius: 4, paddingHorizontal: 2, fontSize: Math.max(8, cellSize * 0.18), fontWeight: '700' }}>{player === 'player1' ? '1' : '2'}{isKing ? '♛' : ''}</ThemedText>
       </View>

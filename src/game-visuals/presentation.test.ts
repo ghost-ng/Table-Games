@@ -7,6 +7,8 @@ import {
   getStateMarker,
   getCellPresentation,
   getPiecePresentation,
+  getCheckerPiecePresentation,
+  getCoinLightingPresentation,
   getSelectionTrailPresentation,
   getVictoryPresentation,
   type PieceMotionKind,
@@ -95,6 +97,31 @@ test('piece disabled and pressed treatments preserve semantic markers', () => {
   });
   assert.equal(getPiecePresentation('selected', true, false).scale, 0.96);
   assert.equal(getPiecePresentation('neutral', false, false).opacity, 1);
+});
+
+test('checker sprites stay complete while selection and king state remain overlay layers', () => {
+  for (const cellSize of [32, 48, 80, 120]) {
+    const piece = getCheckerPiecePresentation(cellSize);
+    assert.ok(piece.pieceSize <= cellSize * 0.8);
+    assert.equal(piece.pieceSize, cellSize * 0.78);
+    assert.equal(piece.spriteOverflow, 'visible');
+    assert.equal(piece.selectionLayer, 'overlay');
+    assert.equal(piece.kingLayer, 'overlay');
+    assert.ok(piece.selectionRingSize > piece.pieceSize);
+    assert.ok(piece.crownSize < piece.pieceSize);
+  }
+});
+
+test('coin themes change only surrounding light while keeping the photographed quarter neutral', () => {
+  assert.deepEqual(getCoinLightingPresentation('modern'), {
+    shadowColor: '#111827', shadowOpacity: 0.28, shadowRadius: 12, elevation: 8,
+  });
+  assert.deepEqual(getCoinLightingPresentation('retro'), {
+    shadowColor: '#7C3F18', shadowOpacity: 0.34, shadowRadius: 14, elevation: 8,
+  });
+  assert.deepEqual(getCoinLightingPresentation('arcade'), {
+    shadowColor: '#00E5FF', shadowOpacity: 0.46, shadowRadius: 20, elevation: 10,
+  });
 });
 
 test('trails derive ordered pixel geometry from normalized points on rectangular boards', () => {

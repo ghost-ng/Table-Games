@@ -18,7 +18,7 @@ import { haptics } from '../../src/utils/haptics';
 import { randomInt } from '../../src/utils/random';
 import { GamePieceImage } from '../../src/components/game-visuals/GamePieceImage';
 import { GAME_VISUALS } from '../../src/game-visuals/registry';
-import { getMotionPreset } from '../../src/game-visuals/presentation';
+import { getCoinLightingPresentation, getMotionPreset } from '../../src/game-visuals/presentation';
 
 type Side = 'H' | 'T';
 
@@ -102,6 +102,7 @@ export default function CoinFlipScreen() {
     ],
   }));
   const face = flipping ? 'edge' : result === 'T' ? 'tails' : 'heads';
+  const coinLighting = getCoinLightingPresentation(themeName);
 
   const total = counts.H + counts.T;
   let streak = 0;
@@ -141,7 +142,13 @@ export default function CoinFlipScreen() {
       <View style={[styles.body, { flexDirection: sideBySide ? 'row' : 'column' }]}>
         <View style={styles.coinArea} onLayout={onCoinAreaLayout}
           accessibilityLabel={flipping ? 'Coin flipping' : result === 'T' ? 'Coin showing Tails' : 'Coin showing Heads'}>
-          <Animated.View testID={`coin-${face}`} style={[{ width: coinSize, height: coinSize }, motionStyle]}>
+          <Animated.View testID={`coin-${face}`} style={[{
+            width: coinSize,
+            height: coinSize,
+            borderRadius: coinSize / 2,
+            shadowOffset: { width: 0, height: themeName === 'arcade' ? 0 : 8 },
+            ...coinLighting,
+          }, motionStyle]}>
             <GamePieceImage source={GAME_VISUALS[themeName].coinFlip[face]} size={coinSize} />
           </Animated.View>
         </View>

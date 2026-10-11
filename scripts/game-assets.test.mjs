@@ -183,10 +183,10 @@ test('manifest supplies 117 portable individual records matching the runtime cat
   }
 });
 
-test('live manifest accepts all 108 custom sprites and only nine authority-pending quarter slots', () => {
+test('live manifest preserves all 108 accepted custom sprites through the final quarter stage', () => {
   const manifest = JSON.parse(readFileSync(resolve(root, 'docs/design/game-art-sources.json'), 'utf8'));
-  assert.equal(manifest.stage, 'individual-assets',
-    'Task 2 acceptance requires promotion from generation-batches to individual-assets');
+  assert.ok(['individual-assets', 'accepted'].includes(manifest.stage),
+    'Task 2 acceptance must remain at individual-assets or advance to accepted');
   assert.equal(manifest.records.length, 117);
   const custom = manifest.records.filter((record) => record.family !== 'coin-flip');
   const coins = manifest.records.filter((record) => record.family === 'coin-flip');
@@ -194,8 +194,9 @@ test('live manifest accepts all 108 custom sprites and only nine authority-pendi
   assert.equal(coins.length, 9);
   assert.equal(manifest.records.filter((record) => Object.hasOwn(record, 'legacy')).length, 0);
   assert.equal(manifest.records.filter((record) => Object.hasOwn(record, 'generationPending')).length, 0);
-  assert.equal(manifest.records.filter((record) => Object.hasOwn(record, 'authorityReferencePending')).length, 9);
-  assert.ok(coins.every((record) => record.authorityReferencePending === true));
+  const pendingCoins = manifest.records.filter((record) => Object.hasOwn(record, 'authorityReferencePending'));
+  assert.equal(pendingCoins.length, manifest.stage === 'individual-assets' ? 9 : 0);
+  assert.ok(manifest.stage === 'accepted' || coins.every((record) => record.authorityReferencePending === true));
   assert.ok(custom.every((record) => !Object.hasOwn(record, 'authorityReferencePending')));
   assert.ok(custom.every((record) => record.generatedAt && Number.isFinite(Date.parse(record.generatedAt))));
   assert.ok(custom.every((record) => record.reviewedAt && Number.isFinite(Date.parse(record.reviewedAt))));
@@ -214,6 +215,31 @@ test('live manifest accepts all 108 custom sprites and only nine authority-pendi
     } else assert.equal(record.generator, undefined, `${identity}: only Hangman uses deterministic generator provenance`);
   }
   art.validateManifest(manifest);
+});
+
+test('accepted quarter records use one authoritative natural-silver source set across every theme', async () => {
+  const manifest = JSON.parse(readFileSync(resolve(root, 'docs/design/game-art-sources.json'), 'utf8'));
+  const coins = manifest.records.filter((record) => record.family === 'coin-flip');
+  assert.equal(manifest.stage, 'accepted');
+  assert.equal(coins.length, 9);
+  assert.equal(coins.filter((record) => Object.hasOwn(record, 'authorityReferencePending')).length, 0);
+  for (const record of coins) {
+    const identity = `${record.theme}/${record.family}/${record.role}`;
+    assert.equal(record.expectedColor, '#C0C0C0', `${identity}: quarter stays natural silver`);
+    assert.match(record.referenceUrl, /^https:\/\//, `${identity}: direct authority URL`);
+    assert.ok(record.referenceTitle.trim(), `${identity}: reference title`);
+    assert.match(record.referenceLicense, /public domain|CC BY-SA [34]\.0/i, `${identity}: reusable license`);
+    assert.ok(Number.isFinite(Date.parse(record.retrievedAt)), `${identity}: retrieval date`);
+    assert.match(record.transformation, /crop|cutout|alpha|resize/i, `${identity}: transformation record`);
+  }
+  for (const role of ['heads', 'tails', 'edge']) {
+    const roleRecords = coins.filter((record) => record.role === role);
+    const hash = (path) => createHash('sha256').update(readFileSync(path)).digest('hex');
+    const sourceHashes = roleRecords.map((record) => hash(resolve(root, record.sourcePath)));
+    const finalHashes = roleRecords.map((record) => hash(resolve(root, record.finalPath)));
+    assert.equal(new Set(sourceHashes).size, 1, `${role}: all themes reuse identical canonical source bytes`);
+    assert.equal(new Set(finalHashes).size, 1, `${role}: all themes reuse identical canonical final bytes`);
+  }
 });
 
 test('manifest stages reject legacy after migration and pending coins at final acceptance', () => {

@@ -12,7 +12,8 @@ const THEMES = ['modern', 'retro', 'arcade'];
 const STAGES = ['contract-only', 'generation-batches', 'individual-assets', 'accepted'];
 const REQUIRED_FIELDS = ['theme', 'family', 'role', 'prompt', 'sourcePath', 'finalPath', 'targetSize',
   'visibleBounds', 'generatedAt', 'reviewedAt'];
-const RECORD_FIELDS = new Set([...REQUIRED_FIELDS, 'expectedOwner', 'expectedColor', 'legacy', 'authorityReferencePending', 'generationPending', 'generator']);
+const RECORD_FIELDS = new Set([...REQUIRED_FIELDS, 'expectedOwner', 'expectedColor', 'legacy', 'authorityReferencePending', 'generationPending', 'generator',
+  'referenceUrl', 'referenceTitle', 'referenceLicense', 'retrievedAt', 'transformation']);
 
 function assertRelativePath(path) {
   assert.ok(typeof path === 'string' && path.length > 0 && !/^(?:\/|[A-Za-z]:)|\\/.test(path)
@@ -90,7 +91,7 @@ export function validateManifest(manifest, { requiredPaths } = {}) {
     identities.add(identity); outputs.add(record.finalPath);
     assert.ok(!sources.has(record.sourcePath), `Duplicate individual source: ${record.sourcePath}`);
     sources.add(record.sourcePath);
-    if (record.expectedColor !== undefined) validateProductionPrompt(record);
+    if (record.expectedColor !== undefined && record.family !== 'coin-flip') validateProductionPrompt(record);
     if (familySizes.has(record.family)) assert.equal(record.targetSize, familySizes.get(record.family), 'Family dimensions must match');
     familySizes.set(record.family, record.targetSize);
     if (Object.hasOwn(record, 'legacy')) {
@@ -101,6 +102,14 @@ export function validateManifest(manifest, { requiredPaths } = {}) {
       assert.ok(record.authorityReferencePending === true && record.family === 'coin-flip', 'Only coin-flip can be authorityReferencePending');
       assert.notEqual(manifest.stage, 'accepted', 'Pending authority references cannot pass final acceptance');
       assert.ok(!Object.hasOwn(record, 'legacy'), 'Pending and legacy statuses are mutually exclusive');
+    }
+    if (record.family === 'coin-flip' && !record.authorityReferencePending) {
+      assert.match(record.referenceUrl ?? '', /^https:\/\//, 'Completed coin referenceUrl must be direct HTTPS provenance');
+      assert.ok(typeof record.referenceTitle === 'string' && record.referenceTitle.trim(), 'Completed coin referenceTitle required');
+      assert.match(record.referenceLicense ?? '', /public domain|CC BY-SA \d\.\d/i, 'Completed coin referenceLicense must permit reuse');
+      assert.ok(typeof record.retrievedAt === 'string' && Number.isFinite(Date.parse(record.retrievedAt)), 'Completed coin retrievedAt required');
+      assert.ok(typeof record.transformation === 'string' && record.transformation.trim(), 'Completed coin transformation required');
+      assert.equal(record.expectedColor, '#C0C0C0', 'Completed quarter art must remain natural silver');
     }
     if (!record.legacy && !record.authorityReferencePending) {
       assert.notEqual(record.sourcePath, record.finalPath, 'Individual source path must differ from final output path');

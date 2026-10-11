@@ -313,3 +313,11 @@ All 108 custom sprites were reconciled across Modern, Retro, and Arcade without 
 | Catalog and budget | All 117 registered final WebPs remain unique catalog entries and total 823,492 bytes. The largest is the unchanged 15,328-byte Arcade Coin Flip heads placeholder. Both the 2 MiB aggregate and 64 KiB per-file limits pass. |
 
 This acceptance changes only the manifest stage, focused acceptance coverage/helper support, and documentation. Gameplay, dependencies, catalog/registry ownership, generated art, normalized finals, QA images, and deployment remain unchanged.
+
+## Task 3 Faithful quarter and checker presentation -- 2026-10-11
+
+Coin Flip now uses real photographed Washington quarters in every theme. Heads and tails come from the same photographed 1983 quarter; the animation state uses a real upright quarter with its reeded edge visible. Deterministic masks remove only the photographed backgrounds, and all three theme copies are byte-identical by role. Original-detail review confirms readable Washington/eagle relief, preserved inscriptions, real wear and rim detail, natural-silver faces, transparent backgrounds, complete silhouettes, and no generated fantasy-coin details. The edge state's warm ambient cast was reduced to neutral silver without redrawing its photographed content.
+
+Modern adds a neutral soft shadow, Retro adds a warmer tabletop shadow, and Arcade adds a restrained cyan rim glow in code around the same quarter sprites. Flip timing, lift, result selection, history, labels, and reduced-motion behavior remain unchanged. Manifest provenance records the direct CC BY-SA source pages, titles, authors, licenses, retrieval date, and exact transformations; the public PWA includes `licenses/ASSET-NOTICES.md`.
+
+Checkers now renders each complete top-down disc at 78% of its cell. The selection ring uses an 86% overlay container with visible overflow, and the crown remains a separate centered overlay at 43% of the cell. Neither state marker is baked into or allowed to crop the checker bitmap; owner text and semantic accessibility labels remain intact.

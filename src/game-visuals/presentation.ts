@@ -1,4 +1,4 @@
-import type { ThemeColors, ThemeMaterials } from '../theme/types';
+import type { ThemeColors, ThemeMaterials, ThemeName } from '../theme/types';
 
 export type PieceMotionKind = 'press' | 'place' | 'drop' | 'sow' | 'flip' | 'roll' | 'victory';
 export type VisualCellState = 'neutral' | 'selected' | 'legal' | 'winning' | 'king' | 'found';
@@ -81,6 +81,28 @@ export function getPiecePresentation(state: VisualCellState, pressed: boolean, d
     scale: pressed && !disabled ? 0.96 : 1,
     marker: getStateMarker(state),
   };
+}
+
+/** Keep complete checker artwork separate from code-rendered state overlays. */
+export function getCheckerPiecePresentation(cellSize: number) {
+  const safeCellSize = Math.max(0, cellSize);
+  return {
+    pieceSize: safeCellSize * 0.78,
+    selectionRingSize: safeCellSize * 0.86,
+    crownSize: safeCellSize * 0.43,
+    spriteOverflow: 'visible' as const,
+    selectionLayer: 'overlay' as const,
+    kingLayer: 'overlay' as const,
+  };
+}
+
+/** Theme personality belongs around the shared natural-silver quarter, never in its bitmap. */
+export function getCoinLightingPresentation(themeName: ThemeName) {
+  return {
+    modern: { shadowColor: '#111827', shadowOpacity: 0.28, shadowRadius: 12, elevation: 8 },
+    retro: { shadowColor: '#7C3F18', shadowOpacity: 0.34, shadowRadius: 14, elevation: 8 },
+    arcade: { shadowColor: '#00E5FF', shadowOpacity: 0.46, shadowRadius: 20, elevation: 10 },
+  }[themeName];
 }
 
 export interface NormalizedPoint { x: number; y: number }

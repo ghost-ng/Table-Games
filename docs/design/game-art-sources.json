@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "stage": "individual-assets",
+  "stage": "accepted",
   "records": [
     {
       "theme": "modern",
@@ -420,7 +420,7 @@
       "theme": "modern",
       "family": "coin-flip",
       "role": "heads",
-      "prompt": "Authority reference pending: faithful natural-silver U.S. Washington quarter heads for the modern theme. Task 3 must select and document appropriately licensed authoritative imagery. This is a reference-acquisition requirement, not an image-generation prompt.",
+      "prompt": "Faithful natural-silver 1983 U.S. Washington quarter heads photographed straight-on. Preserve the original portrait, inscriptions, rim, wear, relief, and surface texture; transparent cutout only with no generated or redrawn coin detail.",
       "sourcePath": "docs/design/source-art/modern/coin-flip/heads.png",
       "finalPath": "assets/pieces/modern/coin-flip/heads.webp",
       "targetSize": 256,
@@ -429,15 +429,20 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "authorityReferencePending": true
+      "generatedAt": "2026-10-11T00:36:04-04:00",
+      "reviewedAt": "2026-10-11T00:36:04-04:00",
+      "expectedColor": "#C0C0C0",
+      "referenceUrl": "https://commons.wikimedia.org/wiki/File:United_States_Quarter.jpg",
+      "referenceTitle": "United States Quarter (1983 obverse and reverse photograph)",
+      "referenceLicense": "CC BY-SA 4.0; photograph by AKS.9955",
+      "retrievedAt": "2026-10-11",
+      "transformation": "Cropped the photographed heads coin, applied a fitted alpha cutout mask, centered it on a transparent square canvas, and resized without redrawing or synthesizing coin details."
     },
     {
       "theme": "modern",
       "family": "coin-flip",
       "role": "tails",
-      "prompt": "Authority reference pending: faithful natural-silver U.S. Washington quarter tails for the modern theme. Task 3 must select and document appropriately licensed authoritative imagery. This is a reference-acquisition requirement, not an image-generation prompt.",
+      "prompt": "Faithful natural-silver 1983 U.S. Washington quarter tails photographed straight-on. Preserve the original eagle, inscriptions, rim, wear, relief, and surface texture; transparent cutout only with no generated or redrawn coin detail.",
       "sourcePath": "docs/design/source-art/modern/coin-flip/tails.png",
       "finalPath": "assets/pieces/modern/coin-flip/tails.webp",
       "targetSize": 256,
@@ -446,15 +451,20 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "authorityReferencePending": true
+      "generatedAt": "2026-10-11T00:36:04-04:00",
+      "reviewedAt": "2026-10-11T00:36:04-04:00",
+      "expectedColor": "#C0C0C0",
+      "referenceUrl": "https://commons.wikimedia.org/wiki/File:United_States_Quarter.jpg",
+      "referenceTitle": "United States Quarter (1983 obverse and reverse photograph)",
+      "referenceLicense": "CC BY-SA 4.0; photograph by AKS.9955",
+      "retrievedAt": "2026-10-11",
+      "transformation": "Cropped the photographed tails coin, applied a fitted alpha cutout mask, centered it on a transparent square canvas, and resized without redrawing or synthesizing coin details."
     },
     {
       "theme": "modern",
       "family": "coin-flip",
       "role": "edge",
-      "prompt": "Authority reference pending: faithful natural-silver U.S. Washington quarter edge for the modern theme. Task 3 must select and document appropriately licensed authoritative imagery. This is a reference-acquisition requirement, not an image-generation prompt.",
+      "prompt": "Faithful natural-silver U.S. Washington quarter photographed upright during a spin with its real reeded edge visible. Preserve the photographed coin relief, inscriptions, edge, wear, and texture; transparent cutout only with no generated or redrawn coin detail.",
       "sourcePath": "docs/design/source-art/modern/coin-flip/edge.png",
       "finalPath": "assets/pieces/modern/coin-flip/edge.webp",
       "targetSize": 256,
@@ -463,9 +473,14 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "authorityReferencePending": true
+      "generatedAt": "2026-10-11T00:36:04-04:00",
+      "reviewedAt": "2026-10-11T00:36:04-04:00",
+      "expectedColor": "#C0C0C0",
+      "referenceUrl": "https://commons.wikimedia.org/wiki/File:Day_220_Cy365_Balancing_(79162781).jpeg",
+      "referenceTitle": "Day 220 Cy365 Balancing (real U.S. quarter standing on its reeded edge)",
+      "referenceLicense": "CC BY-SA 3.0; photograph by Chase N.",
+      "retrievedAt": "2026-10-11",
+      "transformation": "Cropped the photographed upright quarter, applied a fitted alpha cutout mask, reduced warm color cast to natural silver, centered it on transparency, and resized without redrawing or synthesizing coin details."
     },
     {
       "theme": "modern",
@@ -1126,7 +1141,7 @@
       "theme": "retro",
       "family": "coin-flip",
       "role": "heads",
-      "prompt": "Authority reference pending: faithful natural-silver U.S. Washington quarter heads for the retro theme. Task 3 must select and document appropriately licensed authoritative imagery. This is a reference-acquisition requirement, not an image-generation prompt.",
+      "prompt": "Faithful natural-silver 1983 U.S. Washington quarter heads photographed straight-on. Preserve the original portrait, inscriptions, rim, wear, relief, and surface texture; transparent cutout only with no generated or redrawn coin detail.",
       "sourcePath": "docs/design/source-art/retro/coin-flip/heads.png",
       "finalPath": "assets/pieces/retro/coin-flip/heads.webp",
       "targetSize": 256,
@@ -1135,15 +1150,20 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "authorityReferencePending": true
+      "generatedAt": "2026-10-11T00:36:04-04:00",
+      "reviewedAt": "2026-10-11T00:36:04-04:00",
+      "expectedColor": "#C0C0C0",
+      "referenceUrl": "https://commons.wikimedia.org/wiki/File:United_States_Quarter.jpg",
+      "referenceTitle": "United States Quarter (1983 obverse and reverse photograph)",
+      "referenceLicense": "CC BY-SA 4.0; photograph by AKS.9955",
+      "retrievedAt": "2026-10-11",
+      "transformation": "Cropped the photographed heads coin, applied a fitted alpha cutout mask, centered it on a transparent square canvas, and resized without redrawing or synthesizing coin details."
     },
     {
       "theme": "retro",
       "family": "coin-flip",
       "role": "tails",
-      "prompt": "Authority reference pending: faithful natural-silver U.S. Washington quarter tails for the retro theme. Task 3 must select and document appropriately licensed authoritative imagery. This is a reference-acquisition requirement, not an image-generation prompt.",
+      "prompt": "Faithful natural-silver 1983 U.S. Washington quarter tails photographed straight-on. Preserve the original eagle, inscriptions, rim, wear, relief, and surface texture; transparent cutout only with no generated or redrawn coin detail.",
       "sourcePath": "docs/design/source-art/retro/coin-flip/tails.png",
       "finalPath": "assets/pieces/retro/coin-flip/tails.webp",
       "targetSize": 256,
@@ -1152,15 +1172,20 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "authorityReferencePending": true
+      "generatedAt": "2026-10-11T00:36:04-04:00",
+      "reviewedAt": "2026-10-11T00:36:04-04:00",
+      "expectedColor": "#C0C0C0",
+      "referenceUrl": "https://commons.wikimedia.org/wiki/File:United_States_Quarter.jpg",
+      "referenceTitle": "United States Quarter (1983 obverse and reverse photograph)",
+      "referenceLicense": "CC BY-SA 4.0; photograph by AKS.9955",
+      "retrievedAt": "2026-10-11",
+      "transformation": "Cropped the photographed tails coin, applied a fitted alpha cutout mask, centered it on a transparent square canvas, and resized without redrawing or synthesizing coin details."
     },
     {
       "theme": "retro",
       "family": "coin-flip",
       "role": "edge",
-      "prompt": "Authority reference pending: faithful natural-silver U.S. Washington quarter edge for the retro theme. Task 3 must select and document appropriately licensed authoritative imagery. This is a reference-acquisition requirement, not an image-generation prompt.",
+      "prompt": "Faithful natural-silver U.S. Washington quarter photographed upright during a spin with its real reeded edge visible. Preserve the photographed coin relief, inscriptions, edge, wear, and texture; transparent cutout only with no generated or redrawn coin detail.",
       "sourcePath": "docs/design/source-art/retro/coin-flip/edge.png",
       "finalPath": "assets/pieces/retro/coin-flip/edge.webp",
       "targetSize": 256,
@@ -1169,9 +1194,14 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "authorityReferencePending": true
+      "generatedAt": "2026-10-11T00:36:04-04:00",
+      "reviewedAt": "2026-10-11T00:36:04-04:00",
+      "expectedColor": "#C0C0C0",
+      "referenceUrl": "https://commons.wikimedia.org/wiki/File:Day_220_Cy365_Balancing_(79162781).jpeg",
+      "referenceTitle": "Day 220 Cy365 Balancing (real U.S. quarter standing on its reeded edge)",
+      "referenceLicense": "CC BY-SA 3.0; photograph by Chase N.",
+      "retrievedAt": "2026-10-11",
+      "transformation": "Cropped the photographed upright quarter, applied a fitted alpha cutout mask, reduced warm color cast to natural silver, centered it on transparency, and resized without redrawing or synthesizing coin details."
     },
     {
       "theme": "retro",
@@ -1832,7 +1862,7 @@
       "theme": "arcade",
       "family": "coin-flip",
       "role": "heads",
-      "prompt": "Authority reference pending: faithful natural-silver U.S. Washington quarter heads for the arcade theme. Task 3 must select and document appropriately licensed authoritative imagery. This is a reference-acquisition requirement, not an image-generation prompt.",
+      "prompt": "Faithful natural-silver 1983 U.S. Washington quarter heads photographed straight-on. Preserve the original portrait, inscriptions, rim, wear, relief, and surface texture; transparent cutout only with no generated or redrawn coin detail.",
       "sourcePath": "docs/design/source-art/arcade/coin-flip/heads.png",
       "finalPath": "assets/pieces/arcade/coin-flip/heads.webp",
       "targetSize": 256,
@@ -1841,15 +1871,20 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "authorityReferencePending": true
+      "generatedAt": "2026-10-11T00:36:04-04:00",
+      "reviewedAt": "2026-10-11T00:36:04-04:00",
+      "expectedColor": "#C0C0C0",
+      "referenceUrl": "https://commons.wikimedia.org/wiki/File:United_States_Quarter.jpg",
+      "referenceTitle": "United States Quarter (1983 obverse and reverse photograph)",
+      "referenceLicense": "CC BY-SA 4.0; photograph by AKS.9955",
+      "retrievedAt": "2026-10-11",
+      "transformation": "Cropped the photographed heads coin, applied a fitted alpha cutout mask, centered it on a transparent square canvas, and resized without redrawing or synthesizing coin details."
     },
     {
       "theme": "arcade",
       "family": "coin-flip",
       "role": "tails",
-      "prompt": "Authority reference pending: faithful natural-silver U.S. Washington quarter tails for the arcade theme. Task 3 must select and document appropriately licensed authoritative imagery. This is a reference-acquisition requirement, not an image-generation prompt.",
+      "prompt": "Faithful natural-silver 1983 U.S. Washington quarter tails photographed straight-on. Preserve the original eagle, inscriptions, rim, wear, relief, and surface texture; transparent cutout only with no generated or redrawn coin detail.",
       "sourcePath": "docs/design/source-art/arcade/coin-flip/tails.png",
       "finalPath": "assets/pieces/arcade/coin-flip/tails.webp",
       "targetSize": 256,
@@ -1858,15 +1893,20 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "authorityReferencePending": true
+      "generatedAt": "2026-10-11T00:36:04-04:00",
+      "reviewedAt": "2026-10-11T00:36:04-04:00",
+      "expectedColor": "#C0C0C0",
+      "referenceUrl": "https://commons.wikimedia.org/wiki/File:United_States_Quarter.jpg",
+      "referenceTitle": "United States Quarter (1983 obverse and reverse photograph)",
+      "referenceLicense": "CC BY-SA 4.0; photograph by AKS.9955",
+      "retrievedAt": "2026-10-11",
+      "transformation": "Cropped the photographed tails coin, applied a fitted alpha cutout mask, centered it on a transparent square canvas, and resized without redrawing or synthesizing coin details."
     },
     {
       "theme": "arcade",
       "family": "coin-flip",
       "role": "edge",
-      "prompt": "Authority reference pending: faithful natural-silver U.S. Washington quarter edge for the arcade theme. Task 3 must select and document appropriately licensed authoritative imagery. This is a reference-acquisition requirement, not an image-generation prompt.",
+      "prompt": "Faithful natural-silver U.S. Washington quarter photographed upright during a spin with its real reeded edge visible. Preserve the photographed coin relief, inscriptions, edge, wear, and texture; transparent cutout only with no generated or redrawn coin detail.",
       "sourcePath": "docs/design/source-art/arcade/coin-flip/edge.png",
       "finalPath": "assets/pieces/arcade/coin-flip/edge.webp",
       "targetSize": 256,
@@ -1875,9 +1915,14 @@
         "maxFill": 0.8,
         "safePadding": 0.1
       },
-      "generatedAt": null,
-      "reviewedAt": null,
-      "authorityReferencePending": true
+      "generatedAt": "2026-10-11T00:36:04-04:00",
+      "reviewedAt": "2026-10-11T00:36:04-04:00",
+      "expectedColor": "#C0C0C0",
+      "referenceUrl": "https://commons.wikimedia.org/wiki/File:Day_220_Cy365_Balancing_(79162781).jpeg",
+      "referenceTitle": "Day 220 Cy365 Balancing (real U.S. quarter standing on its reeded edge)",
+      "referenceLicense": "CC BY-SA 3.0; photograph by Chase N.",
+      "retrievedAt": "2026-10-11",
+      "transformation": "Cropped the photographed upright quarter, applied a fitted alpha cutout mask, reduced warm color cast to natural silver, centered it on transparency, and resized without redrawing or synthesizing coin details."
     },
     {
       "theme": "arcade",

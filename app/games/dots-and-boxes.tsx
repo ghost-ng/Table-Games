@@ -1,7 +1,6 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Pressable, StyleSheet } from 'react-native';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { View, Pressable, StyleSheet, type GestureResponderEvent } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   useReducedMotion,
   FadeIn,
@@ -29,27 +28,37 @@ import { useBoardFit, useResponsive } from '../../src/utils/layout';
 import { getMotionPreset } from '../../src/game-visuals/presentation';
 import { ThemedBoardSurface } from '../../src/components/game-visuals/ThemedBoardSurface';
 import { VictoryAccent } from '../../src/components/game-visuals/VictoryAccent';
+import {
+  getDotsAndBoxesEdgeKey,
+  getDotsAndBoxesGridGeometry,
+  resolveNearestOpenEdge,
+  SUPPORTED_DOTS_AND_BOXES_GRID_SIZES,
+} from '../../src/game-visuals/dotsAndBoxesInput';
 
-const BOARD_SIZE_OPTIONS = [
-  { label: '3×3', value: 3, description: 'Quick' },
-  { label: '4×4', value: 4, description: 'Classic' },
-  { label: '5×5', value: 5, description: 'Standard' },
-  { label: '6×6', value: 6, description: 'Large' },
-];
+const BOARD_SIZE_DESCRIPTIONS: Record<number, string> = {
+  3: 'Quick',
+  4: 'Classic',
+  5: 'Standard',
+  6: 'Large',
+  8: 'Huge',
+  10: 'Epic',
+};
+const BOARD_SIZE_OPTIONS = SUPPORTED_DOTS_AND_BOXES_GRID_SIZES.map((value) => ({
+  label: `${value}×${value}`,
+  value,
+  description: BOARD_SIZE_DESCRIPTIONS[value],
+}));
 const DEFAULT_GRID_SIZE = 5;
-const DOT_SIZE = 10;
-const LINE_THICKNESS = 6;
-const TAP_ZONE = 44;
 
 export default function DotsAndBoxesScreen() {
   const { theme } = useTheme();
   const reducedMotion = useReducedMotion();
   const placementDuration = getMotionPreset('place', reducedMotion).duration;
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { contentMaxWidth, width, height } = useResponsive();
   const shortLandscape = width > height && height < 560;
-  const { onLayout: onBoardAreaLayout, size: boardSize } = useBoardFit({ maxSize: 640, minSize: 132, inset: 24 });
+  const compactPortrait = width <= 430 && width <= height && height <= 720;
+  const { onLayout: onBoardAreaLayout, size: boardSize } = useBoardFit({ maxSize: 720, minSize: 132, inset: 12, phoneInset: 0 });
 
   const { mode: modeParam } = useLocalSearchParams<{ mode: string }>();
   const resolvedMode = (modeParam === 'multiplayer' ? 'multiplayer' : 'single') as 'single' | 'multiplayer';
@@ -63,16 +72,15 @@ export default function DotsAndBoxesScreen() {
   const [showExtraTurn, setShowExtraTurn] = useState(false);
   const [aiThinking, setAiThinking] = useState(false);
   const [showGameOver, setShowGameOver] = useState(false);
+  const [focusedEdgeKey, setFocusedEdgeKey] = useState<string | null>(null);
   const startTimeRef = useRef(Date.now());
   const prevPlayerRef = useRef<Player>('player1');
 
-  // Keep every outer 44px line target inside the board surface.
-  const gridInset = TAP_ZONE / 2;
-  const cellSize = (boardSize - TAP_ZONE - DOT_SIZE) / (gridSize - 1);
-  // Leave a gap around each dot so perpendicular targets never intersect.
-  const lineHitThickness = Math.min(TAP_ZONE, cellSize * 0.4);
-  const lineHitInset = lineHitThickness / 2 + 1;
-  const lineHitLength = cellSize - lineHitInset * 2;
+  const boardGeometry = getDotsAndBoxesGridGeometry(boardSize, gridSize);
+  const gridInset = boardGeometry?.inset ?? 0;
+  const cellSize = boardGeometry?.cellSize ?? 0;
+  const dotSize = Math.max(6, Math.min(10, cellSize * 0.24));
+  const lineThickness = gridSize >= 8 ? 4 : 6;
 
   const handleBoardSizeSelect = useCallback((size: number) => {
     setGridSize(size);
@@ -115,6 +123,39 @@ export default function DotsAndBoxesScreen() {
     },
     [gameState, aiThinking, mode]
   );
+
+  const boardInputDisabled = aiThinking
+    || gameState.isGameOver
+    || (mode === 'single' && gameState.currentPlayer === 'player2');
+  const occupiedEdgeKeys = useMemo(() => {
+    const occupied = new Set<string>();
+    gameState.horizontalLines.forEach((row, rowIndex) => {
+      row.forEach((owner, colIndex) => {
+        if (owner) {
+          occupied.add(getDotsAndBoxesEdgeKey({ orientation: 'horizontal', row: rowIndex, col: colIndex }));
+        }
+      });
+    });
+    gameState.verticalLines.forEach((row, rowIndex) => {
+      row.forEach((owner, colIndex) => {
+        if (owner) {
+          occupied.add(getDotsAndBoxesEdgeKey({ orientation: 'vertical', row: rowIndex, col: colIndex }));
+        }
+      });
+    });
+    return occupied;
+  }, [gameState.horizontalLines, gameState.verticalLines]);
+
+  const handleBoardRelease = useCallback((event: GestureResponderEvent) => {
+    if (boardInputDisabled) return;
+    const edge = resolveNearestOpenEdge(
+      { x: event.nativeEvent.locationX, y: event.nativeEvent.locationY },
+      boardSize,
+      gridSize,
+      occupiedEdgeKeys,
+    );
+    if (edge) handleLinePress(edge.orientation, edge.row, edge.col);
+  }, [boardInputDisabled, boardSize, gridSize, handleLinePress, occupiedEdgeKeys]);
 
   // AI move — use a ref to avoid stale closures
   const gameStateRef = useRef(gameState);
@@ -209,8 +250,8 @@ export default function DotsAndBoxesScreen() {
 
   // Compute dot positions
   const getDotPosition = (row: number, col: number) => ({
-    x: gridInset + col * cellSize + DOT_SIZE / 2,
-    y: gridInset + row * cellSize + DOT_SIZE / 2,
+    x: gridInset + col * cellSize,
+    y: gridInset + row * cellSize,
   });
 
   const getPlayerColor = (player: Player) =>
@@ -304,22 +345,29 @@ export default function DotsAndBoxesScreen() {
       )}
 
       <ThemedText variant="caption" style={{ color: theme.colors.textMuted, textAlign: 'center' }}>{gridSize}×{gridSize} dots · Complete a box to play again</ThemedText>
-      </>);
       <ThemedText
         variant="caption"
         accessibilityLiveRegion="polite"
         style={{ minHeight: 20, color: theme.colors.textMuted, textAlign: 'center' }}
       >{showExtraTurn ? 'Extra turn!' : aiThinking ? 'AI is thinking…' : ''}</ThemedText>
+      </>);
 
   const rematch = <Button title="Rematch" onPress={handleRematch} variant="secondary" />;
+  const compactRematch = <Button title="Rematch" onPress={handleRematch} variant="secondary" size="sm" />;
 
   return (
-    <GameShell title="Dots & Boxes" onBack={handleHome} footer={shortLandscape ? undefined : rematch} status={shortLandscape ? undefined : gameStatus}>
+    <GameShell
+      title="Dots & Boxes"
+      onBack={handleHome}
+      trailingAction={compactPortrait ? compactRematch : undefined}
+      footer={shortLandscape || compactPortrait ? undefined : rematch}
+      status={shortLandscape || compactPortrait ? undefined : gameStatus}
+    >
       <View style={{ flex: 1, minHeight: 0, flexDirection: 'row', gap: 12 }}>
       <View style={{ flex: 1, minHeight: 0 }}>
 
       {/* Score Display */}
-      <View style={[styles.scoreContainer, shortLandscape && { display: 'none' }]}>
+      <View style={[styles.scoreContainer, compactPortrait && styles.compactScoreContainer, shortLandscape && { display: 'none' }]}>
         <View style={styles.scoreItem}>
           <View
             style={[styles.scoreDot, { backgroundColor: theme.colors.player1 }]}
@@ -361,10 +409,26 @@ export default function DotsAndBoxesScreen() {
         </View>
       </View>
 
+      {compactPortrait ? (
+        <ThemedText
+          variant="caption"
+          accessibilityLiveRegion="polite"
+          style={[styles.compactStatus, { color: theme.colors.textMuted }]}
+        >
+          {gameState.currentPlayer === 'player1'
+            ? mode === 'single' ? 'Your turn' : 'Player 1 turn'
+            : mode === 'single' ? 'AI turn' : 'Player 2 turn'}
+          {' · '}{gridSize}×{gridSize} dots
+          {showExtraTurn ? ' · Extra turn!' : aiThinking ? ' · Thinking…' : ''}
+        </ThemedText>
+      ) : null}
+
       {/* Board */}
       <View style={styles.boardWrapper} onLayout={onBoardAreaLayout}>
         <ThemedBoardSurface
           testID="game-board"
+          onStartShouldSetResponder={() => !boardInputDisabled}
+          onResponderRelease={handleBoardRelease}
           style={[
             styles.board,
             {
@@ -383,6 +447,7 @@ export default function DotsAndBoxesScreen() {
               return (
                 <Animated.View
                   key={`box-${r}-${c}`}
+                  pointerEvents="none"
                   entering={reducedMotion ? undefined : FadeIn.duration(placementDuration)}
                   accessible
                   accessibilityRole="image"
@@ -433,22 +498,23 @@ export default function DotsAndBoxesScreen() {
               return (
                 <View
                   key={`hline-${r}-${c}`}
+                  pointerEvents="none"
                   accessible
                   accessibilityLabel={`Horizontal line, row ${r + 1}, column ${c + 1}, ${player === 'player1' ? 'Player 1' : 'Player 2'}${gameState.lastMove?.orientation === 'horizontal' && gameState.lastMove.row === r && gameState.lastMove.col === c ? ', last edge' : ''}`}
                   style={[
                     styles.drawnLine,
                     {
                       left: startDot.x,
-                      top: startDot.y - LINE_THICKNESS / 2,
+                      top: startDot.y - lineThickness / 2,
                       width: cellSize,
-                      height: LINE_THICKNESS,
+                      height: lineThickness,
                       backgroundColor: getPlayerColor(player),
-                      borderRadius: LINE_THICKNESS / 2,
+                      borderRadius: lineThickness / 2,
                     },
                   ]}
                 >
                   {gameState.lastMove?.orientation === 'horizontal' && gameState.lastMove.row === r && gameState.lastMove.col === c && (
-                    <View pointerEvents="none" aria-hidden accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={{ position: 'absolute', left: cellSize / 2 - 5, top: LINE_THICKNESS / 2 - 5, width: 10, height: 10, borderWidth: 2, borderColor: theme.colors.text, backgroundColor: theme.colors.surfaceRaised, transform: [{ rotate: '45deg' }] }} />
+                    <View pointerEvents="none" aria-hidden accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={{ position: 'absolute', left: cellSize / 2 - 5, top: lineThickness / 2 - 5, width: 10, height: 10, borderWidth: 2, borderColor: theme.colors.text, backgroundColor: theme.colors.surfaceRaised, transform: [{ rotate: '45deg' }] }} />
                   )}
                 </View>
               );
@@ -463,104 +529,96 @@ export default function DotsAndBoxesScreen() {
               return (
                 <View
                   key={`vline-${r}-${c}`}
+                  pointerEvents="none"
                   accessible
                   accessibilityLabel={`Vertical line, row ${r + 1}, column ${c + 1}, ${player === 'player1' ? 'Player 1' : 'Player 2'}${gameState.lastMove?.orientation === 'vertical' && gameState.lastMove.row === r && gameState.lastMove.col === c ? ', last edge' : ''}`}
                   style={[
                     styles.drawnLine,
                     {
-                      left: startDot.x - LINE_THICKNESS / 2,
+                      left: startDot.x - lineThickness / 2,
                       top: startDot.y,
-                      width: LINE_THICKNESS,
+                      width: lineThickness,
                       height: cellSize,
                       backgroundColor: getPlayerColor(player),
-                      borderRadius: LINE_THICKNESS / 2,
+                      borderRadius: lineThickness / 2,
                     },
                   ]}
                 >
                   {gameState.lastMove?.orientation === 'vertical' && gameState.lastMove.row === r && gameState.lastMove.col === c && (
-                    <View pointerEvents="none" aria-hidden accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={{ position: 'absolute', left: LINE_THICKNESS / 2 - 5, top: cellSize / 2 - 5, width: 10, height: 10, borderWidth: 2, borderColor: theme.colors.text, backgroundColor: theme.colors.surfaceRaised, transform: [{ rotate: '45deg' }] }} />
+                    <View pointerEvents="none" aria-hidden accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={{ position: 'absolute', left: lineThickness / 2 - 5, top: cellSize / 2 - 5, width: 10, height: 10, borderWidth: 2, borderColor: theme.colors.text, backgroundColor: theme.colors.surfaceRaised, transform: [{ rotate: '45deg' }] }} />
                   )}
                 </View>
               );
             })
           )}
 
-          {/* Horizontal Line Tap Zones */}
+          {/* Semantic edge controls. Pointer input is resolved once at board level so
+              dense-grid targets never overlap; these thin controls remain available
+              to keyboards and assistive technology. */}
           {Array.from({ length: gridSize }, (_, r) =>
             Array.from({ length: gridSize - 1 }, (_, c) => {
               const drawn = isLineDrawn(gameState, 'horizontal', r, c);
               if (drawn) return null;
               const startDot = getDotPosition(r, c);
+              const edgeKey = getDotsAndBoxesEdgeKey({ orientation: 'horizontal', row: r, col: c });
+              const focused = focusedEdgeKey === edgeKey;
               return (
                 <Pressable
                   key={`htap-${r}-${c}`}
+                  pointerEvents="none"
                   accessibilityRole="button"
                   accessibilityLabel={`Horizontal line, row ${r + 1}, column ${c + 1}`}
-                  disabled={aiThinking || gameState.isGameOver || (mode === 'single' && gameState.currentPlayer === 'player2')}
+                  accessibilityState={{ disabled: boardInputDisabled }}
+                  disabled={boardInputDisabled}
                   onPress={() => handleLinePress('horizontal', r, c)}
+                  onFocus={() => setFocusedEdgeKey(edgeKey)}
+                  onBlur={() => setFocusedEdgeKey((current) => current === edgeKey ? null : current)}
                   style={[
-                    styles.tapZone,
+                    styles.semanticEdgeControl,
                     {
-                      left: startDot.x + lineHitInset,
-                      top: startDot.y - lineHitThickness / 2,
-                      width: lineHitLength,
-                      height: lineHitThickness,
+                      left: startDot.x,
+                      top: startDot.y - (focused ? 2 : 1),
+                      width: cellSize,
+                      height: focused ? 4 : 2,
+                      backgroundColor: focused ? theme.colors.primary : theme.colors.border,
+                      opacity: focused ? 1 : 0.72,
                     },
                   ]}
-                >
-                  <View
-                    style={[
-                      styles.lineHint,
-                      {
-                        width: lineHitLength,
-                        height: 2,
-                        backgroundColor: theme.colors.border,
-                        opacity: 1,
-                        borderRadius: 1,
-                      },
-                    ]}
-                  />
-                </Pressable>
+                />
               );
             })
           )}
 
-          {/* Vertical Line Tap Zones */}
           {Array.from({ length: gridSize - 1 }, (_, r) =>
             Array.from({ length: gridSize }, (_, c) => {
               const drawn = isLineDrawn(gameState, 'vertical', r, c);
               if (drawn) return null;
               const startDot = getDotPosition(r, c);
+              const edgeKey = getDotsAndBoxesEdgeKey({ orientation: 'vertical', row: r, col: c });
+              const focused = focusedEdgeKey === edgeKey;
               return (
                 <Pressable
                   key={`vtap-${r}-${c}`}
+                  pointerEvents="none"
                   accessibilityRole="button"
                   accessibilityLabel={`Vertical line, row ${r + 1}, column ${c + 1}`}
-                  disabled={aiThinking || gameState.isGameOver || (mode === 'single' && gameState.currentPlayer === 'player2')}
+                  accessibilityState={{ disabled: boardInputDisabled }}
+                  disabled={boardInputDisabled}
                   onPress={() => handleLinePress('vertical', r, c)}
+                  onFocus={() => setFocusedEdgeKey(edgeKey)}
+                  onBlur={() => setFocusedEdgeKey((current) => current === edgeKey ? null : current)}
                   style={[
-                    styles.tapZone,
+                    styles.semanticEdgeControl,
                     {
-                      left: startDot.x - lineHitThickness / 2,
-                      top: startDot.y + lineHitInset,
-                      width: lineHitThickness,
-                      height: lineHitLength,
+                      left: startDot.x - (focused ? 2 : 1),
+                      top: startDot.y,
+                      width: focused ? 4 : 2,
+                      height: cellSize,
+                      backgroundColor: focused ? theme.colors.primary : theme.colors.border,
+                      opacity: focused ? 1 : 0.72,
                     },
                   ]}
-                >
-                  <View
-                    style={[
-                      styles.lineHint,
-                      {
-                        width: 2,
-                        height: lineHitLength,
-                        backgroundColor: theme.colors.border,
-                        opacity: 0.7,
-                        borderRadius: 1,
-                      },
-                    ]}
-                  />
-                </Pressable>
+                />
               );
             })
           )}
@@ -572,14 +630,15 @@ export default function DotsAndBoxesScreen() {
               return (
                 <View
                   key={`dot-${r}-${c}`}
+                  pointerEvents="none"
                   style={[
                     styles.dot,
                     {
-                      left: pos.x - DOT_SIZE / 2,
-                      top: pos.y - DOT_SIZE / 2,
-                      width: DOT_SIZE,
-                      height: DOT_SIZE,
-                      borderRadius: DOT_SIZE / 2,
+                      left: pos.x - dotSize / 2,
+                      top: pos.y - dotSize / 2,
+                      width: dotSize,
+                      height: dotSize,
+                      borderRadius: dotSize / 2,
                       backgroundColor: theme.colors.text,
                       borderWidth: theme.materials.boardBorderWidth,
                       borderColor: theme.colors.border,
@@ -643,6 +702,14 @@ const styles = StyleSheet.create({
     gap: 24,
     paddingVertical: 12,
   },
+  compactScoreContainer: {
+    paddingVertical: 4,
+  },
+  compactStatus: {
+    minHeight: 18,
+    textAlign: 'center',
+    marginBottom: 2,
+  },
   scoreItem: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -679,13 +746,11 @@ const styles = StyleSheet.create({
     position: 'absolute',
     zIndex: 5,
   },
-  tapZone: {
+  semanticEdgeControl: {
     position: 'absolute',
     zIndex: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderRadius: 2,
   },
-  lineHint: {},
   boxFill: {
     position: 'absolute',
     zIndex: 1,

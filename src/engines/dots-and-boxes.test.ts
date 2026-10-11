@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createGame, drawLine } from './dots-and-boxes';
+import { createGame, drawLine, getAvailableLines } from './dots-and-boxes';
 
 test('closing a box assigns its owner, scores once, and retains the turn', () => {
   let state = createGame(3);
@@ -17,3 +17,34 @@ test('closing a box assigns its owner, scores once, and retains the turn', () =>
   assert.equal(drawLine(next, 'vertical', 0, 1), next);
   assert.equal(state.boxes[0][0], null);
 });
+
+for (const gridSize of [8, 10]) {
+  test(`${gridSize}x${gridSize} grids initialize with the expected edge and box geometry`, () => {
+    const state = createGame(gridSize);
+
+    assert.equal(state.horizontalLines.length, gridSize);
+    assert.equal(state.horizontalLines[0].length, gridSize - 1);
+    assert.equal(state.verticalLines.length, gridSize - 1);
+    assert.equal(state.verticalLines[0].length, gridSize);
+    assert.equal(state.boxes.length, gridSize - 1);
+    assert.equal(state.boxes[0].length, gridSize - 1);
+    assert.equal(getAvailableLines(state).length, gridSize * (gridSize - 1) * 2);
+  });
+
+  test(`${gridSize}x${gridSize} grids play through every edge and finish every box`, () => {
+    let state = createGame(gridSize);
+    let moves = 0;
+
+    while (!state.isGameOver) {
+      const [next] = getAvailableLines(state);
+      assert.ok(next, 'an unfinished board must expose an open edge');
+      state = drawLine(state, next.orientation, next.row, next.col);
+      moves += 1;
+    }
+
+    assert.equal(moves, gridSize * (gridSize - 1) * 2);
+    assert.equal(state.boxes.flat().filter(Boolean).length, (gridSize - 1) ** 2);
+    assert.equal(state.scores.player1 + state.scores.player2, (gridSize - 1) ** 2);
+    assert.equal(getAvailableLines(state).length, 0);
+  });
+}

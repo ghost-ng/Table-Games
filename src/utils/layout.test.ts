@@ -187,6 +187,34 @@ test('portrait boards remain height-bound and non-board tools may retain their c
   assert.equal(calculateBoardSize({ ...options, areaHeight: 1100, isLandscape: true }), 420);
 });
 
+test('Dots & Boxes fills the measured safe width on a 390x664 portrait phone', () => {
+  assert.equal(calculateBoardSize({
+    areaWidth: 366,
+    areaHeight: 380,
+    maxSize: 720,
+    minSize: 132,
+    inset: 0,
+    aspectRatio: 1,
+    extraHeight: 0,
+    isPhone: true,
+    isLandscape: false,
+  }), 366);
+});
+
+test('Dots & Boxes stays height-bound when compact chrome leaves less room than width', () => {
+  assert.equal(calculateBoardSize({
+    areaWidth: 366,
+    areaHeight: 330,
+    maxSize: 720,
+    minSize: 132,
+    inset: 0,
+    aspectRatio: 1,
+    extraHeight: 0,
+    isPhone: true,
+    isLandscape: false,
+  }), 330);
+});
+
 test('Word Guess consumes the safe portrait width at 390x844', () => {
   const layout = calculateWordGuessLayout({ contentWidth: 390, availableHeight: 844, isLandscape: false, rows: 6, columns: 5, tileGap: 4, keyGap: 4, borderWidth: 2 });
   assert.equal(layout.boardWidth, 390);

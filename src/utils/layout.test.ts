@@ -224,13 +224,22 @@ test('Word Guess consumes the safe portrait width at 390x844', () => {
   assert.ok(layout.keyWidth * 10 + 4 * 9 <= layout.keyboardWidth);
 });
 
-test('Word Guess keeps a large square grid and full-width keyboard at 390x664 without vertical collision', () => {
+test('Word Guess preserves the full portrait board and enlarged keyboard at 390x664', () => {
   const layout = calculateWordGuessLayout({ contentWidth: 390, availableHeight: 664, isLandscape: false, rows: 6, columns: 5, tileGap: 4, keyGap: 4, borderWidth: 2 });
-  assert.ok(layout.boardWidth >= 320 && layout.boardWidth <= 330);
+  assert.equal(layout.boardWidth, 390);
   assert.equal(layout.keyboardWidth, 390);
-  assert.equal(layout.boardHeight, 388);
+  assert.equal(layout.tileSize, 74);
+  assert.equal(layout.boardHeight, 468);
   assert.equal(layout.keyHeight, 48);
   assert.ok(layout.boardWidth <= 390);
+});
+
+test('Word Guess fills the actual padded 390x664 game shell instead of narrowing its grid', () => {
+  const layout = calculateWordGuessLayout({ contentWidth: 366, availableHeight: 664, isLandscape: false, rows: 6, columns: 5, tileGap: 4, keyGap: 4, borderWidth: 2 });
+  assert.equal(layout.boardWidth, 366);
+  assert.equal(layout.keyboardWidth, 366);
+  assert.equal(layout.tileSize, 69.2);
+  assert.equal(layout.keyHeight, 48);
 });
 
 test('Word Guess compact landscape remains height-bound and horizontally contained', () => {

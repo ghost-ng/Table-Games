@@ -321,3 +321,50 @@ Coin Flip now uses real photographed Washington quarters in every theme. Heads a
 Modern adds a neutral soft shadow, Retro adds a warmer tabletop shadow, and Arcade adds a restrained cyan rim glow in code around the same quarter sprites. Flip timing, lift, result selection, history, labels, and reduced-motion behavior remain unchanged. Manifest provenance records the direct CC BY-SA source pages, titles, authors, licenses, retrieval date, and exact transformations; the public PWA includes `licenses/ASSET-NOTICES.md`.
 
 Checkers now renders each complete top-down disc at 78% of its cell. The selection ring uses an 86% overlay container with visible overflow, and the crown remains a separate centered overlay at 43% of the cell. Neither state marker is baked into or allowed to crop the checker bitmap; owner text and semantic accessibility labels remain intact.
+
+## Task 10 Final browser and offline release QA -- 2026-10-11
+
+Fresh final gates pass: 18 WSL, 133 unit, 60 asset, 4 dictionary, and 54 public-readiness tests (269 total); dictionary regeneration/check, TypeScript, root production build, public tracked-tree scan, and `/Table-Games/` Pages build pass. Final Pages version is `9d40b1eaea21`, with 177 precached files (approximately 7.0 MB). All 117 registered accepted production sprites total 836,362 bytes; the largest is 14,340 bytes, below unchanged 2 MiB aggregate / 64 KiB per-file limits. Art and retained asset-acceptance sheets are unchanged.
+
+Playwright CLI was used because the Browser plugin is absent. Chromium production-preview QA covers Modern, Retro, and Arcade at 390x844, 390x664, 844x390, and 1280x900: 12 affected game/tool routes, 144 route/theme/viewport combinations. Every captured page passes horizontal document/body containment and nonzero decoded natural-image dimensions, with no runtime/console errors or failed requests. Native and contact-sheet inspection through `view_image` confirms complete transparent sprites, readable ownership and state markers, and no opaque boxes or art clipping.
+
+Verified states include both quarter faces, real edge/spin, history and reduced motion; normal/king Checkers selection, promotion, legal moves and keyboard focus; Mancala low/12/over-12 counts outside capped stone clusters; full-width Word Guess board/keyboard, emphasized Enter, non-shifting toast and physical keys; Dots 3x3/8x8/10x10 pointer and keyboard edges; three alternating named Hangman rounds plus all seven stages; traceable/untraceable `SEE`; both X/O and disc owners, six marble/four pawn colors, and every d4/d6/d8/d10/d12/d20. Rare promotion, exact seed-count, and SEE boards use browser-only state fixtures before actual interaction; no production test hooks were added.
+
+QA found and corrected the owning Task 5 short-portrait regression before acceptance. Two exact full-width layout assertions failed before the fix; portrait sizing now consumes the safe width instead of narrowing for height. A contained grid-only ScrollView preserves square tiles and enlarged keys above the pinned keyboard. Additional browser red/green checks corrected wrapper clipping in landscape and keyboard centering on desktop; every overflowing grid's final row is reachable, the keyboard stays pinned, and toast geometry remains unchanged across all 12 theme/viewport combinations. All automated gates and affected screenshots were rerun after the final correction; no budgets or failing assertions were relaxed.
+
+Fresh final-build ordinary and actually installed standalone PWA contexts each pass 15 offline reloads: Coin Flip, Checkers, Mancala, Hangman, and Word Grid in every theme. Each has the final 177-entry cache, working local art/controls, offline SEE dictionary validation, and homepage/game/back navigation, with no failed asset requests. Installation was verified with browser installability diagnostics and actual PWA install/standalone launch, not merely manifest inspection. This certifies Chromium on this host, not iOS/Safari/Firefox.
+
+### Compact committed evidence
+
+The exhaustive 324 untouched viewport screenshots are retained only in this run's `/tmp/task10-exhaustive.0ZzeGi` directory. To keep the public repository compact, the committed set contains 21 captioned contact sheets and five native-size critical screenshots: 26 PNGs totaling **9,907,332 bytes (9.45 MiB)**. Matrix sheets have 21 states, in filename order; supplemental sheets have seven Hangman stages plus six die shapes; Word Guess sheets have eight input/toast states plus short-phone grid scrolling; installed-offline sheets have all five required routes. Sheet cells are 150px wide for portrait/supplemental groups and 200px for landscape/desktop groups; they are overview derivatives, not native-detail substitutes. The five native critical PNGs are losslessly optimized and verified raw-pixel-identical to the original screenshots. No palette quantization or retouching is used. Existing public checks have no docs/media budget mechanism; this scoped set was checked explicitly below 10 MB without changing runtime budgets.
+
+| Evidence file | Captured states | Bytes |
+| --- | ---: | ---: |
+| [game-art-refresh-modern-390x844-sheet.png](qa/game-art-refresh-modern-390x844-sheet.png) | 21 | 700,811 |
+| [game-art-refresh-modern-390x664-sheet.png](qa/game-art-refresh-modern-390x664-sheet.png) | 21 | 581,868 |
+| [game-art-refresh-modern-844x390-sheet.png](qa/game-art-refresh-modern-844x390-sheet.png) | 21 | 305,277 |
+| [game-art-refresh-modern-1280x900-sheet.png](qa/game-art-refresh-modern-1280x900-sheet.png) | 21 | 371,490 |
+| [game-art-refresh-modern-supplemental-sheet.png](qa/game-art-refresh-modern-supplemental-sheet.png) | 13 | 236,131 |
+| [game-art-refresh-modern-installed-offline-sheet.png](qa/game-art-refresh-modern-installed-offline-sheet.png) | 5 | 177,084 |
+| [game-art-refresh-modern-word-guess-sheet.png](qa/game-art-refresh-modern-word-guess-sheet.png) | 9 | 171,649 |
+| [game-art-refresh-retro-390x844-sheet.png](qa/game-art-refresh-retro-390x844-sheet.png) | 21 | 853,830 |
+| [game-art-refresh-retro-390x664-sheet.png](qa/game-art-refresh-retro-390x664-sheet.png) | 21 | 739,621 |
+| [game-art-refresh-retro-844x390-sheet.png](qa/game-art-refresh-retro-844x390-sheet.png) | 21 | 387,203 |
+| [game-art-refresh-retro-1280x900-sheet.png](qa/game-art-refresh-retro-1280x900-sheet.png) | 21 | 524,738 |
+| [game-art-refresh-retro-supplemental-sheet.png](qa/game-art-refresh-retro-supplemental-sheet.png) | 13 | 275,754 |
+| [game-art-refresh-retro-installed-offline-sheet.png](qa/game-art-refresh-retro-installed-offline-sheet.png) | 5 | 217,436 |
+| [game-art-refresh-retro-word-guess-sheet.png](qa/game-art-refresh-retro-word-guess-sheet.png) | 9 | 267,840 |
+| [game-art-refresh-arcade-390x844-sheet.png](qa/game-art-refresh-arcade-390x844-sheet.png) | 21 | 913,425 |
+| [game-art-refresh-arcade-390x664-sheet.png](qa/game-art-refresh-arcade-390x664-sheet.png) | 21 | 796,147 |
+| [game-art-refresh-arcade-844x390-sheet.png](qa/game-art-refresh-arcade-844x390-sheet.png) | 21 | 415,161 |
+| [game-art-refresh-arcade-1280x900-sheet.png](qa/game-art-refresh-arcade-1280x900-sheet.png) | 21 | 529,987 |
+| [game-art-refresh-arcade-supplemental-sheet.png](qa/game-art-refresh-arcade-supplemental-sheet.png) | 13 | 290,278 |
+| [game-art-refresh-arcade-installed-offline-sheet.png](qa/game-art-refresh-arcade-installed-offline-sheet.png) | 5 | 235,615 |
+| [game-art-refresh-arcade-word-guess-sheet.png](qa/game-art-refresh-arcade-word-guess-sheet.png) | 9 | 271,003 |
+| [game-art-refresh-modern-wordle-390x664-toast-physical-keys.png](qa/game-art-refresh-modern-wordle-390x664-toast-physical-keys.png) | 1 | 64,874 |
+| [game-art-refresh-modern-wordle-390x664-grid-scrolled.png](qa/game-art-refresh-modern-wordle-390x664-grid-scrolled.png) | 1 | 64,263 |
+| [game-art-refresh-retro-checkers-390x664-king-promotion.png](qa/game-art-refresh-retro-checkers-390x664-king-promotion.png) | 1 | 202,618 |
+| [game-art-refresh-modern-mancala-390x664-low-12-over12-side-counts.png](qa/game-art-refresh-modern-mancala-390x664-low-12-over12-side-counts.png) | 1 | 245,821 |
+| [game-art-refresh-modern-hangman-390x664-stage-6.png](qa/game-art-refresh-modern-hangman-390x664-stage-6.png) | 1 | 67,408 |
+
+All original matrix, stage/die, Word Guess and offline screens were inspected at native detail or in the larger temporary contact sheets, followed by checks of the curated derivatives. Native critical states retain detailed full-width/toast/scroll, king-overlay, side-count and stage-6 evidence. Complete command logs, browser assertions, fixture disclosure, screenshot-source mapping and isolated multi-intermediate-build QA-profile notes are recorded in the local Task 10 report. Independent complete-diff review and external publication remain the root agent's separate gates; this QA task does not push or deploy.

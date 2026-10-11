@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { GameShell } from '../../src/components/ui/GameShell';
 import { StatusRail } from '../../src/components/ui/StatusRail';
@@ -426,6 +426,12 @@ export default function WordleScreen() {
 
           <View style={[styles.playArea, { flexDirection: sideBySide ? 'row' : 'column' }]}>
           <View style={styles.gridArea}>
+            <ScrollView
+              testID="word-guess-grid-scroll"
+              style={styles.gridScroll}
+              contentContainerStyle={styles.gridScrollContent}
+              keyboardShouldPersistTaps="handled"
+            >
             <ThemedBoardSurface style={{ width: gridWidth, gap: TILE_GAP, borderRadius: theme.borderRadius.md }}>
               {Array.from({ length: MAX_GUESSES }, (_, row) => (
                 <View key={row} style={[styles.gridRow, { gap: TILE_GAP }]}>
@@ -433,6 +439,7 @@ export default function WordleScreen() {
                 </View>
               ))}
             </ThemedBoardSurface>
+            </ScrollView>
           </View>
 
           {gameState.isGameOver ? (
@@ -511,7 +518,17 @@ const styles = StyleSheet.create({
   },
   gridArea: {
     flex: 1,
+    minHeight: 0,
     alignSelf: 'stretch',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  gridScroll: {
+    flex: 1,
+    width: '100%',
+  },
+  gridScrollContent: {
+    flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -528,6 +545,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   keyboard: {
+    alignSelf: 'center',
     paddingHorizontal: 8,
     paddingTop: 8,
     paddingBottom: 12,

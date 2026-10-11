@@ -322,7 +322,7 @@ export default function HangmanScreen() {
 
       {/* ── 2P: Enter Word ────────────────────────────────────────────── */}
       {phase === 'wordEntry' && (
-        <View style={styles.centeredPhase}>
+        <ScrollView contentContainerStyle={styles.centeredPhase} keyboardShouldPersistTaps="handled">
           <Card style={styles.setupCard}>
           <HangmanFigure wrongGuesses={0} size={120} />
           <ThemedText variant="caption" style={{ color: theme.colors.primary, textAlign: 'center', marginBottom: 12 }}>PASS & PLAY</ThemedText>
@@ -375,12 +375,12 @@ export default function HangmanScreen() {
             <Button title="Submit" onPress={handleWordSubmit} variant="primary" size="lg" />
           </View>
           </Card>
-        </View>
+        </ScrollView>
       )}
 
       {/* ── 2P: Pass device ───────────────────────────────────────────── */}
       {phase === 'passDevice' && (
-        <View style={styles.centeredPhase}>
+        <ScrollView contentContainerStyle={styles.centeredPhase} keyboardShouldPersistTaps="handled">
           <Card style={styles.setupCard}>
           <HangmanFigure wrongGuesses={0} size={120} />
           <ThemedText variant="caption" style={{ color: theme.colors.primary, textAlign: 'center', marginBottom: 12 }}>YOUR WORD IS READY</ThemedText>
@@ -398,7 +398,7 @@ export default function HangmanScreen() {
             <Button title="Ready" onPress={handlePassReady} variant="primary" size="lg" />
           </View>
           </Card>
-        </View>
+        </ScrollView>
       )}
 
       {/* ── Playing ───────────────────────────────────────────────────── */}

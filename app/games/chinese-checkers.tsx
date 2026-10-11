@@ -11,6 +11,7 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { TactileCell } from '../../src/components/game-visuals/TactileCell';
+import { BoardPressable } from '../../src/components/game-visuals/BoardPressable';
 import { SelectionTrail } from '../../src/components/game-visuals/SelectionTrail';
 import { GamePieceImage } from '../../src/components/game-visuals/GamePieceImage';
 import { GAME_VISUALS } from '../../src/game-visuals/registry';
@@ -555,7 +556,7 @@ export default function ChineseCheckersScreen() {
             ? `${occupant === 'player1' ? playerNames.player1 : playerNames.player2} peg`
             : 'Empty hole';
         return (
-          <Pressable
+          <BoardPressable
             key={`hit-${h.index}`}
             onPress={() => handleHolePress(h.index)}
             accessibilityRole="button"

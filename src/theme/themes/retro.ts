@@ -3,7 +3,7 @@ import { THEME_MATERIALS } from '../materials';
 
 export const retroTheme: Theme = {
   name: 'retro',
-  materials: { ...THEME_MATERIALS.retro, boardTexture: require('../../../assets/textures/retro-bg.webp') },
+  materials: THEME_MATERIALS.retro,
   colors: {
     background: '#F5F0E8',
     surface: '#E8DFD0',

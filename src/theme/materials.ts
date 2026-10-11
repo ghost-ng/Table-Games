@@ -3,6 +3,7 @@ import type { ThemeMaterials, ThemeName } from './types';
 // Keep semantic values independent of bitmap requires and the native runtime.
 export const THEME_MATERIALS: Record<ThemeName, ThemeMaterials> = {
   modern: {
+    boardSurface: { highlightColor: '#FFFFFF', highlightOpacity: 0.16, insetColor: '#111827', insetOpacity: 0.06 },
     boardBorderWidth: 1,
     cellDepth: 2,
     pieceShadowOpacity: 0.1,
@@ -12,6 +13,7 @@ export const THEME_MATERIALS: Record<ThemeName, ThemeMaterials> = {
     celebration: '#059669',
   },
   retro: {
+    boardSurface: { highlightColor: '#FFF9EE', highlightOpacity: 0.18, insetColor: '#7A6B56', insetOpacity: 0.12 },
     boardBorderWidth: 2,
     cellDepth: 3,
     pieceShadowOpacity: 0.2,
@@ -21,6 +23,7 @@ export const THEME_MATERIALS: Record<ThemeName, ThemeMaterials> = {
     celebration: '#5B8C5A',
   },
   arcade: {
+    boardSurface: { highlightColor: '#00E5FF', highlightOpacity: 0.12, insetColor: '#000000', insetOpacity: 0.16 },
     boardBorderWidth: 2,
     cellDepth: 2,
     pieceShadowOpacity: 0.24,

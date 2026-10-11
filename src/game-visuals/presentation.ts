@@ -53,6 +53,44 @@ export function getStateMarker(state: VisualCellState): StateMarker {
   return { ...stateMarkers[state] };
 }
 
+/** Static edge treatments never take part in layout, hit testing, or game state. */
+export function getBoardSurfacePresentation(materials: ThemeMaterials) {
+  const { boardSurface } = materials;
+  const glowing = materials.glowOpacity > 0;
+  return {
+    overflow: 'visible' as const,
+    shadowColor: glowing ? materials.glowColor : '#000000',
+    shadowOffset: { width: 0, height: glowing ? 0 : materials.cellDepth },
+    shadowOpacity: glowing ? materials.glowOpacity : materials.pieceShadowOpacity,
+    shadowRadius: 4,
+    elevation: materials.cellDepth,
+    highlight: {
+      borderTopWidth: materials.boardBorderWidth,
+      borderLeftWidth: materials.boardBorderWidth,
+      borderTopColor: boardSurface.highlightColor,
+      borderLeftColor: boardSurface.highlightColor,
+      opacity: boardSurface.highlightOpacity,
+    },
+    inset: {
+      borderBottomWidth: materials.cellDepth,
+      borderRightWidth: materials.boardBorderWidth,
+      borderBottomColor: boardSurface.insetColor,
+      borderRightColor: boardSurface.insetColor,
+      opacity: boardSurface.insetOpacity,
+    },
+  };
+}
+
+/** Inset outlines remain visible at clipped rack edges and consume no layout space. */
+export function getBoardFocusPresentation(color: string, focusVisible: boolean) {
+  return focusVisible ? {
+    outlineColor: color,
+    outlineStyle: 'solid' as const,
+    outlineWidth: 3,
+    outlineOffset: -3,
+  } : undefined;
+}
+
 export function getCellPresentation(
   colors: Pick<ThemeColors, 'border' | 'focus' | 'success' | 'surfaceRaised' | 'surfaceSunken'>,
   materials: ThemeMaterials,

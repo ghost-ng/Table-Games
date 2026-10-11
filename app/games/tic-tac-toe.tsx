@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  Pressable,
   StyleSheet,
   View,
 } from 'react-native';
@@ -29,6 +28,7 @@ import { ThemedText } from '../../src/components/ui/ThemedText';
 import { GAME_VISUALS } from '../../src/game-visuals/registry';
 import { getMotionPreset } from '../../src/game-visuals/presentation';
 import { ThemedBoardSurface } from '../../src/components/game-visuals/ThemedBoardSurface';
+import { BoardPressable } from '../../src/components/game-visuals/BoardPressable';
 import { GamePieceImage } from '../../src/components/game-visuals/GamePieceImage';
 import { TactileCell } from '../../src/components/game-visuals/TactileCell';
 import { VictoryAccent } from '../../src/components/game-visuals/VictoryAccent';
@@ -235,7 +235,7 @@ export default function TicTacToeScreen() {
                 const isLastRow = rowIndex === 2;
 
                 return (
-                  <Pressable
+                  <BoardPressable
                     key={`${rowIndex}-${colIndex}`}
                     accessibilityRole="button"
                     accessibilityLabel={`Row ${rowIndex + 1}, column ${colIndex + 1}: ${cell ?? 'empty'}${isWinCell ? ', winning mark' : ''}`}
@@ -264,7 +264,7 @@ export default function TicTacToeScreen() {
                         <VictoryAccent visible={isWinCell} kind="ring" size={cellSize * 0.8} style={{ position: 'absolute' }} />
                       </TactileCell>
                     )}
-                  </Pressable>
+                  </BoardPressable>
                 );
               })
             )}

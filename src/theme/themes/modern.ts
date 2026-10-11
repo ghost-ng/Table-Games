@@ -3,7 +3,7 @@ import { THEME_MATERIALS } from '../materials';
 
 export const modernTheme: Theme = {
   name: 'modern',
-  materials: { ...THEME_MATERIALS.modern, boardTexture: require('../../../assets/textures/modern-bg.webp') },
+  materials: THEME_MATERIALS.modern,
   colors: {
     background: '#FAFAFA',
     surface: '#FFFFFF',

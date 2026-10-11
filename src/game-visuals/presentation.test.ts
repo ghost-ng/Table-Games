@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { readFileSync } from 'node:fs';
+import { URL } from 'node:url';
 import { THEME_MATERIALS } from '../theme/materials';
 import {
   getMotionPreset,
@@ -12,6 +14,8 @@ import {
   getMancalaLayoutPresentation,
   getSelectionTrailPresentation,
   getVictoryPresentation,
+  getBoardSurfacePresentation,
+  getBoardFocusPresentation,
   type PieceMotionKind,
 } from './presentation';
 
@@ -62,6 +66,61 @@ test('theme materials keep glow controlled and reuse approved signal colors', ()
     assert.ok(material.boardBorderWidth > 0);
     assert.ok(material.cellDepth > 0);
     assert.ok(material.pieceShadowOpacity >= 0 && material.pieceShadowOpacity <= 1);
+  }
+});
+
+test('board surface layers keep material contrast subtle without encoding a game grid or state', () => {
+  for (const [name, materials] of Object.entries(THEME_MATERIALS)) {
+    assert.ok(materials.boardSurface, `${name} needs a code-native board surface`);
+    assert.deepEqual(Object.keys(materials.boardSurface).sort(), [
+      'highlightColor', 'highlightOpacity', 'insetColor', 'insetOpacity',
+    ]);
+    for (const color of [materials.boardSurface.highlightColor, materials.boardSurface.insetColor]) {
+      assert.match(color, /^#[0-9A-F]{6}$/i);
+    }
+    const surface = getBoardSurfacePresentation(materials);
+    // Even a white highlight over black cannot change a channel by more than 18%.
+    assert.ok(surface.highlight.opacity > 0 && surface.highlight.opacity <= 0.18);
+    assert.ok(surface.inset.opacity > 0 && surface.inset.opacity <= 0.18);
+    assert.ok(surface.highlight.borderTopWidth > 0 && surface.highlight.borderTopWidth <= 2);
+    assert.ok(surface.inset.borderBottomWidth > 0 && surface.inset.borderBottomWidth <= 3);
+    assert.equal(surface.highlight.borderTopColor, materials.boardSurface.highlightColor);
+    assert.equal(surface.inset.borderBottomColor, materials.boardSurface.insetColor);
+    assert.equal(surface.overflow, 'visible');
+    assert.ok(surface.shadowOpacity <= 0.24);
+    assert.ok(!('boardTexture' in materials), 'materials cannot carry a baked board image');
+  }
+});
+
+test('board materials render through decorative code layers outside semantic controls', () => {
+  const source = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8');
+  const board = source('../components/game-visuals/ThemedBoardSurface.tsx');
+  assert.doesNotMatch(board, /<Image\b|boardTexture/);
+  assert.match(board, /getBoardSurfacePresentation/);
+  assert.match(board, /pointerEvents="none"/);
+  assert.match(board, /aria-hidden accessible=\{false\}/);
+  assert.match(board, /importantForAccessibility="no-hide-descendants"/);
+  const image = source('../components/game-visuals/GamePieceImage.tsx');
+  assert.match(image, /pointerEvents="none"/);
+  assert.match(image, /<Image[^>]*resizeMode="contain"[^>]*aria-hidden accessible=\{false\}/);
+  assert.match(image, /accessibilityElementsHidden/);
+  for (const game of ['tic-tac-toe', 'connect-four', 'chinese-checkers', 'dice', 'trouble', 'boggle', 'wordle', 'dots-and-boxes']) {
+    assert.match(source(`../../app/games/${game}.tsx`), /accessibilityLabel=/, `${game} owns its semantic labels`);
+  }
+});
+
+test('board keyboard focus is a static inset outline that cannot change cell geometry', () => {
+  assert.equal(typeof getBoardFocusPresentation, 'function');
+  assert.equal(getBoardFocusPresentation('#00E5FF', false), undefined);
+  assert.deepEqual(getBoardFocusPresentation('#00E5FF', true), {
+    outlineColor: '#00E5FF', outlineStyle: 'solid', outlineWidth: 3, outlineOffset: -3,
+  });
+});
+
+test('sprite board hit targets use a shared code-rendered keyboard focus layer', () => {
+  for (const game of ['tic-tac-toe', 'connect-four', 'chinese-checkers']) {
+    const screen = readFileSync(new URL(`../../app/games/${game}.tsx`, import.meta.url), 'utf8');
+    assert.match(screen, /<BoardPressable\b/, `${game} must render focus independently of its bitmap`);
   }
 });
 

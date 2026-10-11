@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { View, Pressable, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -31,6 +31,7 @@ import { useBoardFit, useResponsive } from '../../src/utils/layout';
 import { GAME_VISUALS } from '../../src/game-visuals/registry';
 import { getDropMotion, getMotionPreset } from '../../src/game-visuals/presentation';
 import { ThemedBoardSurface } from '../../src/components/game-visuals/ThemedBoardSurface';
+import { BoardPressable } from '../../src/components/game-visuals/BoardPressable';
 import { GamePieceImage } from '../../src/components/game-visuals/GamePieceImage';
 import { VictoryAccent } from '../../src/components/game-visuals/VictoryAccent';
 
@@ -341,7 +342,7 @@ export default function ConnectFourScreen() {
             getLowestEmptyRow(gameState.board, col) !== null;
 
           return (
-            <Pressable
+            <BoardPressable
               key={col}
               accessibilityRole="button"
               accessibilityLabel={`Drop in column ${col + 1}`}
@@ -368,7 +369,7 @@ export default function ConnectFourScreen() {
                   },
                 ]}
               />
-            </Pressable>
+            </BoardPressable>
           );
         })}
       </View>
@@ -393,7 +394,7 @@ export default function ConnectFourScreen() {
               const winning = isWinningCell(row, col);
 
               return (
-                <Pressable
+                <BoardPressable
                   key={col}
                   accessibilityRole="button"
                   accessibilityLabel={`Row ${row + 1}, column ${col + 1}: ${cell ?? 'empty'}${winning ? ', winning disc' : ''}`}
@@ -435,7 +436,7 @@ export default function ConnectFourScreen() {
                       />
                     )}
                   </View>
-                </Pressable>
+                </BoardPressable>
               );
             })}
           </View>

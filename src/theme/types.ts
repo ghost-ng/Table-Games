@@ -61,7 +61,13 @@ export interface ThemeAnimation {
 }
 
 export interface ThemeMaterials {
-  boardTexture?: ImageSourcePropType;
+  /** Decorative edge light only; game geometry and state stay in board controls. */
+  boardSurface: {
+    highlightColor: string;
+    highlightOpacity: number;
+    insetColor: string;
+    insetOpacity: number;
+  };
   boardBorderWidth: number;
   cellDepth: number;
   pieceShadowOpacity: number;

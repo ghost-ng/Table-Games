@@ -1,6 +1,7 @@
 import React from 'react';
-import { Image, StyleSheet, View, type ViewProps } from 'react-native';
+import { StyleSheet, View, type ViewProps } from 'react-native';
 import { useTheme } from '../../theme/ThemeProvider';
+import { getBoardSurfacePresentation } from '../../game-visuals/presentation';
 
 export interface ThemedBoardSurfaceProps extends ViewProps {
   children: React.ReactNode;
@@ -9,6 +10,8 @@ export interface ThemedBoardSurfaceProps extends ViewProps {
 export function ThemedBoardSurface({ children, style, testID = 'game-board', ...props }: ThemedBoardSurfaceProps) {
   const { theme } = useTheme();
   const { materials } = theme;
+  const { highlight, inset, ...surface } = getBoardSurfacePresentation(materials);
+  const radius = StyleSheet.flatten(style)?.borderRadius ?? theme.borderRadius.lg;
   return (
     <View {...props} testID={testID} style={[
       {
@@ -16,19 +19,14 @@ export function ThemedBoardSurface({ children, style, testID = 'game-board', ...
         borderColor: theme.colors.border,
         borderWidth: materials.boardBorderWidth,
         borderRadius: theme.borderRadius.lg,
-        overflow: 'visible',
-        shadowColor: materials.glowOpacity > 0 ? materials.glowColor : '#000000',
-        shadowOffset: { width: 0, height: materials.glowOpacity > 0 ? 0 : materials.cellDepth },
-        shadowOpacity: materials.glowOpacity > 0 ? materials.glowOpacity : materials.pieceShadowOpacity,
-        shadowRadius: 4, elevation: materials.cellDepth,
+        ...surface,
       },
       style,
     ]}>
-      {materials.boardTexture && (
-        <View pointerEvents="none" aria-hidden accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[StyleSheet.absoluteFillObject, { borderRadius: theme.borderRadius.lg, overflow: 'hidden' }]}>
-          <Image source={materials.boardTexture} resizeMode="repeat" aria-hidden accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[StyleSheet.absoluteFillObject, { opacity: 0.08 }]} />
-        </View>
-      )}
+      <View pointerEvents="none" aria-hidden accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
+        style={[StyleSheet.absoluteFillObject, { borderRadius: radius }, highlight]} />
+      <View pointerEvents="none" aria-hidden accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
+        style={[StyleSheet.absoluteFillObject, { borderRadius: radius }, inset]} />
       {children}
     </View>
   );

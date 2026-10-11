@@ -105,6 +105,19 @@ export function getCoinLightingPresentation(themeName: ThemeName) {
   }[themeName];
 }
 
+/** Reserve a real side gutter so Mancala counts never cover the stone sprites. */
+export function getMancalaLayoutPresentation(unit: number) {
+  const safeUnit = Math.max(0, unit);
+  return {
+    pitDiameter: safeUnit * 0.68,
+    pitInset: safeUnit * 0.04,
+    countGutter: safeUnit * 0.24,
+    gutterGap: safeUnit * 0.04,
+    stoneSize: Math.max(8, safeUnit * 0.26),
+    countFontSize: Math.max(11, Math.round(safeUnit * 0.22)),
+  };
+}
+
 export interface NormalizedPoint { x: number; y: number }
 export interface TrailSegment { x: number; y: number; length: number; angle: number }
 

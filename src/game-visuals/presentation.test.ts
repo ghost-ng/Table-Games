@@ -9,6 +9,7 @@ import {
   getPiecePresentation,
   getCheckerPiecePresentation,
   getCoinLightingPresentation,
+  getMancalaLayoutPresentation,
   getSelectionTrailPresentation,
   getVictoryPresentation,
   type PieceMotionKind,
@@ -122,6 +123,16 @@ test('coin themes change only surrounding light while keeping the photographed q
   assert.deepEqual(getCoinLightingPresentation('arcade'), {
     shadowColor: '#00E5FF', shadowOpacity: 0.46, shadowRadius: 20, elevation: 10,
   });
+});
+
+test('mancala reserves a side gutter outside the stone pit for exact counts', () => {
+  for (const unit of [48, 72, 120]) {
+    const layout = getMancalaLayoutPresentation(unit);
+    assert.equal(layout.pitDiameter + layout.pitInset + layout.countGutter + layout.gutterGap, unit);
+    assert.ok(layout.stoneSize <= layout.pitDiameter * 0.4);
+    assert.ok(layout.countGutter > 0);
+    assert.ok(layout.countFontSize >= 11);
+  }
 });
 
 test('trails derive ordered pixel geometry from normalized points on rectangular boards', () => {

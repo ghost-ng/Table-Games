@@ -7,6 +7,8 @@ import { ThemedBoardSurface } from '../../src/components/game-visuals/ThemedBoar
 import { SelectionTrail } from '../../src/components/game-visuals/SelectionTrail';
 import { GamePieceImage } from '../../src/components/game-visuals/GamePieceImage';
 import { GAME_VISUALS } from '../../src/game-visuals/registry';
+import { getMancalaStoneSlots } from '../../src/game-visuals/mancalaPresentation';
+import { getMancalaLayoutPresentation } from '../../src/game-visuals/presentation';
 import { GameShell } from '../../src/components/ui/GameShell';
 import { StatusRail } from '../../src/components/ui/StatusRail';
 import { useTheme } from '../../src/theme/ThemeProvider';
@@ -40,7 +42,6 @@ const SHORT = 2.6; // 2 rows + 0.3 padding each side
 const STEP_MS = 130; // per sown seed
 const AI_DELAY_MS = 600;
 const FEEDBACK_MS = 1400;
-const MAX_DOTS = 12;
 
 interface Rect {
   x: number;
@@ -62,12 +63,6 @@ function cellRect(index: number, vertical: boolean): Rect {
   return { x: 1.2 + (12 - index), y: 0.3, w: 1, h: 1 };
 }
 
-// Seeds sit evenly on a ring near the rim, keeping the centre clear for the count.
-function ringPoint(k: number, n: number) {
-  const a = -Math.PI / 2 + (k * 2 * Math.PI) / Math.max(n, 1);
-  return { x: 0.68 * Math.cos(a), y: 0.68 * Math.sin(a) };
-}
-
 // ─── Decorative seed art ──────────────────────────────────────────────────────────────
 
 function SeedArt({
@@ -85,24 +80,21 @@ function SeedArt({
 }) {
   const { themeName } = useTheme();
   const seeds = GAME_VISUALS[themeName].mancala.seeds;
-  // Visual samples are capped; the engine count and numeric label remain authoritative.
-  const n = Math.min(count, MAX_DOTS);
-  const rx = Math.max(0, width / 2 - dot);
-  const ry = Math.max(0, height / 2 - dot);
+  const slots = getMancalaStoneSlots(count, pit);
   return (
     <View pointerEvents="none" aria-hidden accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={StyleSheet.absoluteFill}>
-      {Array.from({ length: n }, (_, k) => {
-        const p = ringPoint(k, n);
+      {slots.map((slot) => {
+        const size = dot * slot.scale;
         return (
           <GamePieceImage
-            key={k}
-            // Stable pit/index mapping consumes no gameplay randomness.
-            source={seeds[(pit + k) % seeds.length]}
-            size={dot}
+            key={`${pit}-${slot.seedIndex}`}
+            source={seeds[(pit + slot.seedIndex) % seeds.length]}
+            size={size}
             style={{
               position: 'absolute',
-              left: width / 2 + p.x * rx - dot / 2,
-              top: height / 2 + p.y * ry - dot / 2,
+              left: slot.x * width - size / 2,
+              top: slot.y * height - size / 2,
+              transform: [{ rotate: `${slot.rotation}deg` }],
             }}
           />
         );
@@ -380,8 +372,9 @@ export default function MancalaScreen() {
   // ─── Board rendering ─────────────────────────────────────────────────────
 
   const pits = displayPits ?? gameState.pits;
-  const countFont = Math.max(11, Math.round(unit * 0.28));
-  const dotSize = Math.max(7, unit * 0.19);
+  const mancalaLayout = getMancalaLayoutPresentation(unit);
+  const countFont = mancalaLayout.countFontSize;
+  const dotSize = mancalaLayout.stoneSize;
 
   const renderStore = (player: Player) => {
     const index = STORE[player];
@@ -392,6 +385,8 @@ export default function MancalaScreen() {
     const color = theme.colors[player];
     const active = !gameState.isGameOver && gameState.currentPlayer === player;
     const highlight = lastSown === index;
+    const gutterWidth = Math.max(22, Math.min(w * 0.28, unit * 0.3));
+    const clusterWidth = Math.max(0, w - gutterWidth);
     return (
       <View
         key={`store-${player}`}
@@ -407,23 +402,23 @@ export default function MancalaScreen() {
           borderWidth: active ? 3 : 2,
           borderColor: highlight ? theme.colors.text : color,
           overflow: 'hidden',
-          alignItems: 'center',
-          justifyContent: 'center',
         }}
       >
         <View style={[StyleSheet.absoluteFill, { backgroundColor: color, opacity: active ? 0.22 : 0.12 }]} />
-        <SeedArt count={pits[index]} width={w} height={h} dot={dotSize} pit={index} />
-        <View style={{ alignItems: 'center', flexDirection: vertical ? 'row' : 'column', gap: vertical ? 8 : 2 }}>
+        <View pointerEvents="none" style={{ position: 'absolute', left: 0, top: 0, width: clusterWidth, height: h }}>
+          <SeedArt count={pits[index]} width={clusterWidth} height={h} dot={dotSize} pit={index} />
+        </View>
+        <View style={{ position: 'absolute', right: 0, top: 0, width: gutterWidth, height: h, alignItems: 'center', justifyContent: 'center', gap: 2 }}>
           <ThemedText
             variant="label"
             numberOfLines={1}
-            style={{ color, fontWeight: '700', fontSize: Math.max(11, Math.round(unit * 0.2)) }}
+            style={{ color, fontWeight: '700', fontSize: Math.max(9, Math.round(unit * 0.14)) }}
           >
-            {vertical ? playerNames[player] : player === 'player1' ? (mode === 'single' ? 'You' : 'P1') : mode === 'single' ? 'AI' : 'P2'}
+            {player === 'player1' ? (mode === 'single' ? 'You' : 'P1') : mode === 'single' ? 'AI' : 'P2'}
           </ThemedText>
           <ThemedText
             variant="heading"
-            style={{ fontSize: Math.max(16, Math.round(unit * 0.42)), color: theme.colors.text }}
+            style={{ fontSize: Math.max(14, countFont), color: theme.colors.text, backgroundColor: theme.colors.surfaceRaised, borderRadius: 999, paddingHorizontal: 4 }}
           >
             {pits[index]}
           </ThemedText>
@@ -436,7 +431,7 @@ export default function MancalaScreen() {
     const r = cellRect(index, vertical);
     const owner = ownerOf(index);
     const color = theme.colors[owner];
-    const d = unit * 0.84;
+    const d = mancalaLayout.pitDiameter;
     const legal = canInteract && isLegalMove(gameState, index);
     const isSource = sourcePit === index;
     const isLast = lastSown === index;
@@ -455,12 +450,13 @@ export default function MancalaScreen() {
           top: r.y * unit,
           width: unit,
           height: unit,
-          alignItems: 'center',
-          justifyContent: 'center',
         }}
       >
         <View
           style={{
+            position: 'absolute',
+            left: mancalaLayout.pitInset,
+            top: (unit - d) / 2,
             width: d,
             height: d,
             borderRadius: d / 2,
@@ -475,19 +471,11 @@ export default function MancalaScreen() {
         >
           <View style={[StyleSheet.absoluteFill, { backgroundColor: color, opacity: legal ? 0.28 : 0.1 }]} />
           <SeedArt count={pits[index]} width={d} height={d} dot={dotSize} pit={index} />
+        </View>
+        <View pointerEvents="none" style={{ position: 'absolute', right: 0, top: 0, width: mancalaLayout.countGutter, height: unit, alignItems: 'center', justifyContent: 'center' }}>
           <ThemedText
             variant="label"
-            style={{
-              fontSize: countFont,
-              fontWeight: '700',
-              backgroundColor: theme.colors.surfaceRaised,
-              borderRadius: countFont,
-              paddingHorizontal: 3,
-              color: pits[index] === 0 ? theme.colors.textMuted : theme.colors.text,
-              textShadowColor: theme.colors.background,
-              textShadowRadius: 3,
-              textShadowOffset: { width: 0, height: 0 },
-            }}
+            style={{ fontSize: countFont, fontWeight: '800', minWidth: Math.max(20, mancalaLayout.countGutter * 0.86), textAlign: 'center', backgroundColor: theme.colors.surfaceRaised, borderColor: color, borderWidth: 1.5, borderRadius: 999, paddingHorizontal: 3, paddingVertical: 2, color: pits[index] === 0 ? theme.colors.textMuted : theme.colors.text }}
           >
             {pits[index]}
           </ThemedText>

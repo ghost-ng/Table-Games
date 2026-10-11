@@ -242,6 +242,40 @@ test('accepted quarter records use one authoritative natural-silver source set a
   }
 });
 
+// Verified against Commons file revision 1240984545: Photographer and EXIF
+// Author both identify Makia Minich; the photograph remains CC BY-SA 3.0.
+const edgeQuarterSource = 'https://commons.wikimedia.org/wiki/File:Day_220_Cy365_Balancing_(79162781).jpeg';
+
+test('quarter edge provenance credits the primary photographer under the original license in every theme', () => {
+  const manifest = JSON.parse(readFileSync(resolve(root, 'docs/design/game-art-sources.json'), 'utf8'));
+  const edges = manifest.records.filter(record => record.family === 'coin-flip' && record.role === 'edge');
+  assert.deepEqual(edges.map(record => record.theme).sort(), ['arcade', 'modern', 'retro']);
+  for (const record of edges) {
+    assert.equal(record.referenceUrl, edgeQuarterSource, `${record.theme}: original photograph`);
+    assert.equal(record.referenceLicense, 'CC BY-SA 3.0; photograph by Makia Minich',
+      `${record.theme}: correct photographer and unchanged license`);
+  }
+});
+
+test('public edge-quarter attribution retains the primary credit and agrees with manifest provenance', () => {
+  const notices = readFileSync(resolve(root, 'public/licenses/ASSET-NOTICES.md'), 'utf8');
+  const section = notices.split('## U.S. quarter spinning/edge view')[1]?.split(/\n## |\nThe adapted/)[0];
+  assert.ok(section, 'Distributed notice must include the adapted edge photograph');
+  const fields = Object.fromEntries(section.split(/\r?\n/).flatMap(line => {
+    const match = /^- ([^:]+): (.*)$/.exec(line);
+    return match ? [[match[1], match[2]]] : [];
+  }));
+  assert.equal(fields.Author, 'Makia Minich', 'Public notice credits the verified photographer');
+  assert.equal(fields.Source, edgeQuarterSource);
+  assert.equal(fields.License, 'Creative Commons Attribution-ShareAlike 3.0 Unported');
+  assert.equal(fields['License URL'], 'https://creativecommons.org/licenses/by-sa/3.0/');
+  const manifest = JSON.parse(readFileSync(resolve(root, 'docs/design/game-art-sources.json'), 'utf8'));
+  for (const record of manifest.records.filter(record => record.referenceUrl === fields.Source)) {
+    assert.equal(record.referenceLicense, `CC BY-SA 3.0; photograph by ${fields.Author}`,
+      `${record.theme}: published attribution must agree with provenance`);
+  }
+});
+
 test('manifest stages reject legacy after migration and pending coins at final acceptance', () => {
   const validate = requireHelper('validateManifest');
   const legacy = individualRecord({ legacy: true, sourcePath: 'assets/pieces/modern/tic-tac-toe/x.webp' });

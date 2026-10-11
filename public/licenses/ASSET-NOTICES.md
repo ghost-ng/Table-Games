@@ -12,7 +12,7 @@
 ## U.S. quarter spinning/edge view
 
 - Work: “Day 220 Cy365 Balancing”
-- Author: Chase N.
+- Author: Makia Minich
 - Source: https://commons.wikimedia.org/wiki/File:Day_220_Cy365_Balancing_(79162781).jpeg
 - License: Creative Commons Attribution-ShareAlike 3.0 Unported
 - License URL: https://creativecommons.org/licenses/by-sa/3.0/

@@ -297,3 +297,19 @@ Contact-sheet order is stage-0 through stage-6. Fresh deterministic authoring re
 Stage remains generation-batches: 108 completed custom records, zero generationPending records, and nine unchanged authorityReferencePending quarter slots. All 117 production sprites total 823,492 bytes; the largest is the inherited 15,328-byte Arcade Coin Flip heads placeholder, below the 2 MiB total and 64 KiB per-file limits.
 
 Only the seven Arcade Hangman records, sources, finals, four QA sheets, token-only theme entrypoint, focused tests, three-theme production explanation and this fidelity evidence belong to the batch. Shared geometry, Modern/Retro generators and bytes, catalog, registry, dependencies, runtime integration, gameplay and deployment remain unchanged. This inspection does not claim a fresh browser gameplay audit.
+
+## Task 2N Final cross-theme sprite acceptance -- 2026-10-11
+
+All 108 custom sprites were reconciled across Modern, Retro, and Arcade without changing accepted source PNG, final WebP, or retained QA-sheet bytes. The manifest is now `individual-assets`: 108 custom records are complete, zero `legacy` or `generationPending` properties remain, and exactly nine Coin Flip records remain `authorityReferencePending` for the authoritative-quarter work in Task 3.
+
+| Inspection | Evidence and result |
+| --- | --- |
+| Tokens, discs, and crown markers | All twelve production/phone light/dark sheets preserve complete X/O silhouettes, unobstructed O openings, semantic ownership, recessed Connect Four faces, ridged checker faces, and readable standalone crowns. The raised/front orthographic crown is accepted as a family-wide marker-role exception: it is an overlay marker rather than a checker disc, remains centered and complete, and has no disc underneath. Checker pieces themselves remain top-down. |
+| Marbles and Mancala stones | All twelve sheets preserve six distinct marble colors, spherical marble identity, and six individual Mancala stone/seed silhouettes. Pale pieces retain outlined boundaries on light and dark backgrounds, while the seed profiles remain distinct from marbles at phone size. |
+| Pawns and dice | All twelve sheets preserve four seat colors, upright pawn silhouettes, and six recognizable blank polyhedral dice. Geometry, boundaries, and ownership remain readable on both backgrounds and at phone size without relying on glow. |
+| Hangman progression | All twelve sheets preserve the exact seven-stage sequence: platform, posts, crossbar, friendly head, torso, arms, then feet. Fixed framing and retained parts do not shift between stages or themes; faces and additions remain readable at production and phone sizes. Retro intentionally retains its documented warm light/dark QA backgrounds. |
+| Aggregate reproduction | Fresh isolated composition reproduced all 48 retained sheets pixel-for-pixel from current finals and documented order, cell sizes, columns, and backgrounds. Raw RGBA comparison avoids the lossless-WebP encoder's aggregate WSL memory cost; every committed QA file remains byte-unchanged. |
+| Cross-theme quality | Modern retains clean tabletop materials, Retro retains warm worn physical materials, and Arcade retains solid dark bodies with restrained neon rims. No inspected sheet shows text, an opaque/checkerboard background, clipping, detached specks, extra objects, muddy alpha, or glow-only readability. |
+| Catalog and budget | All 117 registered final WebPs remain unique catalog entries and total 823,492 bytes. The largest is the unchanged 15,328-byte Arcade Coin Flip heads placeholder. Both the 2 MiB aggregate and 64 KiB per-file limits pass. |
+
+This acceptance changes only the manifest stage, focused acceptance coverage/helper support, and documentation. Gameplay, dependencies, catalog/registry ownership, generated art, normalized finals, QA images, and deployment remain unchanged.

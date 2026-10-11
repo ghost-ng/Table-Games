@@ -99,7 +99,17 @@ During incomplete theme work, use exact-asset selection. For Hangman, `--asset m
 
 The production prompt inventory is the manifest itself: each custom role names its theme materials, exact semantic owner and hexadecimal color, fixed camera and light, square genuine-alpha canvas, 72–80% longest-bound fill, complete silhouette, and the no-text/no-watermark/no-ground-plane constraints. `validateProductionPrompt` checks these invariants, rejects sheet or multi-object instructions, requires blank dice and individual Mancala stones, and keeps Hangman instructions to friendly assembly. It is a text-contract check; original-detail visual inspection remains mandatory after each actual generation. No images are generated in Task 2A.
 
-`createContactSheet(inputs, { root, columns = 6, cellSize = 160, background = '#f5f5f5', outputPath })` accepts manifest records, relative image paths, or image buffers in display order. It returns a lossless WebP buffer and optionally writes a repository-relative QA path. Produce both `#f5f5f5` and `#101020` backgrounds, inspect at original size, and retain QA outputs under `docs/design/qa/`. Contact sheets are inspection artifacts, not generation sources.
+`createContactSheet(inputs, { root, columns = 6, cellSize = 160, background = '#f5f5f5', outputPath, format = 'webp' })` accepts manifest records, relative image paths, or image buffers in display order. It returns a lossless WebP buffer and optionally writes a repository-relative QA path. The test-only `format: 'raw'` mode returns the same composed RGBA pixels without encoding and cannot write an output file. Produce both `#f5f5f5` and `#101020` backgrounds, inspect at original size, and retain QA outputs under `docs/design/qa/`. Contact sheets are inspection artifacts, not generation sources.
+
+### Crown marker camera exception
+
+The shared `king-crown` is an overlay marker, not a checker disc. Across Modern, Retro, and Arcade it may use a raised/front orthographic presentation instead of reading as a literal top-down disc, provided it remains one standalone centered crown with a complete readable silhouette and no checker disc underneath. The application places the marker over the separately rendered checker piece. This role-specific exception does not relax the top-down requirement for either checker disc and does not authorize a baked piece, text, background, or second object.
+
+## Task 2 final cross-theme acceptance
+
+Task 2N advances the manifest to `individual-assets` after reconciling all 108 custom sprites and all 48 retained production/phone, light/dark QA sheets. Every custom record has a unique individual source and final path, real generation and review dates, its frozen production prompt, and required deterministic generator provenance for Hangman only. No `legacy` or `generationPending` property remains. The nine Coin Flip slots remain `authorityReferencePending` until Task 3 supplies authoritative quarter imagery.
+
+Fresh isolated composition reproduced every retained QA sheet pixel-for-pixel from its accepted finals. Raw RGBA comparison is used for the final aggregate test because repeating 48 lossless WebP encodes exceeds this WSL host's memory; the committed QA files themselves remain byte-unchanged. All source PNGs and production WebPs also remain unchanged during acceptance. Cross-theme inspection confirms semantic ownership, normalized framing, theme material identity, phone readability, light/dark contrast, complete silhouettes, and the absence of text, backgrounds, clipping, detached specks, extra objects, muddy alpha, or glow-only boundaries. The seven Hangman stages retain identical structural progression across all themes.
 
 ## Semantic ownership
 

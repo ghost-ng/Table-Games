@@ -426,9 +426,11 @@ export async function normalizeHangmanGroup(records, { root = process.cwd(), wri
 
 /** Arrange buffers, relative paths, or manifest records in input order for visual QA. */
 export async function createContactSheet(inputs, { root = process.cwd(), columns = 6, cellSize = 160,
-  background = '#f5f5f5', outputPath } = {}) {
+  background = '#f5f5f5', outputPath, format = 'webp' } = {}) {
   assert.ok(Array.isArray(inputs) && inputs.length > 0, 'Contact sheet requires images');
   assert.ok(Number.isInteger(columns) && columns > 0 && Number.isInteger(cellSize) && cellSize > 0, 'Positive contact sheet dimensions required');
+  assert.ok(['webp', 'raw'].includes(format), 'Contact sheet format must be webp or raw');
+  assert.ok(format !== 'raw' || !outputPath, 'Raw contact sheets cannot be written as image files');
   const composites = [];
   for (let index = 0; index < inputs.length; index++) {
     const input = inputs[index];
@@ -437,9 +439,10 @@ export async function createContactSheet(inputs, { root = process.cwd(), columns
       background: { r: 0, g: 0, b: 0, alpha: 0 } }).png().toBuffer();
     composites.push({ input: data, left: index % columns * cellSize, top: Math.floor(index / columns) * cellSize });
   }
-  const data = await sharp({ create: { width: Math.min(columns, inputs.length) * cellSize,
+  const sheet = sharp({ create: { width: Math.min(columns, inputs.length) * cellSize,
     height: Math.ceil(inputs.length / columns) * cellSize, channels: 4, background } })
-    .composite(composites).webp({ lossless: true, effort: 6 }).toBuffer();
+    .composite(composites);
+  const data = format === 'raw' ? await sheet.ensureAlpha().raw().toBuffer() : await sheet.webp({ lossless: true, effort: 6 }).toBuffer();
   if (outputPath) {
     const path = await containedPath(root, outputPath, { output: true });
     await mkdir(dirname(path), { recursive: true }); await writeFile(path, data);

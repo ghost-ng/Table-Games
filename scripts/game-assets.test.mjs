@@ -183,6 +183,39 @@ test('manifest supplies 117 portable individual records matching the runtime cat
   }
 });
 
+test('live manifest accepts all 108 custom sprites and only nine authority-pending quarter slots', () => {
+  const manifest = JSON.parse(readFileSync(resolve(root, 'docs/design/game-art-sources.json'), 'utf8'));
+  assert.equal(manifest.stage, 'individual-assets',
+    'Task 2 acceptance requires promotion from generation-batches to individual-assets');
+  assert.equal(manifest.records.length, 117);
+  const custom = manifest.records.filter((record) => record.family !== 'coin-flip');
+  const coins = manifest.records.filter((record) => record.family === 'coin-flip');
+  assert.equal(custom.length, 108);
+  assert.equal(coins.length, 9);
+  assert.equal(manifest.records.filter((record) => Object.hasOwn(record, 'legacy')).length, 0);
+  assert.equal(manifest.records.filter((record) => Object.hasOwn(record, 'generationPending')).length, 0);
+  assert.equal(manifest.records.filter((record) => Object.hasOwn(record, 'authorityReferencePending')).length, 9);
+  assert.ok(coins.every((record) => record.authorityReferencePending === true));
+  assert.ok(custom.every((record) => !Object.hasOwn(record, 'authorityReferencePending')));
+  assert.ok(custom.every((record) => record.generatedAt && Number.isFinite(Date.parse(record.generatedAt))));
+  assert.ok(custom.every((record) => record.reviewedAt && Number.isFinite(Date.parse(record.reviewedAt))));
+  assert.equal(new Set(custom.map((record) => record.sourcePath)).size, 108);
+  assert.equal(new Set(custom.map((record) => record.finalPath)).size, 108);
+  for (const record of custom) {
+    const identity = `${record.theme}/${record.family}/${record.role}`;
+    assert.equal(record.sourcePath, `docs/design/source-art/${identity}.png`);
+    assert.equal(record.finalPath, `assets/pieces/${identity}.webp`);
+    assert.ok(existsSync(resolve(root, record.sourcePath)), `${identity}: accepted source must exist`);
+    assert.ok(existsSync(resolve(root, record.finalPath)), `${identity}: accepted final must exist`);
+    assert.match(record.expectedColor, /^#[\dA-F]{6}$/i, `${identity}: exact semantic color is required`);
+    requireHelper('validateProductionPrompt')(record);
+    if (record.family === 'hangman') {
+      assert.equal(record.generator, `scripts/generate-${record.theme}-hangman.mjs`, `${identity}: generator provenance`);
+    } else assert.equal(record.generator, undefined, `${identity}: only Hangman uses deterministic generator provenance`);
+  }
+  art.validateManifest(manifest);
+});
+
 test('manifest stages reject legacy after migration and pending coins at final acceptance', () => {
   const validate = requireHelper('validateManifest');
   const legacy = individualRecord({ legacy: true, sourcePath: 'assets/pieces/modern/tic-tac-toe/x.webp' });
@@ -517,6 +550,9 @@ test('contact sheets preserve input order and display sprites on deterministic l
     const data = await create([input, other], { columns: 2, cellSize: 100, background });
     assert.deepEqual(data, await create([input, other], { columns: 2, cellSize: 100, background }));
     const { data: pixels, info } = await sharp(data).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    const raw = await create([input, other], { columns: 2, cellSize: 100, background, format: 'raw' });
+    assert.equal(raw.length, 200 * 100 * 4, 'Raw contact sheet must return unpacked RGBA pixels');
+    assert.deepEqual(raw, pixels, 'Raw contact sheet pixels must equal lossless WebP decode');
     assert.equal(info.width, 200); assert.equal(info.height, 100);
     const color = background === '#f5f5f5' ? [245, 245, 245, 255] : [16, 16, 32, 255];
     assert.deepEqual([...pixels.subarray(0, 4)], color);
@@ -556,6 +592,119 @@ test('all final sprites decode as square RGBA with consistent family dimensions;
     // During generation batches, old finals stay in place until the individual source is inspected.
     if (record.legacy !== true && record.authorityReferencePending !== true && record.generationPending !== true) validate(metrics, record);
   }
+});
+
+test('accepted token, checker, marble, pawn, seed, and die families retain normalized framing and camera evidence', async () => {
+  const manifest = JSON.parse(readFileSync(resolve(root, 'docs/design/game-art-sources.json'), 'utf8'));
+  const groups = [
+    { name: 'token', camera: 'top-down', records: (record) => ['tic-tac-toe', 'connect-four'].includes(record.family),
+      aspect: [0.95, 1.05] },
+    { name: 'checker', camera: 'top-down', records: (record) => record.family === 'checkers' && record.role !== 'king-crown',
+      aspect: [0.98, 1.02] },
+    { name: 'marble', camera: 'top-down', records: (record) => record.family === 'chinese-checkers',
+      aspect: [0.97, 1.03] },
+    { name: 'pawn', camera: 'front three-quarter', records: (record) => record.family === 'trouble',
+      aspect: [0.50, 0.70] },
+    { name: 'seed', camera: 'top-down', records: (record) => record.family === 'mancala' },
+    { name: 'die', camera: 'front three-quarter', records: (record) => record.family === 'dice' },
+  ];
+  for (const group of groups) {
+    const records = manifest.records.filter(group.records);
+    assert.ok(records.length >= 6, `${group.name}: complete three-theme family evidence is required`);
+    const fills = [];
+    for (const record of records) {
+      const identity = `${record.theme}/${record.family}/${record.role}`;
+      assert.match(record.prompt, new RegExp(`Camera: ${group.camera};`, 'i'), `${identity}: camera contract`);
+      const metrics = await art.readImageMetrics(resolve(root, record.finalPath));
+      art.assertImageMetrics(metrics, record);
+      const centerX = metrics.bounds.left + (metrics.bounds.width - 1) / 2;
+      const centerY = metrics.bounds.top + (metrics.bounds.height - 1) / 2;
+      const canvasCenter = (metrics.width - 1) / 2;
+      assert.ok(Math.abs(centerX - canvasCenter) <= 0.5, `${identity}: horizontally normalized`);
+      assert.ok(Math.abs(centerY - canvasCenter) <= 0.5, `${identity}: vertically normalized`);
+      fills.push(metrics.visibleFill);
+      if (group.aspect) {
+        const aspect = metrics.bounds.width / metrics.bounds.height;
+        assert.ok(aspect >= group.aspect[0] && aspect <= group.aspect[1],
+          `${identity}: silhouette orientation ${aspect.toFixed(3)} must fit ${group.name} camera evidence`);
+      }
+    }
+    assert.ok(Math.max(...fills) - Math.min(...fills) <= 0.005,
+      `${group.name}: normalized longest-bound fill must remain consistent across themes`);
+  }
+});
+
+test('all 48 retained batch QA sheets reproduce pixel-for-pixel from accepted finals', () => {
+  const manifest = JSON.parse(readFileSync(resolve(root, 'docs/design/game-art-sources.json'), 'utf8'));
+  const batches = [
+    { theme: 'modern', families: ['tic-tac-toe', 'connect-four', 'checkers'], columns: 4, full: 256, phone: 64,
+      files: { light: 'modern-tokens-discs-light.webp', dark: 'modern-tokens-discs-dark.webp',
+        'phone-light': 'modern-tokens-discs-phone-light.webp', 'phone-dark': 'modern-tokens-discs-phone-dark.webp' } },
+    { theme: 'retro', families: ['tic-tac-toe', 'connect-four', 'checkers'], columns: 4, full: 256, phone: 64,
+      files: { light: 'retro-tokens-discs-full-light.webp', dark: 'retro-tokens-discs-full-dark.webp',
+        'phone-light': 'retro-tokens-discs-phone-light.webp', 'phone-dark': 'retro-tokens-discs-phone-dark.webp' } },
+    { theme: 'arcade', families: ['tic-tac-toe', 'connect-four', 'checkers'], columns: 4, full: 256, phone: 64,
+      files: { light: 'arcade-tokens-discs-full-light.webp', dark: 'arcade-tokens-discs-full-dark.webp',
+        'phone-light': 'arcade-tokens-discs-phone-light.webp', 'phone-dark': 'arcade-tokens-discs-phone-dark.webp' } },
+    { theme: 'modern', families: ['chinese-checkers', 'mancala'], columns: 6, full: 128, phone: 32,
+      files: { light: 'modern-marbles-seeds-light.webp', dark: 'modern-marbles-seeds-dark.webp',
+        'phone-light': 'modern-marbles-seeds-phone-light.webp', 'phone-dark': 'modern-marbles-seeds-phone-dark.webp' } },
+    ...['retro', 'arcade'].map((theme) => ({ theme, families: ['chinese-checkers', 'mancala'], columns: 6, full: 128, phone: 32,
+      files: { light: `${theme}-marbles-stones-full-light.webp`, dark: `${theme}-marbles-stones-full-dark.webp`,
+        'phone-light': `${theme}-marbles-stones-phone-light.webp`, 'phone-dark': `${theme}-marbles-stones-phone-dark.webp` } })),
+    ...['modern', 'retro', 'arcade'].map((theme) => ({ theme, families: ['trouble', 'dice'], columns: 5, full: 256, phone: 64,
+      files: { light: `${theme}-pawns-dice-full-light.webp`, dark: `${theme}-pawns-dice-full-dark.webp`,
+        'phone-light': `${theme}-pawns-dice-phone-light.webp`, 'phone-dark': `${theme}-pawns-dice-phone-dark.webp` } })),
+    ...['modern', 'retro', 'arcade'].map((theme) => ({ theme, families: ['hangman'], columns: 4, full: 384, phone: 160,
+      backgrounds: theme === 'retro' ? { light: '#f5f0e6', dark: '#17120d' } : undefined,
+      files: { light: `${theme}-hangman-full-light.webp`, dark: `${theme}-hangman-full-dark.webp`,
+        'phone-light': `${theme}-hangman-phone-light.webp`, 'phone-dark': `${theme}-hangman-phone-dark.webp` } })),
+  ];
+  const reproduceSheet = String.raw`
+    import assert from 'node:assert/strict';
+    import { existsSync, readFileSync } from 'node:fs';
+    import { resolve } from 'node:path';
+    import sharp from 'sharp';
+    import * as art from './scripts/game-art-lib.mjs';
+
+    sharp.concurrency(1);
+    const root = process.cwd();
+    const { batch, mode, filename } = JSON.parse(process.env.GAME_ART_QA_SHEET);
+    const manifest = JSON.parse(readFileSync(resolve(root, 'docs/design/game-art-sources.json'), 'utf8'));
+    const records = manifest.records.filter((record) =>
+      record.theme === batch.theme && batch.families.includes(record.family));
+    const phone = mode.startsWith('phone-');
+    const dark = mode.endsWith('dark');
+    const fresh = await art.createContactSheet(records, {
+      root,
+      columns: phone && batch.families.includes('checkers') ? 7 : batch.columns,
+      cellSize: phone ? batch.phone : batch.full,
+      background: dark ? (batch.backgrounds?.dark ?? '#101020') : (batch.backgrounds?.light ?? '#f5f5f5'),
+      format: 'raw',
+    });
+    const path = resolve(root, 'docs/design/qa', filename);
+    assert.ok(existsSync(path), filename + ': retained QA sheet must exist');
+    const expected = await sharp(path).ensureAlpha().raw().toBuffer();
+    assert.equal(fresh.equals(expected), true, filename + ': pixel-exact deterministic reproduction');
+    process.stdout.write(JSON.stringify(filename));
+  `;
+  const comparisons = [];
+  for (const batch of batches) {
+    for (const [mode, filename] of Object.entries(batch.files)) {
+      const result = spawnSync(process.execPath, ['--input-type=module', '--eval', reproduceSheet], {
+        cwd: root,
+        encoding: 'utf8',
+        env: { ...process.env, VIPS_CONCURRENCY: '1', GAME_ART_QA_SHEET: JSON.stringify({ batch, mode, filename }) },
+        maxBuffer: 1024 * 1024,
+      });
+      assert.equal(result.status, 0,
+        `${filename}: isolated QA reproduction failed (signal ${result.signal || 'none'})\n${result.stderr || result.stdout}`);
+      comparisons.push(JSON.parse(result.stdout));
+    }
+  }
+  assert.equal(batches.length, 12);
+  assert.equal(comparisons.length, 48);
+  assert.equal(new Set(comparisons).size, 48);
 });
 
 test('generation batches retain 108 individual prompts and nine quarter slots through honest batch progress', () => {
@@ -1114,8 +1263,8 @@ test('Arcade Hangman QA sheets reproduce all seven finals in order at full and p
     const path = resolve(root, 'docs/design/qa/arcade-hangman-' + qa.mode + '.webp');
     assert.ok(existsSync(path), 'Arcade Hangman ' + qa.mode + ' QA sheet must exist');
     const fresh = await art.createContactSheet(records,
-      { root, columns: 4, cellSize: qa.cellSize, background: qa.background });
-    assert.deepEqual(fresh, readFileSync(path),
-      'Arcade Hangman ' + qa.mode + ' QA sheet must reproduce byte-for-byte');
+      { root, columns: 4, cellSize: qa.cellSize, background: qa.background, format: 'raw' });
+    const expected = await sharp(path).ensureAlpha().raw().toBuffer();
+    assert.equal(fresh.equals(expected), true, 'Arcade Hangman ' + qa.mode + ' QA sheet must reproduce pixel-for-pixel');
   }
 });

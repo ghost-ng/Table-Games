@@ -7,7 +7,7 @@ import { ThemedBoardSurface } from '../../src/components/game-visuals/ThemedBoar
 import { SelectionTrail } from '../../src/components/game-visuals/SelectionTrail';
 import { GamePieceImage } from '../../src/components/game-visuals/GamePieceImage';
 import { GAME_VISUALS } from '../../src/game-visuals/registry';
-import { getMancalaStoneSlots } from '../../src/game-visuals/mancalaPresentation';
+import { getMancalaStoneSlots, getMancalaStorePresentation } from '../../src/game-visuals/mancalaPresentation';
 import { getMancalaLayoutPresentation } from '../../src/game-visuals/presentation';
 import { GameShell } from '../../src/components/ui/GameShell';
 import { StatusRail } from '../../src/components/ui/StatusRail';
@@ -385,8 +385,8 @@ export default function MancalaScreen() {
     const color = theme.colors[player];
     const active = !gameState.isGameOver && gameState.currentPlayer === player;
     const highlight = lastSown === index;
-    const gutterWidth = Math.max(22, Math.min(w * 0.28, unit * 0.3));
-    const clusterWidth = Math.max(0, w - gutterWidth);
+    const storeLayout = getMancalaStorePresentation(unit, w);
+    const clusterWidth = storeLayout.clusterWidth;
     return (
       <View
         key={`store-${player}`}
@@ -397,28 +397,23 @@ export default function MancalaScreen() {
           top: r.y * unit + pad,
           width: w,
           height: h,
-          borderRadius: Math.min(w, h) / 2,
-          backgroundColor: theme.colors.surfaceSunken,
-          borderWidth: active ? 3 : 2,
-          borderColor: highlight ? theme.colors.text : color,
-          overflow: 'hidden',
         }}
       >
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: color, opacity: active ? 0.22 : 0.12 }]} />
-        <View pointerEvents="none" style={{ position: 'absolute', left: 0, top: 0, width: clusterWidth, height: h }}>
+        <View pointerEvents="none" style={{ position: 'absolute', left: 0, top: 0, width: clusterWidth, height: h, borderRadius: Math.min(clusterWidth, h) / 2, backgroundColor: theme.colors.surfaceSunken, borderWidth: active ? 3 : 2, borderColor: highlight ? theme.colors.text : color, overflow: 'hidden' }}>
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: color, opacity: active ? 0.22 : 0.12 }]} />
           <SeedArt count={pits[index]} width={clusterWidth} height={h} dot={dotSize} pit={index} />
         </View>
-        <View style={{ position: 'absolute', right: 0, top: 0, width: gutterWidth, height: h, alignItems: 'center', justifyContent: 'center', gap: 2 }}>
+        <View style={{ position: 'absolute', left: storeLayout.countLeft, top: 0, width: storeLayout.countWidth, height: h, alignItems: 'center', justifyContent: 'center', gap: 2 }}>
           <ThemedText
             variant="label"
             numberOfLines={1}
-            style={{ color, fontWeight: '700', fontSize: Math.max(9, Math.round(unit * 0.14)) }}
+            style={{ color, fontWeight: '700', fontSize: Math.max(9, Math.min(Math.round(unit * 0.14), Math.floor(storeLayout.countWidth / 2))) }}
           >
             {player === 'player1' ? (mode === 'single' ? 'You' : 'P1') : mode === 'single' ? 'AI' : 'P2'}
           </ThemedText>
           <ThemedText
-            variant="heading"
-            style={{ fontSize: Math.max(14, countFont), color: theme.colors.text, backgroundColor: theme.colors.surfaceRaised, borderRadius: 999, paddingHorizontal: 4 }}
+            variant="label"
+            style={{ fontSize: storeLayout.countFontSize, fontWeight: '800', color: theme.colors.text, backgroundColor: theme.colors.surfaceRaised, borderColor: color, borderWidth: 1, borderRadius: 999, paddingHorizontal: 2, textAlign: 'center' }}
           >
             {pits[index]}
           </ThemedText>

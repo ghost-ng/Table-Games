@@ -1,3 +1,18 @@
+/** Keep the existing stone canvas, but render readable counts outside its well. */
+export function getMancalaStorePresentation(unit: number, width: number) {
+  const gutterWidth = Math.max(22, Math.min(width * 0.28, unit * 0.3));
+  const clusterWidth = Math.max(0, width - gutterWidth);
+  const gap = Math.min(4, unit * 0.04);
+  const countWidth = gutterWidth - gap;
+  return {
+    clusterWidth,
+    countLeft: clusterWidth + gap,
+    countWidth,
+    // Body-font digits fit even on phones; Arcade's wide heading font does not.
+    countFontSize: Math.max(11, Math.min(Math.round(unit * 0.22), Math.floor((countWidth - 6) / 1.2))),
+  };
+}
+
 export interface MancalaStoneSlot {
   seedIndex: number;
   x: number;

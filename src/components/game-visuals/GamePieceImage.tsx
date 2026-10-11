@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Image, type ImageSourcePropType, type StyleProp, type ViewStyle } from 'react-native';
+import { Image, StyleSheet, type ImageSourcePropType, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useTheme } from '../../theme/ThemeProvider';
 import { getMotionPreset, getPiecePresentation, type VisualCellState } from '../../game-visuals/presentation';
@@ -23,7 +23,13 @@ export function GamePieceImage({ source, size, state = 'neutral', pressed = fals
   useEffect(() => {
     scale.value = withTiming(presentation.scale, { duration });
   }, [scale, presentation.scale, duration]);
-  const motionStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  // The final animated style must preserve caller placement/rotation transforms.
+  const callerTransform = StyleSheet.flatten(style)?.transform;
+  const motionStyle = useAnimatedStyle(() => ({
+    transform: typeof callerTransform === 'string'
+      ? `${callerTransform} scale(${scale.value})`
+      : [...(callerTransform ?? []), { scale: scale.value }],
+  }));
   const color = presentation.marker.victory || state === 'found' ? theme.materials.celebration : theme.colors.focus;
   const glowing = theme.materials.glowOpacity > 0;
 
